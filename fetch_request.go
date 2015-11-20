@@ -41,15 +41,16 @@ type FetchRequest struct {
 	ReplicaId     int32
 	MaxWaitTime   int32
 	MinBytes      int32
-	Topics        map[string]*PartitonBlock
+	Topics        map[string][]*PartitonBlock
 }
 
 func (fetchRequest *FetchRequest) Encode() []byte {
 	requestHeaderLength := 8 + 2 + len(fetchRequest.RequestHeader.ClientId)
 	requestLength := requestHeaderLength + 12
 	requestLength += 4
-	for topicname := range fetchRequest.Topics {
+	for topicname, partitonBlocks := range fetchRequest.Topics {
 		requestLength += 2 + len(topicname) + 16
+		requestLength += 4 + len(partitonBlocks)*16
 	}
 
 	payload := make([]byte, requestLength+4)
@@ -69,18 +70,22 @@ func (fetchRequest *FetchRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.Topics)))
 	offset += 4
-	for topicname, partitonBlock := range fetchRequest.Topics {
+	for topicname, partitonBlocks := range fetchRequest.Topics {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicname)))
 		offset += 2
 		copy(payload[offset:], topicname)
 		offset += len(topicname)
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(partitonBlock.Partition))
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitonBlocks)))
 		offset += 4
-		binary.BigEndian.PutUint64(payload[offset:], uint64(partitonBlock.FetchOffset))
-		offset += 8
-		binary.BigEndian.PutUint32(payload[offset:], uint32(partitonBlock.MaxBytes))
-		offset += 4
+		for _, partitonBlock := range partitonBlocks {
+			binary.BigEndian.PutUint32(payload[offset:], uint32(partitonBlock.Partition))
+			offset += 4
+			binary.BigEndian.PutUint64(payload[offset:], uint64(partitonBlock.FetchOffset))
+			offset += 8
+			binary.BigEndian.PutUint32(payload[offset:], uint32(partitonBlock.MaxBytes))
+			offset += 4
+		}
 	}
 	return payload
 }

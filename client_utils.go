@@ -24,6 +24,7 @@ func GetMetaData(broker string, topic string, correlationId int32, clientId stri
 
 	responsePlayload := make([]byte, 10240)
 	length, _ := conn.Read(responsePlayload)
+	conn.Close()
 
 	metadataResponse := &MetadataResponse{}
 	err = metadataResponse.Decode(responsePlayload[:length])
