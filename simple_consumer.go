@@ -118,6 +118,7 @@ func (simpleConsumer *SimpleConsumer) consume(messages chan Message) {
 				logger.Fatalln("fetch more data than needed")
 			}
 		}
+		//correlationId := int(binary.BigEndian.Uint32(buf))
 		fetchResponse, err := DecodeFetchResponse(buf[4:])
 		if err != nil {
 			logger.Fatalln(err)
@@ -136,5 +137,8 @@ func (simpleConsumer *SimpleConsumer) consume(messages chan Message) {
 			}
 		}
 		log.Printf("offset is %d\n", offset)
+		partitonBlock.FetchOffset = offset
+		correlationId++
+		fetchRequest.RequestHeader.CorrelationId = correlationId
 	}
 }
