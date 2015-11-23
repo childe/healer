@@ -34,7 +34,7 @@ Value			The value is the actual message contents as an opaque byte array. Kafka 
 //Value      []byte
 //}
 
-type MessageSet []struct {
+type Message struct {
 	Offset      int64
 	MessageSize int32
 
@@ -45,3 +45,4 @@ type MessageSet []struct {
 	Key        []byte
 	Value      []byte
 }
+type MessageSet []Message
