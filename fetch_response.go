@@ -66,10 +66,8 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 			offset += 8
 			fetchResponse[i].TopicDatas[j].MessageSetSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
-			messageSetCount := 100
-			fetchResponse[i].TopicDatas[j].MessageSet = make([]Message, messageSetCount)
-			k := 0
-			for {
+			fetchResponse[i].TopicDatas[j].MessageSet = make([]Message, fetchResponse[i].TopicDatas[j].MessageSetSize)
+			for k := int32(0); k < fetchResponse[i].TopicDatas[j].MessageSetSize; k++ {
 				fetchResponse[i].TopicDatas[j].MessageSet[k].Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
 				fetchResponse[i].TopicDatas[j].MessageSet[k].MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -102,15 +100,7 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 				if offset == uint64(len(payload)) {
 					break
 				}
-				k++
-				if k >= messageSetCount {
-					messageSetCount *= 2
-					fetchResponse[i].TopicDatas[j].MessageSet = append(
-						fetchResponse[i].TopicDatas[j].MessageSet,
-						make([]Message, messageSetCount)...)
-				}
 			}
-			fetchResponse[i].TopicDatas[j].MessageSet = fetchResponse[i].TopicDatas[j].MessageSet[:k]
 		}
 	}
 

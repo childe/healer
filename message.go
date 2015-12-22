@@ -1,5 +1,9 @@
 package gokafka
 
+import (
+	"encoding/binary"
+)
+
 /*
 Message sets
 One structure common to both the produce and fetch requests is the message set format. A message in kafka is a key-value pair with a small amount of associated metadata. A message set is just a sequence of messages with offset and size information. This format happens to be used both for the on-disk storage on the broker and the on-the-wire format.
@@ -46,3 +50,45 @@ type Message struct {
 	Value      []byte
 }
 type MessageSet []Message
+
+func (messageSet *MessageSet) Length() int {
+	length := 4
+	for _, message := range *messageSet {
+		length += 24 + len(message.Key) + len(message.Value)
+	}
+	return length
+}
+
+func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(*messageSet)))
+	offset += 4
+
+	for _, message := range *messageSet {
+		binary.BigEndian.PutUint64(payload[offset:], uint64(message.Offset))
+		offset += 8
+
+		binary.BigEndian.PutUint32(payload[offset:], uint32(message.MessageSize))
+		offset += 4
+
+		binary.BigEndian.PutUint32(payload[offset:], uint32(message.Crc))
+		offset += 4
+
+		payload[offset] = byte(message.MagicByte)
+		offset += 1
+
+		payload[offset] = byte(message.Attributes)
+		offset += 1
+
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(message.Key)))
+		offset += 2
+		copy(payload[offset:], message.Key)
+		offset += len(message.Key)
+
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(message.Value)))
+		offset += 2
+		copy(payload[offset:], message.Value)
+		offset += len(message.Value)
+	}
+
+	return offset
+}

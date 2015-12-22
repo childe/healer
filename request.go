@@ -20,6 +20,10 @@ type RequestHeader struct {
 	ClientId      string
 }
 
+func (requestHeader *RequestHeader) Length() int {
+	return 10 + len(requestHeader.ClientId)
+}
+
 func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 	binary.BigEndian.PutUint16(payload[offset:], requestHeader.ApiKey)
 	offset += 2

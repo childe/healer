@@ -24,7 +24,7 @@ type SimpleConsumer struct {
 	MinBytes    int32
 }
 
-func (simpleConsumer *SimpleConsumer) consume(messages chan Message) {
+func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 	var (
 		metadataResponse *MetadataResponse = nil
 		err              error
@@ -89,24 +89,25 @@ func (simpleConsumer *SimpleConsumer) consume(messages chan Message) {
 		CorrelationId: correlationId,
 		ClientId:      simpleConsumer.ClientId,
 	}
+	var offset int64
 	for {
 		payload := fetchRequest.Encode()
 		conn.Write(payload)
 		buf := make([]byte, 4)
 		_, err = conn.Read(buf)
-		//logger.Println(buf)
+		logger.Println(buf)
 
 		if err != nil {
 			logger.Fatalln(err)
 		}
 		responseLength := int(binary.BigEndian.Uint32(buf))
-		logger.Println(responseLength)
+		logger.Println("responseLength:", responseLength)
 		buf = make([]byte, responseLength)
 
 		readLength := 0
 		for {
 			length, err := conn.Read(buf[readLength:])
-			logger.Println(length)
+			logger.Println("length", length)
 			if err == io.EOF {
 				break
 			}
@@ -118,26 +119,31 @@ func (simpleConsumer *SimpleConsumer) consume(messages chan Message) {
 				logger.Fatalln("fetch more data than needed")
 			}
 		}
-		//correlationId := int(binary.BigEndian.Uint32(buf))
+		logger.Println(buf)
+		correlationId := int32(binary.BigEndian.Uint32(buf))
+		logger.Println("correlationId", correlationId)
 		fetchResponse, err := DecodeFetchResponse(buf[4:])
 		if err != nil {
 			logger.Fatalln(err)
 		}
 
-		var offset int64
 		for _, fetchResponsePiece := range fetchResponse {
 			for _, topicData := range fetchResponsePiece.TopicDatas {
-				if topicData.ErrorCode != 0 {
-					logger.Printf("failed to fetch data from topic[%s] partition[%d]\n", simpleConsumer.TopicName, simpleConsumer.Partition)
-				}
-				for _, message := range topicData.MessageSet {
-					offset = message.Offset
-					messages <- message
+				if topicData.ErrorCode == 0 {
+					for _, message := range topicData.MessageSet {
+						offset = message.Offset
+						log.Printf("offset: %d\n", offset)
+						messages <- message
+					}
+				} else if topicData.ErrorCode == -1 {
+					logger.Printf(AllError[0].Format())
+				} else {
+					logger.Printf(AllError[topicData.ErrorCode].Format())
 				}
 			}
 		}
-		log.Printf("offset is %d\n", offset)
-		partitonBlock.FetchOffset = offset
+		log.Printf("offset is now %d\n", offset)
+		partitonBlock.FetchOffset = offset + 1
 		correlationId++
 		fetchRequest.RequestHeader.CorrelationId = correlationId
 	}
