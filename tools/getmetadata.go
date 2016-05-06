@@ -29,7 +29,7 @@ func main() {
 	for _, broker := range strings.Split(*brokerList, ",") {
 
 		pid := os.Getpid()
-		metadataResponse, err := gokafka.GetMetaData(broker, *topic, int32(pid), clientID)
+		metadataResponse, err := gokafka.GetMetaData(broker, *topic, int32(pid), *clientID)
 		if err != nil {
 			logger.Println(err)
 			continue
