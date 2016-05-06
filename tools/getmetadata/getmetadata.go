@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/childe/gokafka"
 )
@@ -26,21 +25,16 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	for _, broker := range strings.Split(*brokerList, ",") {
-
-		pid := os.Getpid()
-		metadataResponse, err := gokafka.GetMetaData(broker, *topic, int32(pid), *clientID)
-		if err != nil {
-			logger.Println(err)
-			continue
-		}
-
-		s, err := json.MarshalIndent(metadataResponse, "", "  ")
-		if err != nil {
-			logger.Println(err)
-			continue
-		}
-		fmt.Println(string(s))
-		break
+	pid := os.Getpid()
+	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(pid), *clientID)
+	if err != nil {
+		logger.Println(err)
 	}
+
+	s, err := json.MarshalIndent(metadataResponse, "", "  ")
+	if err != nil {
+		logger.Println(err)
+	}
+
+	fmt.Println(string(s))
 }

@@ -1,35 +1,68 @@
 package gokafka
 
 import (
+	"encoding/binary"
+	"errors"
+	"io"
 	"net"
+	"strings"
 	"time"
 )
 
-func GetMetaData(broker string, topic string, correlationId int32, clientId string) (*MetadataResponse, error) {
-	metadataRequest := MetadataRequest{}
-	metadataRequest.RequestHeader = &RequestHeader{
-		ApiKey:        API_MetadataRequest,
-		ApiVersion:    0,
-		CorrelationId: 0,
-		ClientId:      clientId,
-	}
-	metadataRequest.Topic = []string{topic}
+// GetMetaData return one MetadataResponse object
+func GetMetaData(brokerList string, topic string, correlationID int32, clientID string) (*MetadataResponse, error) {
+	for _, broker := range strings.Split(brokerList, ",") {
+		metadataRequest := MetadataRequest{}
+		metadataRequest.RequestHeader = &RequestHeader{
+			ApiKey:        API_MetadataRequest,
+			ApiVersion:    0,
+			CorrelationId: correlationID,
+			ClientId:      clientID,
+		}
+		metadataRequest.Topic = []string{topic}
 
-	conn, err := net.DialTimeout("tcp", broker, time.Second*5)
-	if err != nil {
-		return nil, err
-	}
-	payload := metadataRequest.Encode()
-	conn.Write(payload)
+		conn, err := net.DialTimeout("tcp", broker, time.Second*5)
+		if err != nil {
+			return nil, err
+		}
+		payload := metadataRequest.Encode()
+		conn.Write(payload)
 
-	responsePlayload := make([]byte, 10240)
-	length, _ := conn.Read(responsePlayload)
-	conn.Close()
+		responseLengthBuf := make([]byte, 4)
+		_, err = conn.Read(responseLengthBuf)
+		if err != nil {
+			return nil, err
+		}
 
-	metadataResponse := &MetadataResponse{}
-	err = metadataResponse.Decode(responsePlayload[:length])
-	if err != nil {
-		return nil, err
+		responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
+		responseBuf := make([]byte, 4+responseLength)
+
+		readLength := 0
+		for {
+			length, err := conn.Read(responseBuf[4+readLength:])
+			if err == io.EOF {
+				break
+			}
+
+			if err != nil {
+				logger.Fatalln(err)
+				return nil, err
+			}
+
+			readLength += length
+			if readLength > responseLength {
+				return nil, errors.New("fetch more data than needed while read getMetaData response")
+			}
+		}
+		copy(responseBuf[0:4], responseLengthBuf)
+
+		metadataResponse := &MetadataResponse{}
+		err = metadataResponse.Decode(responseBuf)
+		if err != nil {
+			return nil, err
+		}
+		return metadataResponse, nil
 	}
-	return metadataResponse, nil
+
+	return nil, errors.New("could not get metadata from all brokers")
 }
