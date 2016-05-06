@@ -65,13 +65,20 @@ func (produceRequest *ProduceRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(produceRequest.Timeout))
 	offset += 4
 
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(produceRequest.TopicBlocks)))
+	offset += 4
 	for _, topicBlock := range produceRequest.TopicBlocks {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicBlock.TopicName)))
 		offset += 2
+		copy(payload[offset:], topicBlock.TopicName)
+		offset += len(topicBlock.TopicName)
+
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(topicBlock.PartitonBlocks)))
+		offset += 4
 		for _, parttionBlock := range topicBlock.PartitonBlocks {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(parttionBlock.Partition))
 			offset += 4
-			binary.BigEndian.PutUint32(payload[offset:], uint32(parttionBlock.MessageSetSize))
+			binary.BigEndian.PutUint32(payload[offset:], uint32(parttionBlock.MessageSet.Length()))
 			offset += 4
 
 			offset = parttionBlock.MessageSet.Encode(payload, offset)
