@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gokafka"
+	"github.com/childe/gokafka"
 	"log"
 	"os"
 	"strings"
