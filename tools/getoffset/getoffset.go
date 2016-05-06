@@ -3,39 +3,45 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/gokafka"
 	"log"
 	"net"
 	"os"
 	"time"
+
+	"github.com/childe/gokafka"
 )
 
 var (
-	brokerList         = flag.String("brokers", "127.0.0.1:9092", "The comma separated list of brokers in the Kafka cluster.")
-	topic              = flag.String("topic", "", "REQUIRED")
-	timeValue          = flag.Int("time", -3, "REQUIRED. time")
-	maxNumberOfOffsets = flag.Int("maxoffsets", 0, "REQUIRED. time")
+	brokerList = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
+	topic      = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
+	timeValue  = flag.Int64("time", -1, "timestamp/-1(latest)/-2(earliest). timestamp of the offsets before that.(default: -1) ")
+	offsets    = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
+	clientID   = flag.String("clientID", "gokafkaShell", "The ID of this client.")
 
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
 func main() {
 	flag.Parse()
-	//flag.PrintDefaults()
 
-	correlationId := uint32(os.Getpid())
+	if *topic == "" {
+		fmt.Println("need topic!")
+		flag.PrintDefaults()
+	}
+
+	correlationID := int32(os.Getpid())
 
 	requestHeader := &gokafka.RequestHeader{
 		ApiKey:        gokafka.API_OffsetRequest,
 		ApiVersion:    0,
-		CorrelationId: correlationId,
-		ClientId:      "gokafka_getoffset",
+		CorrelationId: correlationID,
+		ClientId:      *clientID,
 	}
 
 	partitionOffsetRequestInfos := make(map[uint32]*gokafka.PartitionOffsetRequestInfo)
 	partitionOffsetRequestInfos[0] = &gokafka.PartitionOffsetRequestInfo{
-		Time:               -1,
-		MaxNumberOfOffsets: 1000,
+		Time:               *timeValue,
+		MaxNumberOfOffsets: uint32(*offsets),
 	}
 	topicOffsetRequestInfos := make(map[string]map[uint32]*gokafka.PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[*topic] = partitionOffsetRequestInfos
@@ -52,8 +58,8 @@ func main() {
 		Timeout:   time.Second * 5,
 		KeepAlive: time.Hour * 2,
 	}
-	addr := net.JoinHostPort(*brokerList, "9092")
-	conn, connErr := dialer.Dial("tcp", addr)
+
+	conn, connErr := dialer.Dial("tcp", *brokerList)
 	if connErr != nil {
 		fmt.Println("dial error")
 		fmt.Println(connErr)
