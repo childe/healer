@@ -16,7 +16,7 @@ var (
 	topic      = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
 	timeValue  = flag.Int64("time", -1, "timestamp/-1(latest)/-2(earliest). timestamp of the offsets before that.(default: -1) ")
 	offsets    = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
-	clientID   = flag.String("clientID", "gokafkaShell", "The ID of this client.")
+	clientID   = flag.String("clientID", "gokafka", "The ID of this client.")
 
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
