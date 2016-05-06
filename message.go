@@ -2,6 +2,7 @@ package gokafka
 
 import (
 	"encoding/binary"
+	"github.com/klauspost/crc32"
 )
 
 /*
@@ -43,7 +44,7 @@ type Message struct {
 	MessageSize int32
 
 	//Message
-	Crc        int32
+	Crc        uint32
 	MagicByte  int8
 	Attributes int8
 	Key        []byte
@@ -52,26 +53,23 @@ type Message struct {
 type MessageSet []Message
 
 func (messageSet *MessageSet) Length() int {
-	length := 4
+	length := 0
 	for _, message := range *messageSet {
-		length += 24 + len(message.Key) + len(message.Value)
+		length += 26 + len(message.Key) + len(message.Value)
 	}
 	return length
 }
 
 func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(*messageSet)))
-	offset += 4
-
 	for _, message := range *messageSet {
 		binary.BigEndian.PutUint64(payload[offset:], uint64(message.Offset))
 		offset += 8
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(message.MessageSize))
+		binary.BigEndian.PutUint32(payload[offset:], uint32(14+len(message.Key)+len(message.Value)))
 		offset += 4
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(message.Crc))
 		offset += 4
+		crcPosition := offset
 
 		payload[offset] = byte(message.MagicByte)
 		offset += 1
@@ -79,15 +77,24 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		payload[offset] = byte(message.Attributes)
 		offset += 1
 
-		binary.BigEndian.PutUint16(payload[offset:], uint16(len(message.Key)))
-		offset += 2
-		copy(payload[offset:], message.Key)
-		offset += len(message.Key)
+		if message.Key == nil {
+			var i int32 = -1
+			binary.BigEndian.PutUint32(payload[offset:], uint32(i))
+			offset += 4
+		} else {
+			binary.BigEndian.PutUint16(payload[offset:], uint16(len(message.Key)))
+			offset += 2
+			copy(payload[offset:], message.Key)
+			offset += len(message.Key)
+		}
 
-		binary.BigEndian.PutUint16(payload[offset:], uint16(len(message.Value)))
-		offset += 2
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(message.Value)))
+		offset += 4
 		copy(payload[offset:], message.Value)
 		offset += len(message.Value)
+
+		message.Crc = crc32.ChecksumIEEE(payload[crcPosition:offset])
+		binary.BigEndian.PutUint32(payload[crcPosition-4:], message.Crc)
 	}
 
 	return offset
