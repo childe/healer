@@ -72,7 +72,7 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 				offset += 8
 				fetchResponse[i].TopicDatas[j].MessageSet[k].MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
-				fetchResponse[i].TopicDatas[j].MessageSet[k].Crc = int32(binary.BigEndian.Uint32(payload[offset:]))
+				fetchResponse[i].TopicDatas[j].MessageSet[k].Crc = binary.BigEndian.Uint32(payload[offset:])
 				offset += 4
 				fetchResponse[i].TopicDatas[j].MessageSet[k].MagicByte = int8(payload[offset])
 				offset += 1
