@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/gokafka"
+	"fmt"
+	"github.com/childe/gokafka"
 	"log"
 	"math"
 	"os"
@@ -25,6 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *topic == "" {
+		fmt.Println("need topic!")
 		flag.PrintDefaults()
 	}
 
