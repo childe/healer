@@ -3,6 +3,7 @@ package gokafka
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -56,10 +57,11 @@ type MetadataResponse struct {
 }
 
 func (metadataResponse *MetadataResponse) Decode(payload []byte) error {
+	//TODO: actually we have judged if the lenght matches while reading data from connection
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return errors.New("MetadataResponse length did not match")
+		return errors.New(fmt.Sprintf("MetadataResponse length did not match: %d!=%d", responseLength+4, len(payload)))
 	}
 	offset += 4
 
