@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/gokafka"
 	"log"
 	"os"
+
+	"github.com/childe/gokafka"
 )
 
 var (
