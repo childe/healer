@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -82,11 +84,45 @@ func main() {
 				}
 				conn.Write(payload)
 
-				responsePayload := make([]byte, 1024)
-				length, _ := conn.Read(responsePayload)
+				responseLengthBuf := make([]byte, 4)
+				_, err = conn.Read(responseLengthBuf)
+				if err != nil {
+					logger.Println(connErr)
+					//next broker for this partition
+					continue
+				}
+
+				responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
+				responseBuf := make([]byte, 4+responseLength)
+
+				readLength := 0
+				for {
+					length, err := conn.Read(responseBuf[4+readLength:])
+					if err == io.EOF {
+						break
+					}
+
+					if err != nil {
+						logger.Println(connErr)
+						break
+					}
+
+					readLength += length
+					if readLength > responseLength {
+						logger.Println("fetch more data than needed while read getMetaData response")
+						break
+					}
+				}
+
+				if readLength != responseLength {
+					logger.Println("do NOT fetch needed length while read getMetaData response")
+					//next broker for this partition
+					continue
+				}
+				copy(responseBuf[0:4], responseLengthBuf)
 
 				offsetResponse := &gokafka.OffsetResponse{}
-				offsetResponse.Decode(responsePayload[:length])
+				offsetResponse.Decode(responseBuf)
 				for topic, partitions := range offsetResponse.Info {
 					for _, partition := range partitions {
 						fmt.Printf("%s:%d", topic, partition.Partition)
