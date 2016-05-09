@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/childe/gokafka"
@@ -29,53 +30,74 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	correlationID := int32(os.Getpid())
-
-	requestHeader := &gokafka.RequestHeader{
-		ApiKey:        gokafka.API_OffsetRequest,
-		ApiVersion:    0,
-		CorrelationId: correlationID,
-		ClientId:      *clientID,
+	correlationID := os.Getpid()
+	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
+	if err != nil {
+		logger.Fatal(err)
 	}
 
-	partitionOffsetRequestInfos := make(map[uint32]*gokafka.PartitionOffsetRequestInfo)
-	partitionOffsetRequestInfos[0] = &gokafka.PartitionOffsetRequestInfo{
-		Time:               *timeValue,
-		MaxNumberOfOffsets: uint32(*offsets),
-	}
-	topicOffsetRequestInfos := make(map[string]map[uint32]*gokafka.PartitionOffsetRequestInfo)
-	topicOffsetRequestInfos[*topic] = partitionOffsetRequestInfos
+	brokers := metadataResponse.Brokers
 
-	offsetReqeust := &gokafka.OffsetReqeust{
-		RequestHeader: requestHeader,
-		ReplicaId:     -1,
-		RequestInfo:   topicOffsetRequestInfos,
-	}
+	partitions := metadataResponse.TopicMetadatas[0].PartitionMetadatas
 
-	payload := offsetReqeust.Encode()
+	for _, partition := range partitions {
+		partitionID := partition.PartitionId
+		leader := partition.Leader
 
-	dialer := net.Dialer{
-		Timeout:   time.Second * 5,
-		KeepAlive: time.Hour * 2,
-	}
+		for _, broker := range brokers {
+			if leader == broker.NodeId {
+				requestHeader := &gokafka.RequestHeader{
+					ApiKey:        gokafka.API_OffsetRequest,
+					ApiVersion:    0,
+					CorrelationId: int32(correlationID),
+					ClientId:      *clientID,
+				}
 
-	conn, connErr := dialer.Dial("tcp", *brokerList)
-	if connErr != nil {
-		fmt.Println("dial error")
-		fmt.Println(connErr)
-		return
-	}
-	conn.Write(payload)
+				partitionOffsetRequestInfos := make(map[uint32]*gokafka.PartitionOffsetRequestInfo)
+				partitionOffsetRequestInfos[uint32(partitionID)] = &gokafka.PartitionOffsetRequestInfo{
+					Time:               *timeValue,
+					MaxNumberOfOffsets: uint32(*offsets),
+				}
+				topicOffsetRequestInfos := make(map[string]map[uint32]*gokafka.PartitionOffsetRequestInfo)
+				topicOffsetRequestInfos[*topic] = partitionOffsetRequestInfos
 
-	responsePayload := make([]byte, 1024)
-	length, _ := conn.Read(responsePayload)
+				offsetReqeust := &gokafka.OffsetReqeust{
+					RequestHeader: requestHeader,
+					ReplicaId:     -1,
+					RequestInfo:   topicOffsetRequestInfos,
+				}
 
-	offsetResponse := &gokafka.OffsetResponse{}
-	offsetResponse.Decode(responsePayload[:length])
-	for topic, partions := range offsetResponse.Info {
-		fmt.Println(topic)
-		for _, b := range partions {
-			fmt.Println(*b)
+				payload := offsetReqeust.Encode()
+
+				dialer := net.Dialer{
+					Timeout:   time.Second * 5,
+					KeepAlive: time.Hour * 2,
+				}
+
+				leaderAddr := net.JoinHostPort(broker.Host, strconv.Itoa(int(broker.Port)))
+				conn, connErr := dialer.Dial("tcp", leaderAddr)
+				if connErr != nil {
+					logger.Println(connErr)
+					continue
+				}
+				conn.Write(payload)
+
+				responsePayload := make([]byte, 1024)
+				length, _ := conn.Read(responsePayload)
+
+				offsetResponse := &gokafka.OffsetResponse{}
+				offsetResponse.Decode(responsePayload[:length])
+				for topic, partitions := range offsetResponse.Info {
+					for _, partition := range partitions {
+						fmt.Printf("%s:%d", topic, partition.Partition)
+						for _, offset := range partition.Offset {
+							fmt.Printf(":%d", offset)
+						}
+						fmt.Println()
+					}
+				}
+			}
 		}
 	}
+
 }
