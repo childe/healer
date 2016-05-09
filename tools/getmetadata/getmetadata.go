@@ -25,8 +25,8 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	pid := os.Getpid()
-	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(pid), *clientID)
+	correlationID := os.Getpid()
+	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
 	if err != nil {
 		logger.Println(err)
 	}
