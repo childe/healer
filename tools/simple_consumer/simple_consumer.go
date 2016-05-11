@@ -47,7 +47,7 @@ func main() {
 	go func() { simpleConsumer.Consume(messages) }()
 	for {
 		message := <-messages
-		log.Println(string(message.Value))
+		fmt.Printf("%d: %s\n", message.Offset, message.Value)
 		i++
 		if i >= *maxMessages {
 			os.Exit(0)
