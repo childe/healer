@@ -1,5 +1,7 @@
 package main
 
+//TODO maxBytes
+
 import (
 	"flag"
 	"fmt"
