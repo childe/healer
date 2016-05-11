@@ -1,15 +1,10 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/childe/gokafka"
 )
@@ -24,82 +19,6 @@ var (
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
-func getOffset(broker gokafka.BrokerInfo, partitionID int32) (*gokafka.OffsetResponse, error) {
-	correlationID := os.Getpid()
-
-	requestHeader := &gokafka.RequestHeader{
-		ApiKey:        gokafka.API_OffsetRequest,
-		ApiVersion:    0,
-		CorrelationId: int32(correlationID),
-		ClientId:      *clientID,
-	}
-
-	partitionOffsetRequestInfos := make(map[uint32]*gokafka.PartitionOffsetRequestInfo)
-	partitionOffsetRequestInfos[uint32(partitionID)] = &gokafka.PartitionOffsetRequestInfo{
-		Time:               *timeValue,
-		MaxNumberOfOffsets: uint32(*offsets),
-	}
-	topicOffsetRequestInfos := make(map[string]map[uint32]*gokafka.PartitionOffsetRequestInfo)
-	topicOffsetRequestInfos[*topic] = partitionOffsetRequestInfos
-
-	offsetReqeust := &gokafka.OffsetReqeust{
-		RequestHeader: requestHeader,
-		ReplicaId:     -1,
-		RequestInfo:   topicOffsetRequestInfos,
-	}
-
-	payload := offsetReqeust.Encode()
-
-	dialer := net.Dialer{
-		Timeout:   time.Second * 5,
-		KeepAlive: time.Hour * 2,
-	}
-
-	leaderAddr := net.JoinHostPort(broker.Host, strconv.Itoa(int(broker.Port)))
-	conn, connErr := dialer.Dial("tcp", leaderAddr)
-	if connErr != nil {
-		logger.Println(connErr)
-		return nil, connErr
-	}
-	conn.Write(payload)
-
-	responseLengthBuf := make([]byte, 4)
-	_, err := conn.Read(responseLengthBuf)
-	if err != nil {
-		return nil, err
-	}
-
-	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	responseBuf := make([]byte, 4+responseLength)
-
-	readLength := 0
-	for {
-		length, err := conn.Read(responseBuf[4+readLength:])
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		readLength += length
-		if readLength > responseLength {
-			return nil, fmt.Errorf("fetch more data than needed while read getMetaData response")
-		}
-	}
-
-	if readLength != responseLength {
-		return nil, fmt.Errorf("do NOT fetch needed length while read getMetaData response")
-	}
-	copy(responseBuf[0:4], responseLengthBuf)
-
-	offsetResponse := &gokafka.OffsetResponse{}
-	offsetResponse.Decode(responseBuf)
-
-	return offsetResponse, nil
-}
-
 func main() {
 	flag.Parse()
 
@@ -108,7 +27,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	correlationID := os.Getpid()
+	correlationID := int32(os.Getpid())
 	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
 	if err != nil {
 		logger.Fatal(err)
@@ -124,7 +43,7 @@ func main() {
 
 		for _, broker := range brokers {
 			if leader == broker.NodeId {
-				offsetResponse, err := getOffset(broker, partitionID)
+				offsetResponse, err := gokafka.GetOffset(broker, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
 				if err != nil {
 					fmt.Println(err)
 
