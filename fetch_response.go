@@ -1,8 +1,6 @@
 package gokafka
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
 /*
 FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]]
@@ -20,6 +18,7 @@ Partition				The id of the partition this response is for.
 TopicName				The name of the topic this response entry is for.
 */
 
+// TopicData stores partitionID and MessageSet in the partition
 type TopicData struct {
 	Partition           int32
 	ErrorCode           int16
@@ -28,12 +27,14 @@ type TopicData struct {
 	MessageSet          MessageSet
 }
 
+// FetchResponse stores topicname and arrya of TopicData
 type FetchResponse []struct {
 	//CorrelationId int32
 	TopicName  string
 	TopicDatas []TopicData
 }
 
+// DecodeFetchResponse decode payload stored in byte array to FetchResponse object
 func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 	offset := uint64(0)
 
@@ -66,7 +67,7 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 			offset += 8
 			fetchResponse[i].TopicDatas[j].MessageSetSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
-			fetchResponse[i].TopicDatas[j].MessageSet = make([]Message, fetchResponse[i].TopicDatas[j].MessageSetSize)
+			fetchResponse[i].TopicDatas[j].MessageSet = make([]Message, fetchResponse[i].TopicDatas[j].MessageSetSize/26)
 			for k := int32(0); k < fetchResponse[i].TopicDatas[j].MessageSetSize; k++ {
 				fetchResponse[i].TopicDatas[j].MessageSet[k].Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
@@ -75,9 +76,9 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 				fetchResponse[i].TopicDatas[j].MessageSet[k].Crc = binary.BigEndian.Uint32(payload[offset:])
 				offset += 4
 				fetchResponse[i].TopicDatas[j].MessageSet[k].MagicByte = int8(payload[offset])
-				offset += 1
+				offset++
 				fetchResponse[i].TopicDatas[j].MessageSet[k].Attributes = int8(payload[offset])
-				offset += 1
+				offset++
 				keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
 				if keyLength == -1 {
@@ -98,6 +99,7 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 					offset += uint64(valueLength)
 				}
 				if offset == uint64(len(payload)) {
+					fetchResponse[i].TopicDatas[j].MessageSet = fetchResponse[i].TopicDatas[j].MessageSet[:k+1]
 					break
 				}
 			}
