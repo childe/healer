@@ -2,6 +2,7 @@ package gokafka
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -13,8 +14,9 @@ import (
 
 var logger = log.New(os.Stderr, "", log.LstdFlags)
 
+// SimpleConsumer instance is built to consume messages from kafka broker
 type SimpleConsumer struct {
-	ClientId    string
+	ClientID    string
 	Brokers     string
 	TopicName   string
 	Partition   int32
@@ -24,14 +26,15 @@ type SimpleConsumer struct {
 	MinBytes    int32
 }
 
+// Consume consume  messages from kafka broker and send them to channels
 func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 	var (
-		metadataResponse *MetadataResponse = nil
+		metadataResponse *MetadataResponse
 		err              error
 	)
 	pid := os.Getpid()
 	for _, broker := range strings.Split(simpleConsumer.Brokers, ",") {
-		metadataResponse, err = GetMetaData(broker, simpleConsumer.TopicName, int32(pid), simpleConsumer.ClientId)
+		metadataResponse, err = GetMetaData(broker, simpleConsumer.TopicName, int32(pid), simpleConsumer.ClientID)
 		if err != nil {
 			logger.Println(err)
 		} else {
@@ -63,7 +66,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 			port = broker.Port
 		}
 	}
-	logger.Printf("leader of %s:%d is %s:%d", simpleConsumer.TopicName, simpleConsumer.Partition, host, port)
+	// logger.Printf("leader of %s:%d is %s:%d", simpleConsumer.TopicName, simpleConsumer.Partition, host, port)
 	leaderAddr := net.JoinHostPort(host, strconv.Itoa(int(port)))
 	conn, err := net.DialTimeout("tcp", leaderAddr, time.Second*5)
 	if err != nil {
@@ -71,7 +74,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 	}
 	defer func() { conn.Close() }()
 
-	correlationId := int32(0)
+	correlationID := int32(0)
 	partitonBlock := &PartitonBlock{
 		Partition:   simpleConsumer.Partition,
 		FetchOffset: simpleConsumer.FetchOffset,
@@ -86,28 +89,27 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 	fetchRequest.RequestHeader = &RequestHeader{
 		ApiKey:        API_FetchRequest,
 		ApiVersion:    0,
-		CorrelationId: correlationId,
-		ClientId:      simpleConsumer.ClientId,
+		CorrelationId: correlationID,
+		ClientId:      simpleConsumer.ClientID,
 	}
-	var offset int64
+
 	for {
 		payload := fetchRequest.Encode()
 		conn.Write(payload)
+
 		buf := make([]byte, 4)
 		_, err = conn.Read(buf)
-		logger.Println(buf)
-
 		if err != nil {
 			logger.Fatalln(err)
 		}
+
 		responseLength := int(binary.BigEndian.Uint32(buf))
-		logger.Println("responseLength:", responseLength)
+		fmt.Println(responseLength)
 		buf = make([]byte, responseLength)
 
 		readLength := 0
 		for {
 			length, err := conn.Read(buf[readLength:])
-			logger.Println("length", length)
 			if err == io.EOF {
 				break
 			}
@@ -119,9 +121,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 				logger.Fatalln("fetch more data than needed")
 			}
 		}
-		logger.Println(buf)
-		correlationId := int32(binary.BigEndian.Uint32(buf))
-		logger.Println("correlationId", correlationId)
+		correlationID := int32(binary.BigEndian.Uint32(buf))
 		fetchResponse, err := DecodeFetchResponse(buf[4:])
 		if err != nil {
 			logger.Fatalln(err)
@@ -131,8 +131,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 			for _, topicData := range fetchResponsePiece.TopicDatas {
 				if topicData.ErrorCode == 0 {
 					for _, message := range topicData.MessageSet {
-						offset = message.Offset
-						log.Printf("offset: %d\n", offset)
+						partitonBlock.FetchOffset = message.Offset + 1
 						messages <- message
 					}
 				} else if topicData.ErrorCode == -1 {
@@ -142,9 +141,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 				}
 			}
 		}
-		log.Printf("offset is now %d\n", offset)
-		partitonBlock.FetchOffset = offset + 1
-		correlationId++
-		fetchRequest.RequestHeader.CorrelationId = correlationId
+		correlationID++
+		fetchRequest.RequestHeader.CorrelationId = correlationID
 	}
 }
