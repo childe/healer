@@ -18,6 +18,7 @@ var (
 	clientID    = flag.String("clientID", "gokafka", "The ID of this client.")
 	minBytes    = flag.Int("min-bytes", 1, "The fetch size of each request.")
 	maxWaitTime = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
+	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 	// maxBytes    = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 
 	logger = log.New(os.Stderr, "", log.LstdFlags)
@@ -41,10 +42,15 @@ func main() {
 	simpleConsumer.MaxBytes = math.MaxInt32
 	simpleConsumer.MinBytes = int32(*minBytes)
 
+	i := 0
 	messages := make(chan gokafka.Message)
 	go func() { simpleConsumer.Consume(messages) }()
 	for {
 		message := <-messages
 		log.Println(string(message.Value))
+		i++
+		if i >= *maxMessages {
+			os.Exit(0)
+		}
 	}
 }
