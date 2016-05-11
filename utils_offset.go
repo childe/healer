@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strconv"
 	"time"
 )
 
 // GetOffset return the offset values array from server
-func GetOffset(broker BrokerInfo, topic string, partitionID int32, correlationID int32, clientID string, timeValue int64, offsets uint32) (*OffsetResponse, error) {
+func GetOffset(broker string, topic string, partitionID int32, correlationID int32, clientID string, timeValue int64, offsets uint32) (*OffsetResponse, error) {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
@@ -39,8 +38,7 @@ func GetOffset(broker BrokerInfo, topic string, partitionID int32, correlationID
 		KeepAlive: time.Hour * 2,
 	}
 
-	leaderAddr := net.JoinHostPort(broker.Host, strconv.Itoa(int(broker.Port)))
-	conn, connErr := dialer.Dial("tcp", leaderAddr)
+	conn, connErr := dialer.Dial("tcp", broker)
 	if connErr != nil {
 		logger.Println(connErr)
 		return nil, connErr

@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strconv"
 
 	"github.com/childe/gokafka"
 )
@@ -43,7 +45,8 @@ func main() {
 
 		for _, broker := range brokers {
 			if leader == broker.NodeId {
-				offsetResponse, err := gokafka.GetOffset(broker, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
+				brokerAddr := net.JoinHostPort(broker.Host, strconv.Itoa(int(broker.Port)))
+				offsetResponse, err := gokafka.GetOffset(brokerAddr, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
 				if err != nil {
 					fmt.Println(err)
 
