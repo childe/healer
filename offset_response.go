@@ -1,4 +1,4 @@
-package gokafka
+package healer
 
 import (
 	"encoding/binary"

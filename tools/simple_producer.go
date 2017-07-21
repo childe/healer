@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/childe/gokafka"
+	"github.com/childe/healer"
 )
 
 var (
@@ -27,7 +27,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	simpleProducer := &gokafka.SimpleProducer{}
+	simpleProducer := &healer.SimpleProducer{}
 	simpleProducer.Config.ClientId = "console-producer"
 	simpleProducer.Config.Broker = *brokers
 	simpleProducer.Config.TopicName = *topic
@@ -35,10 +35,10 @@ func main() {
 	simpleProducer.Config.RequiredAcks = 0
 	simpleProducer.Config.Timeout = 0
 	simpleProducer.Config.MessageCap = 1
-	simpleProducer.MessageSet = make([]gokafka.Message, 1)
+	simpleProducer.MessageSet = make([]healer.Message, 1)
 	simpleProducer.MessageSetSize = 0
 
-	message := gokafka.Message{
+	message := healer.Message{
 		MagicByte:  0,
 		Attributes: 0,
 		Key:        nil,

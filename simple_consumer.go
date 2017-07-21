@@ -1,7 +1,8 @@
-package gokafka
+package healer
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -103,6 +104,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 		}
 
 		responseLength := int(binary.BigEndian.Uint32(buf))
+		fmt.Println(responseLength)
 		buf = make([]byte, responseLength)
 
 		readLength := 0

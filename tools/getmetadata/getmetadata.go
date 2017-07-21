@@ -7,12 +7,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/childe/gokafka"
+	"github.com/childe/healer"
 )
 
 var (
 	brokerList = flag.String("brokers", "127.0.0.1:9092", "REQUIRED: The list of hostname and port of the server to connect to.")
-	clientID   = flag.String("clientID", "gokafka", "The ID of this client.")
+	clientID   = flag.String("clientID", "healer", "The ID of this client.")
 	topic      = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
 	logger     = log.New(os.Stderr, "", log.LstdFlags)
 )
@@ -26,7 +26,7 @@ func main() {
 	}
 
 	correlationID := os.Getpid()
-	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
+	metadataResponse, err := healer.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
 	if err != nil {
 		logger.Println(err)
 	}

@@ -9,7 +9,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/childe/gokafka"
+	"github.com/childe/healer"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition   = flag.Int("partition", 0, "The partition to consume from.")
 	offset      = flag.Int64("offset", -2, "The offset id to consume from, default to -2 which means from beginning; while value -1 means from end(default -2).")
-	clientID    = flag.String("clientID", "gokafka", "The ID of this client.")
+	clientID    = flag.String("clientID", "healer", "The ID of this client.")
 	minBytes    = flag.Int("min-bytes", 1, "The fetch size of each request.")
 	maxWaitTime = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
 	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
@@ -34,7 +34,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	simpleConsumer := &gokafka.SimpleConsumer{}
+	simpleConsumer := &healer.SimpleConsumer{}
 	simpleConsumer.ClientID = *clientID
 	simpleConsumer.Brokers = *brokers
 	simpleConsumer.TopicName = *topic
@@ -45,7 +45,7 @@ func main() {
 	simpleConsumer.MinBytes = int32(*minBytes)
 
 	i := 0
-	messages := make(chan gokafka.Message)
+	messages := make(chan healer.Message)
 	go func() { simpleConsumer.Consume(messages) }()
 	for {
 		message := <-messages

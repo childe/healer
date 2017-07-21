@@ -1,8 +1,9 @@
-package gokafka
+package healer
 
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -12,6 +13,7 @@ import (
 // GetMetaData return one MetadataResponse object
 func GetMetaData(brokerList string, topic string, correlationID int32, clientID string) (*MetadataResponse, error) {
 	for _, broker := range strings.Split(brokerList, ",") {
+		fmt.Println(broker)
 		metadataRequest := MetadataRequest{}
 		metadataRequest.RequestHeader = &RequestHeader{
 			ApiKey:        API_MetadataRequest,
@@ -53,6 +55,9 @@ func GetMetaData(brokerList string, topic string, correlationID int32, clientID 
 			if readLength > responseLength {
 				return nil, errors.New("fetch more data than needed while read getMetaData response")
 			}
+			if readLength == responseLength {
+				break
+			}
 		}
 		copy(responseBuf[0:4], responseLengthBuf)
 
@@ -61,6 +66,7 @@ func GetMetaData(brokerList string, topic string, correlationID int32, clientID 
 		if err != nil {
 			return nil, err
 		}
+		conn.Close()
 		return metadataResponse, nil
 	}
 

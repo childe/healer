@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/childe/gokafka"
+	"github.com/childe/healer"
 )
 
 var (
@@ -16,7 +16,7 @@ var (
 	topic      = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
 	timeValue  = flag.Int64("time", -1, "timestamp/-1(latest)/-2(earliest). timestamp of the offsets before that.(default: -1) ")
 	offsets    = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
-	clientID   = flag.String("clientID", "gokafka", "The ID of this client.")
+	clientID   = flag.String("clientID", "healer", "The ID of this client.")
 
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	correlationID := int32(os.Getpid())
-	metadataResponse, err := gokafka.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
+	metadataResponse, err := healer.GetMetaData(*brokerList, *topic, int32(correlationID), *clientID)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func main() {
 		for _, broker := range brokers {
 			if leader == broker.NodeId {
 				brokerAddr := net.JoinHostPort(broker.Host, strconv.Itoa(int(broker.Port)))
-				offsetResponse, err := gokafka.GetOffset(brokerAddr, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
+				offsetResponse, err := healer.GetOffset(brokerAddr, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
 				if err != nil {
 					fmt.Println(err)
 

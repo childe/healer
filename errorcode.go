@@ -1,4 +1,4 @@
-package gokafka
+package healer
 
 type Error struct {
 	Errorcode int
@@ -6,8 +6,8 @@ type Error struct {
 	ErrorDesc string
 }
 
-func (gokafkaError *Error) Format() string {
-	return gokafkaError.ErrorDesc
+func (healerError *Error) Format() string {
+	return healerError.ErrorDesc
 }
 
 var AllError []*Error = make([]*Error, 32)
