@@ -39,7 +39,12 @@ func (broker *Broker) RequestMetaData(topic string) (*MetadataResponse, error) {
 		CorrelationId: correlationID,
 		ClientId:      broker.clientID,
 	}
-	metadataRequest.Topic = []string{topic}
+
+	if topic != "" {
+		metadataRequest.Topic = []string{topic}
+	} else {
+		metadataRequest.Topic = []string{}
+	}
 
 	payload := metadataRequest.Encode()
 	broker.conn.Write(payload)
