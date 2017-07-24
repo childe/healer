@@ -3,6 +3,7 @@ package healer
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -111,6 +112,23 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 
 // GetOffset return the offset values array from server
 func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue int64, offsets uint32) (*OffsetResponse, error) {
+	if partition < 0 {
+		metadataResponse, err := broker.RequestMetaData(topic)
+		if err != nil {
+			return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
+		}
+
+		// TODO only one topic
+		topicMetadata := metadataResponse.TopicMetadatas[0]
+
+		if topicMetadata.TopicErrorCode != 0 {
+			return nil, AllError[topicMetadata.TopicErrorCode]
+		}
+
+		for _, X := range topicMetadata.PartitionMetadatas{
+
+		}
+	}
 	correlationID := int32(os.Getpid())
 
 	requestHeader := &RequestHeader{
