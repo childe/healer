@@ -85,5 +85,7 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	//TODO error info in the response
 	return metadataResponse, nil
 }
