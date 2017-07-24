@@ -15,7 +15,7 @@ type Broker struct {
 	conn     net.Conn
 }
 
-func GetBroker(address string) (*Broker, error) {
+func NewBroker(address string) (*Broker, error) {
 	broker := &Broker{}
 	conn, err := net.DialTimeout("tcp", address, time.Second*5)
 	if err != nil {
