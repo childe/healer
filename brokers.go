@@ -12,30 +12,15 @@ type Brokers struct {
 	brokers map[int32]*Broker
 }
 
-func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
-	availableBroker := ""
+func getAllBrokersFromOne(broker *Broker, clientID string) (*Brokers, error) {
 	brokers := &Brokers{}
 	brokers.brokers = make(map[int32]*Broker)
-	for _, brokerAddr := range strings.Split(brokerList, ",") {
-		broker, err := NewBroker(brokerAddr, clientID, -1)
-		if err != nil {
-			glog.Infof("init broker from %s error:%s", brokerAddr, err)
-		} else {
-			brokers.brokers[0] = broker
-			availableBroker = brokerAddr
-			break
-		}
-	}
-	if availableBroker == "" {
-		return nil, fmt.Errorf("could not get any available broker from %s", brokerList)
-	}
 
-	// get all brokers
 	topic := ""
-	metadataResponse, err := brokers.brokers[0].RequestMetaData(&topic)
+	metadataResponse, err := broker.RequestMetaData(&topic)
 	if err != nil {
-		glog.Infof("could not get metadata from %s:%s", brokers.brokers[0].address, err)
-		return brokers, nil
+		glog.Infof("could not get metadata from %s:%s", broker.address, err)
+		return nil, err
 	}
 
 	if glog.V(10) {
@@ -49,9 +34,6 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokerAddr := fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port)
-		if brokerAddr == availableBroker {
-			continue
-		}
 		broker, err := NewBroker(brokerAddr, clientID, brokerInfo.NodeId)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
@@ -73,6 +55,24 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 	}
 
 	return brokers, nil
+}
+
+func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
+	for _, brokerAddr := range strings.Split(brokerList, ",") {
+		broker, err := NewBroker(brokerAddr, clientID, -1)
+		if err != nil {
+			glog.Infof("init broker from %s error:%s", brokerAddr, err)
+		} else {
+			brokers, err := getAllBrokersFromOne(broker, clientID)
+			if err != nil {
+				glog.Infof("could not get broker list from %s:%s", broker.address, err)
+			} else {
+				return brokers, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("could not get any available broker from %s", brokerList)
+
 }
 
 func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error) {
