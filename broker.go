@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 type Broker struct {
@@ -124,6 +126,8 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 
 	payload := offsetReqeust.Encode()
 
+	glog.V(10).Infof("offset request payload is prepared")
+
 	broker.conn.Write(payload)
 
 	responseLengthBuf := make([]byte, 4)
@@ -133,6 +137,9 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
+
+	glog.V(10).Infof("there is %d bytes in offsets response", responseLength)
+
 	responseBuf := make([]byte, 4+responseLength)
 
 	readLength := 0
@@ -149,6 +156,10 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 		readLength += length
 		if readLength > responseLength {
 			return nil, errors.New("fetch more data than needed while read getMetaData response")
+		}
+
+		if readLength == responseLength {
+			break
 		}
 	}
 
