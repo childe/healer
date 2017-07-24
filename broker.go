@@ -39,23 +39,7 @@ func NewBroker(address string, clientID string) (*Broker, error) {
 	return broker, nil
 }
 
-func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) {
-	correlationID := int32(os.Getpid())
-	metadataRequest := MetadataRequest{}
-	metadataRequest.RequestHeader = &RequestHeader{
-		ApiKey:        API_MetadataRequest,
-		ApiVersion:    0,
-		CorrelationId: correlationID,
-		ClientId:      broker.clientID,
-	}
-
-	if topic != nil {
-		metadataRequest.Topic = []string{*topic}
-	} else {
-		metadataRequest.Topic = []string{}
-	}
-
-	payload := metadataRequest.Encode()
+func (broker *Broker) request(payload []byte) ([]byte, error) {
 	broker.conn.Write(payload)
 
 	responseLengthBuf := make([]byte, 4)
@@ -88,6 +72,32 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 		}
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
+
+	return responseBuf, nil
+}
+
+func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) {
+	correlationID := int32(os.Getpid())
+	metadataRequest := MetadataRequest{}
+	metadataRequest.RequestHeader = &RequestHeader{
+		ApiKey:        API_MetadataRequest,
+		ApiVersion:    0,
+		CorrelationId: correlationID,
+		ClientId:      broker.clientID,
+	}
+
+	if topic != nil {
+		metadataRequest.Topic = []string{*topic}
+	} else {
+		metadataRequest.Topic = []string{}
+	}
+
+	payload := metadataRequest.Encode()
+
+	responseBuf, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
 
 	metadataResponse := &MetadataResponse{}
 	err = metadataResponse.Decode(responseBuf)
@@ -125,48 +135,12 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 	}
 
 	payload := offsetReqeust.Encode()
-
 	glog.V(10).Infof("offset request payload is prepared")
 
-	broker.conn.Write(payload)
-
-	responseLengthBuf := make([]byte, 4)
-	_, err := broker.conn.Read(responseLengthBuf)
+	responseBuf, err := broker.request(payload)
 	if err != nil {
 		return nil, err
 	}
-
-	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-
-	glog.V(10).Infof("there is %d bytes in offsets response", responseLength)
-
-	responseBuf := make([]byte, 4+responseLength)
-
-	readLength := 0
-	for {
-		length, err := broker.conn.Read(responseBuf[4+readLength:])
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		readLength += length
-		if readLength > responseLength {
-			return nil, errors.New("fetch more data than needed while read getMetaData response")
-		}
-
-		if readLength == responseLength {
-			break
-		}
-	}
-
-	if readLength != responseLength {
-		return nil, errors.New("do NOT fetch needed length while read getMetaData response")
-	}
-	copy(responseBuf[0:4], responseLengthBuf)
 
 	offsetResponse := &OffsetResponse{}
 	offsetResponse.Decode(responseBuf)
