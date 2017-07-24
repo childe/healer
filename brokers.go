@@ -85,3 +85,17 @@ func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error
 
 	return nil, fmt.Errorf("could not get metadata from all brokers")
 }
+
+// GetOffset return the offset values array from server
+func (brokers *Brokers) RequestOffset(topic *string, partitionID int32, timeValue int64, offsets uint32) (*OffsetResponse, error) {
+	for _, broker := range brokers.brokers {
+		offsetsResponse, err := broker.RequestOffsets(topic, partitionID, timeValue, offsets)
+		if err != nil {
+			glog.Infof("could not get offsets from %s:%s", broker.address, err)
+		} else {
+			return offsetsResponse, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not get offsets from all brokers")
+}
