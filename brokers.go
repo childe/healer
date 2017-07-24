@@ -13,7 +13,7 @@ type Brokers struct {
 }
 
 func NewBrokers(brokerList string) (*Brokers, error) {
-	hasAvailableBroker := false
+	availableBroker := ""
 	brokers := &Brokers{}
 	brokers.brokers = make([]*Broker, 0)
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
@@ -22,11 +22,11 @@ func NewBrokers(brokerList string) (*Brokers, error) {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
 			brokers.brokers = append(brokers.brokers, broker)
-			hasAvailableBroker = true
+			availableBroker = brokerAddr
 			break
 		}
 	}
-	if hasAvailableBroker == false {
+	if availableBroker == "" {
 		return nil, fmt.Errorf("could not get any available broker from %s", brokerList)
 	}
 
@@ -40,29 +40,33 @@ func NewBrokers(brokerList string) (*Brokers, error) {
 	if glog.V(10) {
 		s, err := json.MarshalIndent(metadataResponse, "", "  ")
 		if err != nil {
-			glog.Infof("brokers info from metadata: %s", s)
-		} else {
 			glog.Infof("failed to marshal brokers info from metadata: %s", err)
+		} else {
+			glog.Infof("brokers info from metadata: %s", s)
 		}
 	}
 
 	for _, brokerInfo := range metadataResponse.Brokers {
-		brokerAddr := fmt.Fprint("%s:%d", brokerInfo.Host, brokerInfo.Port)
+		brokerAddr := fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port)
+		if brokerAddr == availableBroker {
+			continue
+		}
 		broker, err := NewBroker(brokerAddr)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
 			brokers.brokers = append(brokers.brokers, broker)
-			break
 		}
 	}
 
-	if glog.V(10) {
+	glog.Infof("got %d brokers", len(brokers.brokers))
+
+	if glog.V(5) {
 		addresses := make([]string, len(brokers.brokers))
 		for i, broker := range brokers.brokers {
 			addresses[i] = broker.address
 		}
-		glog.Infof("all brokers: %s", strings.Join(addresses))
+		glog.Infof("all brokers: %s", strings.Join(addresses, ","))
 	}
 
 	return brokers, nil
@@ -72,9 +76,9 @@ func (brokers *Brokers) RequestMetaData(topic string) (*MetadataResponse, error)
 	for _, broker := range brokers.brokers {
 		metadataResponse, err := broker.RequestMetaData(topic)
 		if err != nil {
-			return metadataResponse, nil
-		} else {
 			glog.Infof("could not get metadata from %s:%s", broker.address, err)
+		} else {
+			return metadataResponse, nil
 		}
 	}
 
