@@ -4,25 +4,24 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 )
 
 var (
 	brokerList = flag.String("brokers", "127.0.0.1:9092", "REQUIRED: The list of hostname and port of the server to connect to.")
 	clientID   = flag.String("clientID", "healer", "The ID of this client.")
 	topic      = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
-	logger     = log.New(os.Stderr, "", log.LstdFlags)
 )
 
 func main() {
 	flag.Parse()
 
-	brokers, err := healer.NewBrokers(*brokerList)
+	brokers, err := healer.NewBrokers(*brokerList, *clientID)
 	if err != nil {
-		logger.Println(err)
+		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)
 	}
 
@@ -34,13 +33,13 @@ func main() {
 	}
 
 	if err != nil {
-		logger.Println(err)
+		glog.Errorf("failed to get metadata response:%s", err)
 		os.Exit(5)
 	}
 
 	s, err := json.MarshalIndent(metadataResponse, "", "  ")
 	if err != nil {
-		logger.Println(err)
+		glog.Errorf("failed to marshal metadata response:%s", err)
 		os.Exit(5)
 	}
 
