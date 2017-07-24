@@ -20,13 +20,13 @@ var (
 func main() {
 	flag.Parse()
 
-	broker, err := healer.GetBroker(*brokerList)
+	brokers, err := healer.NewBrokers(*brokerList)
 	if err != nil {
 		logger.Println(err)
 		os.Exit(255)
 	}
 
-	metadataResponse, err := broker.RequestMetaData(*topic)
+	metadataResponse, err := brokers.RequestMetaData(*topic)
 
 	if err != nil {
 		logger.Println(err)
