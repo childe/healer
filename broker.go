@@ -30,7 +30,7 @@ func NewBroker(address string) (*Broker, error) {
 	return broker, nil
 }
 
-func (broker *Broker) RequestMetaData(topic string) (*MetadataResponse, error) {
+func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) {
 	correlationID := int32(os.Getpid())
 	metadataRequest := MetadataRequest{}
 	metadataRequest.RequestHeader = &RequestHeader{
@@ -40,8 +40,8 @@ func (broker *Broker) RequestMetaData(topic string) (*MetadataResponse, error) {
 		ClientId:      broker.clientID,
 	}
 
-	if topic != "" {
-		metadataRequest.Topic = []string{topic}
+	if topic != nil {
+		metadataRequest.Topic = []string{*topic}
 	} else {
 		metadataRequest.Topic = []string{}
 	}

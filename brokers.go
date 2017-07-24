@@ -31,7 +31,8 @@ func NewBrokers(brokerList string) (*Brokers, error) {
 	}
 
 	// get all brokers
-	metadataResponse, err := brokers.brokers[0].RequestMetaData("")
+	topic := ""
+	metadataResponse, err := brokers.brokers[0].RequestMetaData(&topic)
 	if err != nil {
 		glog.Infof("could not get metadata from %s:%s", brokers.brokers[0].address, err)
 		return brokers, nil
@@ -72,7 +73,7 @@ func NewBrokers(brokerList string) (*Brokers, error) {
 	return brokers, nil
 }
 
-func (brokers *Brokers) RequestMetaData(topic string) (*MetadataResponse, error) {
+func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error) {
 	for _, broker := range brokers.brokers {
 		metadataResponse, err := broker.RequestMetaData(topic)
 		if err != nil {

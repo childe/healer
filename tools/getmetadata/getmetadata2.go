@@ -26,7 +26,12 @@ func main() {
 		os.Exit(255)
 	}
 
-	metadataResponse, err := brokers.RequestMetaData(*topic)
+	var metadataResponse *healer.MetadataResponse
+	if *topic == "" {
+		metadataResponse, err = brokers.RequestMetaData(nil)
+	} else {
+		metadataResponse, err = brokers.RequestMetaData(topic)
+	}
 
 	if err != nil {
 		logger.Println(err)
