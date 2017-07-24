@@ -20,11 +20,6 @@ var (
 func main() {
 	flag.Parse()
 
-	if *topic == "" {
-		fmt.Println("need topic!")
-		flag.PrintDefaults()
-	}
-
 	broker, err := healer.GetBroker(*brokerList)
 	if err != nil {
 		logger.Println(err)
