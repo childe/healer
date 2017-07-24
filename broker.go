@@ -91,7 +91,7 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 }
 
 // GetOffset return the offset values array from server
-func (broker *Broker) RequestOffset(topic *string, partitionID int32, clientID string, timeValue int64, offsets uint32) (*OffsetResponse, error) {
+func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue int64, offsets uint32) (*OffsetResponse, error) {
 	correlationID := int32(os.Getpid())
 
 	requestHeader := &RequestHeader{
