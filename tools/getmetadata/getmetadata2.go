@@ -23,7 +23,7 @@ func main() {
 	brokers, err := healer.NewBrokers(*brokerList)
 	if err != nil {
 		logger.Println(err)
-		os.Exit(255)
+		os.Exit(5)
 	}
 
 	var metadataResponse *healer.MetadataResponse
@@ -35,13 +35,13 @@ func main() {
 
 	if err != nil {
 		logger.Println(err)
-		os.Exit(255)
+		os.Exit(5)
 	}
 
 	s, err := json.MarshalIndent(metadataResponse, "", "  ")
 	if err != nil {
 		logger.Println(err)
-		os.Exit(255)
+		os.Exit(5)
 	}
 
 	fmt.Println(string(s))
