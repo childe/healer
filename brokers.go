@@ -17,7 +17,7 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 	brokers := &Brokers{}
 	brokers.brokers = make([]*Broker, 0)
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
-		broker, err := NewBroker(brokerAddr, clientID)
+		broker, err := NewBroker(brokerAddr, clientID, -1)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
@@ -52,7 +52,7 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 		if brokerAddr == availableBroker {
 			continue
 		}
-		broker, err := NewBroker(brokerAddr, clientID)
+		broker, err := NewBroker(brokerAddr, clientID, brokerInfo.NodeId)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {

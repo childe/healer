@@ -13,6 +13,7 @@ import (
 )
 
 type Broker struct {
+	nodeID   int32
 	address  string
 	clientID string
 	conn     net.Conn
@@ -20,13 +21,14 @@ type Broker struct {
 
 var defaultClientID = "healer"
 
-func NewBroker(address string, clientID string) (*Broker, error) {
+func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 	//TODO more parameters, timeout, keepalive, connect timeout ...
 	if clientID == "" {
 		clientID = defaultClientID
 	}
 
 	broker := &Broker{
+		nodeID:   nodeID,
 		address:  address,
 		clientID: clientID,
 	}
@@ -112,7 +114,7 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 
 // GetOffset return the offset values array from server
 func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue int64, offsets uint32) (*OffsetResponse, error) {
-	if partition < 0 {
+	if partitionID < 0 {
 		metadataResponse, err := broker.RequestMetaData(topic)
 		if err != nil {
 			return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
@@ -125,9 +127,9 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 			return nil, AllError[topicMetadata.TopicErrorCode]
 		}
 
-		for _, X := range topicMetadata.PartitionMetadatas{
+		//for _, x := range topicMetadata.PartitionMetadatas {
 
-		}
+		//}
 	}
 	correlationID := int32(os.Getpid())
 
