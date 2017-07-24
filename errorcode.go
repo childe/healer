@@ -6,7 +6,7 @@ type Error struct {
 	ErrorDesc string
 }
 
-func (healerError *Error) Format() string {
+func (healerError *Error) Error() string {
 	return healerError.ErrorDesc
 }
 

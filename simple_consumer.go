@@ -135,9 +135,9 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 						messages <- message
 					}
 				} else if topicData.ErrorCode == -1 {
-					logger.Printf(AllError[0].Format())
+					logger.Printf(AllError[0].Error())
 				} else {
-					logger.Printf(AllError[topicData.ErrorCode].Format())
+					logger.Printf(AllError[topicData.ErrorCode].Error())
 				}
 			}
 		}
