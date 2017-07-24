@@ -9,19 +9,19 @@ import (
 )
 
 type Brokers struct {
-	brokers []*Broker
+	brokers map[int32]*Broker
 }
 
 func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 	availableBroker := ""
 	brokers := &Brokers{}
-	brokers.brokers = make([]*Broker, 0)
+	brokers.brokers = make(map[int32]*Broker)
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
 		broker, err := NewBroker(brokerAddr, clientID, -1)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
-			brokers.brokers = append(brokers.brokers, broker)
+			brokers.brokers[0] = broker
 			availableBroker = brokerAddr
 			break
 		}
@@ -56,7 +56,7 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
-			brokers.brokers = append(brokers.brokers, broker)
+			brokers.brokers[brokerInfo.NodeId] = broker
 		}
 	}
 
@@ -64,8 +64,10 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 
 	if glog.V(5) {
 		addresses := make([]string, len(brokers.brokers))
-		for i, broker := range brokers.brokers {
+		i := 0
+		for _, broker := range brokers.brokers {
 			addresses[i] = broker.address
+			i++
 		}
 		glog.Infof("all brokers: %s", strings.Join(addresses, ","))
 	}
