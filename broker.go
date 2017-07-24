@@ -15,10 +15,17 @@ type Broker struct {
 	conn     net.Conn
 }
 
-func NewBroker(address string) (*Broker, error) {
+var defaultClientID = "healer"
+
+func NewBroker(address string, clientID string) (*Broker, error) {
 	//TODO more parameters, timeout, keepalive, connect timeout ...
+	if clientID == "" {
+		clientID = defaultClientID
+	}
+
 	broker := &Broker{
-		address: address,
+		address:  address,
+		clientID: clientID,
 	}
 
 	conn, err := net.DialTimeout("tcp", address, time.Second*5)

@@ -12,12 +12,12 @@ type Brokers struct {
 	brokers []*Broker
 }
 
-func NewBrokers(brokerList string) (*Brokers, error) {
+func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 	availableBroker := ""
 	brokers := &Brokers{}
 	brokers.brokers = make([]*Broker, 0)
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
-		broker, err := NewBroker(brokerAddr)
+		broker, err := NewBroker(brokerAddr, clientID)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
@@ -52,7 +52,7 @@ func NewBrokers(brokerList string) (*Brokers, error) {
 		if brokerAddr == availableBroker {
 			continue
 		}
-		broker, err := NewBroker(brokerAddr)
+		broker, err := NewBroker(brokerAddr, clientID)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
