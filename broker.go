@@ -16,12 +16,16 @@ type Broker struct {
 }
 
 func NewBroker(address string) (*Broker, error) {
-	broker := &Broker{}
+	broker := &Broker{
+		address: address,
+	}
+
 	conn, err := net.DialTimeout("tcp", address, time.Second*5)
 	if err != nil {
 		return nil, err
 	}
 	broker.conn = conn
+
 	return broker, nil
 }
 
