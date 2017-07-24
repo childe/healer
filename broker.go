@@ -16,6 +16,7 @@ type Broker struct {
 }
 
 func NewBroker(address string) (*Broker, error) {
+	//TODO more parameters, timeout, keepalive, connect timeout ...
 	broker := &Broker{
 		address: address,
 	}
