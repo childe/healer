@@ -29,13 +29,13 @@ type PartitionOffsetRequestInfo struct {
 	MaxNumberOfOffsets uint32
 }
 
-type OffsetReqeust struct {
+type OffsetsReqeust struct {
 	RequestHeader *RequestHeader
 	ReplicaId     int32
 	RequestInfo   map[string]map[uint32]*PartitionOffsetRequestInfo
 }
 
-func (offsetR *OffsetReqeust) Encode() []byte {
+func (offsetR *OffsetsReqeust) Encode() []byte {
 	requestLength := 8 + 2 + len(offsetR.RequestHeader.ClientId) + 4
 	requestLength += 4
 	for topicName, partitionInfo := range offsetR.RequestInfo {

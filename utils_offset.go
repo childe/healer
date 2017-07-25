@@ -25,13 +25,13 @@ func GetOffset(broker string, topic string, partitionID int32, correlationID int
 	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
 
-	offsetReqeust := &OffsetReqeust{
+	offsetsReqeust := &OffsetsReqeust{
 		RequestHeader: requestHeader,
 		ReplicaId:     -1,
 		RequestInfo:   topicOffsetRequestInfos,
 	}
 
-	payload := offsetReqeust.Encode()
+	payload := offsetsReqeust.Encode()
 
 	dialer := net.Dialer{
 		Timeout:   time.Second * 5,
