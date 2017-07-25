@@ -21,6 +21,8 @@ type Broker struct {
 
 var defaultClientID = "healer"
 
+// NewBroker is used just as bootstrap in NewBrokers.
+// user must always init a Brokers instance by NewBrokers
 func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 	//TODO more parameters, timeout, keepalive, connect timeout ...
 	//TODO get available api versions
