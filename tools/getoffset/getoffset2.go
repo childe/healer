@@ -33,7 +33,7 @@ func main() {
 		os.Exit(5)
 	}
 
-	offsetsResponse, err := brokers.RequestOffsets(topic, 0, *timeValue, (uint32)(*offsets))
+	offsetsResponse, err := brokers.RequestOffsets(topic, -1, *timeValue, (uint32)(*offsets))
 
 	if err != nil {
 		glog.Errorf("failed to get offsets:%s", err)
