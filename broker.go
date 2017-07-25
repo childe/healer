@@ -23,6 +23,7 @@ var defaultClientID = "healer"
 
 func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 	//TODO more parameters, timeout, keepalive, connect timeout ...
+	//TODO get available api versions
 	if clientID == "" {
 		clientID = defaultClientID
 	}
