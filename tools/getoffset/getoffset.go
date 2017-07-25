@@ -46,14 +46,14 @@ func main() {
 		for _, broker := range brokers {
 			if leader == broker.NodeId {
 				brokerAddr := net.JoinHostPort(broker.Host, strconv.Itoa(int(broker.Port)))
-				offsetResponse, err := healer.GetOffset(brokerAddr, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
+				offsetsResponse, err := healer.GetOffset(brokerAddr, *topic, partitionID, correlationID, *clientID, *timeValue, uint32(*offsets))
 				if err != nil {
 					fmt.Println(err)
 
 					//next partition
 					break
 				}
-				for topic, partitions := range offsetResponse.Info {
+				for topic, partitions := range offsetsResponse.Info {
 					for _, partition := range partitions {
 						fmt.Printf("%s:%d", topic, partition.Partition)
 						for _, offset := range partition.Offset {

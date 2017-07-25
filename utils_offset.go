@@ -9,7 +9,7 @@ import (
 )
 
 // GetOffset return the offset values array from server
-func GetOffset(broker string, topic string, partitionID int32, correlationID int32, clientID string, timeValue int64, offsets uint32) (*OffsetResponse, error) {
+func GetOffset(broker string, topic string, partitionID int32, correlationID int32, clientID string, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
@@ -76,8 +76,8 @@ func GetOffset(broker string, topic string, partitionID int32, correlationID int
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
 
-	offsetResponse := &OffsetResponse{}
-	offsetResponse.Decode(responseBuf)
+	offsetsResponse := &OffsetsResponse{}
+	offsetsResponse.Decode(responseBuf)
 
-	return offsetResponse, nil
+	return offsetsResponse, nil
 }

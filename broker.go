@@ -113,9 +113,9 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 }
 
 // GetOffset return the offset values array from server
-func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetResponse, error) {
+func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
 	if partitionID < 0 {
-		rst := make([]*OffsetResponse, 0)
+		rst := make([]*OffsetsResponse, 0)
 		metadataResponse, err := broker.RequestMetaData(topic)
 		if err != nil {
 			return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
@@ -129,11 +129,11 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 		}
 
 		for _, x := range topicMetadata.PartitionMetadatas {
-			offsetResponseList, err := broker.RequestOffsets(topic, x.PartitionId, timeValue, offsets)
+			offsetsResponseList, err := broker.RequestOffsets(topic, x.PartitionId, timeValue, offsets)
 			if err != nil {
 				return nil, err
 			}
-			rst = append(rst, offsetResponseList...)
+			rst = append(rst, offsetsResponseList...)
 		}
 		return rst, nil
 	}
@@ -168,8 +168,8 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 		return nil, err
 	}
 
-	offsetResponse := &OffsetResponse{}
-	offsetResponse.Decode(responseBuf)
+	offsetsResponse := &OffsetsResponse{}
+	offsetsResponse.Decode(responseBuf)
 
-	return []*OffsetResponse{offsetResponse}, nil
+	return []*OffsetsResponse{offsetsResponse}, nil
 }
