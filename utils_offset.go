@@ -25,7 +25,7 @@ func GetOffset(broker string, topic string, partitionID int32, correlationID int
 	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
 
-	offsetsReqeust := &OffsetsReqeust{
+	offsetsReqeust := &OffsetsRequest{
 		RequestHeader: requestHeader,
 		ReplicaId:     -1,
 		RequestInfo:   topicOffsetRequestInfos,
