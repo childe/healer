@@ -10,11 +10,11 @@ var (
 	brokers       = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
 )
 
-func TestNewBroker(t *testing.T) {
+func init() {
 	flag.Parse()
+}
 
-	t.Log(*brokerAddress)
-
+func TestNewBroker(t *testing.T) {
 	_, err := NewBroker(*brokerAddress, "healer", -1)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
