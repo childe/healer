@@ -142,27 +142,7 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 	}
 	correlationID := int32(os.Getpid())
 
-	requestHeader := &RequestHeader{
-		ApiKey:        API_OffsetRequest,
-		ApiVersion:    0,
-		CorrelationId: correlationID,
-		ClientId:      broker.clientID,
-	}
-
-	partitionOffsetRequestInfos := make(map[uint32]*PartitionOffsetRequestInfo)
-	partitionOffsetRequestInfos[uint32(partitionID)] = &PartitionOffsetRequestInfo{
-		Time:               timeValue,
-		MaxNumberOfOffsets: offsets,
-	}
-	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
-	topicOffsetRequestInfos[*topic] = partitionOffsetRequestInfos
-
-	offsetsRequest := &OffsetsRequest{
-		RequestHeader: requestHeader,
-		ReplicaId:     -1,
-		RequestInfo:   topicOffsetRequestInfos,
-	}
-
+	offsetsRequest := NewOffsetsRequest(*topic, []uint32{uint32(partitionID)}, timeValue, offsets, correlationID, broker.clientID)
 	payload := offsetsRequest.Encode()
 	glog.V(10).Infof("offset request payload is prepared")
 
