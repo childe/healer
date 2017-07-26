@@ -35,6 +35,31 @@ type OffsetsReqeust struct {
 	RequestInfo   map[string]map[uint32]*PartitionOffsetRequestInfo
 }
 
+func NewOffsetsRequest(topic string, partitionID uint32, timeValue int64, offsets uint32, correlationID int32, clientID string) OffsetsReqeust {
+	requestHeader := &RequestHeader{
+		ApiKey:        API_OffsetRequest,
+		ApiVersion:    0,
+		CorrelationId: correlationID,
+		ClientId:      clientID,
+	}
+
+	partitionOffsetRequestInfos := make(map[uint32]*PartitionOffsetRequestInfo)
+	partitionOffsetRequestInfos[uint32(partitionID)] = &PartitionOffsetRequestInfo{
+		Time:               timeValue,
+		MaxNumberOfOffsets: offsets,
+	}
+	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
+	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
+
+	offsetsReqeust := OffsetsReqeust{
+		RequestHeader: requestHeader,
+		ReplicaId:     -1,
+		RequestInfo:   topicOffsetRequestInfos,
+	}
+
+	return offsetsReqeust
+}
+
 func (offsetR *OffsetsReqeust) Encode() []byte {
 	requestLength := 8 + 2 + len(offsetR.RequestHeader.ClientId) + 4
 	requestLength += 4
