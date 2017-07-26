@@ -116,10 +116,10 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 }
 
 // GetOffset return the offset values array from server
-func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
+func (broker *Broker) RequestOffsets(topic string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
 	if partitionID < 0 {
 		rst := make([]*OffsetsResponse, 0)
-		metadataResponse, err := broker.RequestMetaData(topic)
+		metadataResponse, err := broker.RequestMetaData(&topic)
 		if err != nil {
 			return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
 		}
@@ -142,7 +142,7 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 	}
 	correlationID := int32(os.Getpid())
 
-	offsetsRequest := NewOffsetsRequest(*topic, []uint32{uint32(partitionID)}, timeValue, offsets, correlationID, broker.clientID)
+	offsetsRequest := NewOffsetsRequest(topic, []uint32{uint32(partitionID)}, timeValue, offsets, correlationID, broker.clientID)
 	payload := offsetsRequest.Encode()
 	glog.V(10).Infof("offset request payload is prepared")
 
