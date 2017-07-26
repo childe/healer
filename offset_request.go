@@ -35,7 +35,8 @@ type OffsetsRequest struct {
 	RequestInfo   map[string]map[uint32]*PartitionOffsetRequestInfo
 }
 
-func NewOffsetsRequest(topic string, partitionID uint32, timeValue int64, offsets uint32, correlationID int32, clientID string) OffsetsRequest {
+// request only ONE topic
+func NewOffsetsRequest(topic string, partitionIDs []uint32, timeValue int64, offsets uint32, correlationID int32, clientID string) OffsetsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
@@ -44,9 +45,11 @@ func NewOffsetsRequest(topic string, partitionID uint32, timeValue int64, offset
 	}
 
 	partitionOffsetRequestInfos := make(map[uint32]*PartitionOffsetRequestInfo)
-	partitionOffsetRequestInfos[uint32(partitionID)] = &PartitionOffsetRequestInfo{
-		Time:               timeValue,
-		MaxNumberOfOffsets: offsets,
+	for _, id := range partitionIDs {
+		partitionOffsetRequestInfos[id] = &PartitionOffsetRequestInfo{
+			Time:               timeValue,
+			MaxNumberOfOffsets: offsets,
+		}
 	}
 	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
