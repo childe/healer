@@ -54,13 +54,13 @@ func NewOffsetsRequest(topic string, partitionIDs []uint32, timeValue int64, off
 	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
 
-	offsetsReqeust := OffsetsRequest{
+	offsetsRequest := OffsetsRequest{
 		RequestHeader: requestHeader,
 		ReplicaId:     -1,
 		RequestInfo:   topicOffsetRequestInfos,
 	}
 
-	return offsetsReqeust
+	return offsetsRequest
 }
 
 func (offsetR *OffsetsRequest) Encode() []byte {

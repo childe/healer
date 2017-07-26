@@ -7,34 +7,15 @@ import (
 
 func TestGenOffsetsRequest(t *testing.T) {
 	correlationID := int32(os.Getpid())
-	partitionID := 0
+	partitionID := uint32(0)
 	clientID := "healer"
 	timeValue := int64(0)
 	offsets := uint32(10)
 	topic := "test"
 
-	requestHeader := &RequestHeader{
-		ApiKey:        API_OffsetRequest,
-		ApiVersion:    0,
-		CorrelationId: correlationID,
-		ClientId:      clientID,
-	}
+	offsetsRequest := NewOffsetsRequest(topic, []uint32{partitionID}, timeValue, offsets, correlationID, clientID)
 
-	partitionOffsetRequestInfos := make(map[uint32]*PartitionOffsetRequestInfo)
-	partitionOffsetRequestInfos[uint32(partitionID)] = &PartitionOffsetRequestInfo{
-		Time:               timeValue,
-		MaxNumberOfOffsets: offsets,
-	}
-	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
-	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
-
-	offsetsReqeust := &OffsetsRequest{
-		RequestHeader: requestHeader,
-		ReplicaId:     -1,
-		RequestInfo:   topicOffsetRequestInfos,
-	}
-
-	payload := offsetsReqeust.Encode()
+	payload := offsetsRequest.Encode()
 	if len(payload) != 54 {
 		t.Error("offsets request payload length should be 54")
 	}

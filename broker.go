@@ -157,13 +157,13 @@ func (broker *Broker) RequestOffsets(topic *string, partitionID int32, timeValue
 	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[*topic] = partitionOffsetRequestInfos
 
-	offsetsReqeust := &OffsetsRequest{
+	offsetsRequest := &OffsetsRequest{
 		RequestHeader: requestHeader,
 		ReplicaId:     -1,
 		RequestInfo:   topicOffsetRequestInfos,
 	}
 
-	payload := offsetsReqeust.Encode()
+	payload := offsetsRequest.Encode()
 	glog.V(10).Infof("offset request payload is prepared")
 
 	responseBuf, err := broker.request(payload)
