@@ -104,6 +104,26 @@ func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValu
 		return nil, AllError[topicMetadata.TopicErrorCode]
 	}
 
+	if partitionID >= 0 {
+		uID := uint32(partitionID)
+		for _, x := range topicMetadata.PartitionMetadatas {
+			if uID == x.PartitionId {
+				if leader, ok := brokers.brokers[x.Leader]; !ok {
+					return nil, fmt.Errorf("could not find leader of %s[%d]", topic, partitionID)
+				} else {
+					offsetsResponse, err := leader.RequestOffsets(topic, []uint32{uID}, timeValue, offsets)
+					if err != nil {
+						return nil, err
+					} else {
+						return []*OffsetsResponse{offsetsResponse}, nil
+					}
+				}
+			}
+		}
+		return nil, fmt.Errorf("could not find partition %d in topic %s", partitionID, topic)
+	}
+
+	// try to get all partition offsets
 	offsetsRequestsMapping := make(map[int32][]uint32, 0) //nodeID: partitionIDs
 	for _, x := range topicMetadata.PartitionMetadatas {
 		if _, ok := offsetsRequestsMapping[x.Leader]; ok {
@@ -115,12 +135,17 @@ func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValu
 
 	rst := make([]*OffsetsResponse, 0)
 	if partitionID < 0 {
-		for _, _ = range offsetsRequestsMapping {
-			//offsetsResponseList, err := broker.RequestOffsets(topic, partitionIDs, timeValue, offsets)
-			//if err != nil {
-			//return nil, err
-			//}
-			//rst = append(rst, offsetsResponseList...)
+		for leaderID, partitionIDs := range offsetsRequestsMapping {
+			if leader, ok := brokers.brokers[leaderID]; !ok {
+				return nil, fmt.Errorf("could not find leader of %s[%v]", topic, partitionIDs)
+			} else {
+				offsetsResponse, err := leader.RequestOffsets(topic, partitionIDs, timeValue, offsets)
+				if err != nil {
+					// TODO display error for the partition and go on?
+					return nil, err
+				}
+				rst = append(rst, offsetsResponse)
+			}
 		}
 		return rst, nil
 	}
