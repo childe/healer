@@ -111,3 +111,21 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 	//TODO error info in the response
 	return metadataResponse, nil
 }
+
+// GetOffset return the offset values array from server
+func (broker *Broker) RequestOffsets(topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
+	correlationID := int32(os.Getpid())
+
+	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, correlationID, broker.clientID)
+	payload := offsetsRequest.Encode()
+
+	responseBuf, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	offsetsResponse := &OffsetsResponse{}
+	offsetsResponse.Decode(responseBuf)
+
+	return offsetsResponse, nil
+}
