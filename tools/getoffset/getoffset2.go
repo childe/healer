@@ -16,6 +16,7 @@ var (
 	timeValue  = flag.Int64("time", -1, "timestamp/-1(latest)/-2(earliest). timestamp of the offsets before that.(default: -1) ")
 	offsets    = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
 	clientID   = flag.String("clientID", "healer", "The ID of this client.")
+	format     = flag.String("format", "", "output original kafka response if set to original")
 )
 
 func main() {
@@ -46,5 +47,22 @@ func main() {
 		os.Exit(5)
 	}
 
-	fmt.Println(string(s))
+	if *format == "original" {
+		fmt.Println(string(s))
+	} else {
+		for _, x := range offsetsResponse {
+			for topic, partitionOffsetsList := range x.Info {
+				for _, partitionOffsets := range partitionOffsetsList {
+					fmt.Printf("%s:%d:", topic, partitionOffsets.Partition)
+					for i, offset := range partitionOffsets.Offset {
+						if i != 0 {
+							fmt.Print(",")
+						}
+						fmt.Printf("%d", offset)
+					}
+					fmt.Println()
+				}
+			}
+		}
+	}
 }
