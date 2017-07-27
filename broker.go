@@ -3,13 +3,10 @@ package healer
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 type Broker struct {
@@ -113,46 +110,4 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 
 	//TODO error info in the response
 	return metadataResponse, nil
-}
-
-// GetOffset return the offset values array from server
-func (broker *Broker) RequestOffsets(topic string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
-	if partitionID < 0 {
-		rst := make([]*OffsetsResponse, 0)
-		metadataResponse, err := broker.RequestMetaData(&topic)
-		if err != nil {
-			return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
-		}
-
-		// TODO only one topic
-		topicMetadata := metadataResponse.TopicMetadatas[0]
-
-		if topicMetadata.TopicErrorCode != 0 {
-			return nil, AllError[topicMetadata.TopicErrorCode]
-		}
-
-		for _, x := range topicMetadata.PartitionMetadatas {
-			offsetsResponseList, err := broker.RequestOffsets(topic, x.PartitionId, timeValue, offsets)
-			if err != nil {
-				return nil, err
-			}
-			rst = append(rst, offsetsResponseList...)
-		}
-		return rst, nil
-	}
-	correlationID := int32(os.Getpid())
-
-	offsetsRequest := NewOffsetsRequest(topic, []uint32{uint32(partitionID)}, timeValue, offsets, correlationID, broker.clientID)
-	payload := offsetsRequest.Encode()
-	glog.V(10).Infof("offset request payload is prepared")
-
-	responseBuf, err := broker.request(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	offsetsResponse := &OffsetsResponse{}
-	offsetsResponse.Decode(responseBuf)
-
-	return []*OffsetsResponse{offsetsResponse}, nil
 }

@@ -75,9 +75,9 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 
 }
 
-func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error) {
+func (brokers *Brokers) RequestMetaData(topic string) (*MetadataResponse, error) {
 	for _, broker := range brokers.brokers {
-		metadataResponse, err := broker.RequestMetaData(topic)
+		metadataResponse, err := broker.RequestMetaData(&topic)
 		if err != nil {
 			glog.Infof("could not get metadata from %s:%s", broker.address, err)
 		} else {
@@ -90,14 +90,39 @@ func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error
 
 // GetOffset return the offset values array from server
 func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
-	for _, broker := range brokers.brokers {
-		offsetsResponse, err := broker.RequestOffsets(topic, partitionID, timeValue, offsets)
-		if err != nil {
-			glog.Infof("could not get offsets from %s:%s", broker.address, err)
+	// have to find which leader own the partition by request metadata
+	// TODO cache
+	metadataResponse, err := brokers.RequestMetaData(topic)
+	if err != nil {
+		return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
+	}
+
+	// TODO only one topic
+	topicMetadata := metadataResponse.TopicMetadatas[0]
+
+	if topicMetadata.TopicErrorCode != 0 {
+		return nil, AllError[topicMetadata.TopicErrorCode]
+	}
+
+	offsetsRequestsMapping := make(map[int32][]uint32, 0) //nodeID: partitionIDs
+	for _, x := range topicMetadata.PartitionMetadatas {
+		if _, ok := offsetsRequestsMapping[x.Leader]; ok {
+			offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionId)
 		} else {
-			return offsetsResponse, nil
+			offsetsRequestsMapping[x.Leader] = []uint32{x.PartitionId}
 		}
 	}
 
-	return nil, fmt.Errorf("could not get offsets from all brokers")
+	rst := make([]*OffsetsResponse, 0)
+	if partitionID < 0 {
+		for _, _ = range offsetsRequestsMapping {
+			//offsetsResponseList, err := broker.RequestOffsets(topic, partitionIDs, timeValue, offsets)
+			//if err != nil {
+			//return nil, err
+			//}
+			//rst = append(rst, offsetsResponseList...)
+		}
+		return rst, nil
+	}
+	return nil, nil
 }

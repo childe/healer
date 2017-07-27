@@ -42,16 +42,16 @@ func TestNewBroker(t *testing.T) {
 	}
 }
 
-func TestRequestOffsets(t *testing.T) {
-	broker, err := NewBroker(*brokerAddress, "healer", -1)
-	if err != nil {
-		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
-	}
+//func TestRequestOffsets(t *testing.T) {
+	//broker, err := NewBroker(*brokerAddress, "healer", -1)
+	//if err != nil {
+		//t.Errorf("new broker from %s error:%s", *brokerAddress, err)
+	//}
 
-	_, err = broker.RequestOffsets(*topic, -1, 0, 10)
-	if err != nil {
-		t.Errorf("request offsets for topic[%s] error:%s", *topic, err)
-	} else {
-		t.Logf("reqeust offsets for topic[%s] OK", *topic)
-	}
-}
+	//_, err = broker.RequestOffsets(*topic, -1, 0, 10)
+	//if err != nil {
+		//t.Errorf("request offsets for topic[%s] error:%s", *topic, err)
+	//} else {
+		//t.Logf("reqeust offsets for topic[%s] OK", *topic)
+	//}
+//}

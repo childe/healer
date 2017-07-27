@@ -19,7 +19,7 @@ type SimpleConsumer struct {
 	ClientID    string
 	Brokers     string
 	TopicName   string
-	Partition   int32
+	Partition   uint32
 	FetchOffset int64
 	MaxBytes    int32
 	MaxWaitTime int32

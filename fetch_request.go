@@ -31,7 +31,7 @@ MaxBytes		The maximum bytes to include in the message set for this partition. Th
 */
 
 type PartitonBlock struct {
-	Partition   int32
+	Partition   uint32
 	FetchOffset int64
 	MaxBytes    int32
 }
@@ -79,7 +79,7 @@ func (fetchRequest *FetchRequest) Encode() []byte {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitonBlocks)))
 		offset += 4
 		for _, partitonBlock := range partitonBlocks {
-			binary.BigEndian.PutUint32(payload[offset:], uint32(partitonBlock.Partition))
+			binary.BigEndian.PutUint32(payload[offset:], partitonBlock.Partition)
 			offset += 4
 			binary.BigEndian.PutUint64(payload[offset:], uint64(partitonBlock.FetchOffset))
 			offset += 8

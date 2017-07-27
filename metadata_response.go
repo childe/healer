@@ -37,7 +37,7 @@ type BrokerInfo struct {
 
 type PartitionMetadataInfo struct {
 	PartitionErrorCode int16
-	PartitionId        int32
+	PartitionId        uint32
 	Leader             int32
 	Replicas           []int32
 	Isr                []int32
@@ -109,7 +109,7 @@ func (metadataResponse *MetadataResponse) Decode(payload []byte) error {
 			//Isr                []int32
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
-			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionId = int32(binary.BigEndian.Uint32(payload[offset:]))
+			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionId = binary.BigEndian.Uint32(payload[offset:])
 			offset += 4
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].Leader = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
