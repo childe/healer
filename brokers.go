@@ -17,7 +17,7 @@ func getAllBrokersFromOne(broker *Broker, clientID string) (*Brokers, error) {
 	brokers.brokers = make(map[int32]*Broker)
 
 	topic := ""
-	metadataResponse, err := broker.RequestMetaData(&topic)
+	metadataResponse, err := broker.requestMetaData(&topic)
 	if err != nil {
 		glog.Infof("could not get metadata from %s:%s", broker.address, err)
 		return nil, err
@@ -77,7 +77,7 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 
 func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error) {
 	for _, broker := range brokers.brokers {
-		metadataResponse, err := broker.RequestMetaData(topic)
+		metadataResponse, err := broker.requestMetaData(topic)
 		if err != nil {
 			glog.Infof("could not get metadata from %s:%s", broker.address, err)
 		} else {
@@ -111,7 +111,7 @@ func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValu
 				if leader, ok := brokers.brokers[x.Leader]; !ok {
 					return nil, fmt.Errorf("could not find leader of %s[%d]", topic, partitionID)
 				} else {
-					offsetsResponse, err := leader.RequestOffsets(topic, []uint32{uID}, timeValue, offsets)
+					offsetsResponse, err := leader.requestOffsets(topic, []uint32{uID}, timeValue, offsets)
 					if err != nil {
 						return nil, err
 					} else {
@@ -139,7 +139,7 @@ func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValu
 			if leader, ok := brokers.brokers[leaderID]; !ok {
 				return nil, fmt.Errorf("could not find leader of %s[%v]", topic, partitionIDs)
 			} else {
-				offsetsResponse, err := leader.RequestOffsets(topic, partitionIDs, timeValue, offsets)
+				offsetsResponse, err := leader.requestOffsets(topic, partitionIDs, timeValue, offsets)
 				if err != nil {
 					// TODO display error for the partition and go on?
 					return nil, err

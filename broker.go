@@ -79,7 +79,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	return responseBuf, nil
 }
 
-func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) {
+func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) {
 	correlationID := int32(os.Getpid())
 	metadataRequest := MetadataRequest{}
 	metadataRequest.RequestHeader = &RequestHeader{
@@ -112,8 +112,8 @@ func (broker *Broker) RequestMetaData(topic *string) (*MetadataResponse, error) 
 	return metadataResponse, nil
 }
 
-// GetOffset return the offset values array from server
-func (broker *Broker) RequestOffsets(topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
+// RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
+func (broker *Broker) requestOffsets(topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
 	correlationID := int32(os.Getpid())
 
 	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, correlationID, broker.clientID)
