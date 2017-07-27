@@ -75,9 +75,9 @@ func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 
 }
 
-func (brokers *Brokers) RequestMetaData(topic string) (*MetadataResponse, error) {
+func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error) {
 	for _, broker := range brokers.brokers {
-		metadataResponse, err := broker.RequestMetaData(&topic)
+		metadataResponse, err := broker.RequestMetaData(topic)
 		if err != nil {
 			glog.Infof("could not get metadata from %s:%s", broker.address, err)
 		} else {
@@ -92,7 +92,7 @@ func (brokers *Brokers) RequestMetaData(topic string) (*MetadataResponse, error)
 func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
 	// have to find which leader own the partition by request metadata
 	// TODO cache
-	metadataResponse, err := brokers.RequestMetaData(topic)
+	metadataResponse, err := brokers.RequestMetaData(&topic)
 	if err != nil {
 		return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
 	}
