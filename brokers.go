@@ -101,7 +101,7 @@ func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValu
 	topicMetadata := metadataResponse.TopicMetadatas[0]
 
 	if topicMetadata.TopicErrorCode != 0 {
-		return nil, AllError[topicMetadata.TopicErrorCode]
+		return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, AllError[topicMetadata.TopicErrorCode].ErrorMsg)
 	}
 
 	if partitionID >= 0 {
