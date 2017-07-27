@@ -16,26 +16,36 @@ func init() {
 	AllError[0] = &Error{
 		Errorcode: -1,
 		ErrorMsg:  "Unknown",
-		ErrorDesc: "An unexpected server error",
+		ErrorDesc: "The server experienced an unexpected error when processing the request",
 	}
 	AllError[1] = &Error{
 		Errorcode: 1,
-		ErrorMsg:  "OffsetOutOfRange",
-		ErrorDesc: "The requested offset is outside the range of offsets maintained by the server for the given topic/partition.",
+		ErrorMsg:  "OFFSET_OUT_OF_RANGE",
+		ErrorDesc: "The requested offset is not within the range of offsets maintained by the server.",
 	}
 	AllError[2] = &Error{
 		Errorcode: 2,
-		ErrorMsg:  "InvalidMessage",
-		ErrorDesc: "This indicates that a message contents does not match its CRC",
+		ErrorMsg:  "CORRUPT_MESSAGE",
+		ErrorDesc: "This message has failed its CRC checksum, exceeds the valid size, or is otherwise corrupt.",
 	}
 	AllError[3] = &Error{
 		Errorcode: 3,
-		ErrorMsg:  "UnknownTopicOrPartition",
-		ErrorDesc: "This indicates that a message contents does not match its CRC",
+		ErrorMsg:  "UNKNOWN_TOPIC_OR_PARTITION",
+		ErrorDesc: "This server does not host this topic-partition.",
 	}
 	AllError[4] = &Error{
 		Errorcode: 4,
-		ErrorMsg:  "InvalidMessageSize",
-		ErrorDesc: "The message has a negative size",
+		ErrorMsg:  "INVALID_FETCH_SIZE",
+		ErrorDesc: "The requested fetch size is invalid.",
+	}
+	AllError[5] = &Error{
+		Errorcode: 5,
+		ErrorMsg:  "INVALID_FETCH_SIZE",
+		ErrorDesc: "The requested fetch size is invalid.",
+	}
+	AllError[6] = &Error{
+		Errorcode: 6,
+		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
+		ErrorDesc: "This server is not the leader for that topic-partition.",
 	}
 }
