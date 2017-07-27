@@ -88,7 +88,7 @@ func (brokers *Brokers) RequestMetaData(topic *string) (*MetadataResponse, error
 	return nil, fmt.Errorf("could not get metadata from all brokers")
 }
 
-// GetOffset return the offset values array from server
+// RequestOffsets return the offset values array. return all partitions if partitionID < 0
 func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
 	// have to find which leader own the partition by request metadata
 	// TODO cache
