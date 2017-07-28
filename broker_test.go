@@ -36,7 +36,7 @@ func TestNewBroker(t *testing.T) {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	}
 
-	_, err = NewBroker("127.0.0.1:10000", "", 0)
+	_, err = NewBroker("127.0.0.1:21010", "", 0)
 	if err == nil {
 		t.Errorf("it should not get new broker from 127.0.0.1:10000")
 	}
