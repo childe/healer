@@ -20,7 +20,7 @@ type RequestHeader struct {
 	ClientId      string
 }
 
-func (requestHeader *RequestHeader) Length() int {
+func (requestHeader *RequestHeader) length() int {
 	return 10 + len(requestHeader.ClientId)
 }
 

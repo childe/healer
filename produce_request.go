@@ -39,7 +39,7 @@ type ProduceRequest struct {
 }
 
 func (produceRequest *ProduceRequest) Length() int {
-	requestLength := produceRequest.RequestHeader.Length() + 10 //	RequiredAcks(2) + Timeout(4) + TopicBlocks_length(4)
+	requestLength := produceRequest.RequestHeader.length() + 10 //	RequiredAcks(2) + Timeout(4) + TopicBlocks_length(4)
 	for _, topicBlock := range produceRequest.TopicBlocks {
 		requestLength += 6 + len(topicBlock.TopicName)
 		for _, parttionBlock := range topicBlock.PartitonBlocks {
