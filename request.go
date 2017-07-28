@@ -11,7 +11,7 @@ var API_OffsetRequest uint16 = 2
 var API_MetadataRequest uint16 = 3
 var API_OffsetCommitRequest uint16 = 8
 var API_OffsetFetchRequest uint16 = 9
-var API_ConsumerMetadataRequest uint16 = 10
+var API_FindCoordinator uint16 = 10
 
 type RequestHeader struct {
 	ApiKey        uint16

@@ -43,6 +43,7 @@ func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 }
 
 func (broker *Broker) request(payload []byte) ([]byte, error) {
+	// TODO log?
 	broker.conn.Write(payload)
 
 	responseLengthBuf := make([]byte, 4)
@@ -128,4 +129,21 @@ func (broker *Broker) requestOffsets(topic string, partitionIDs []uint32, timeVa
 	offsetsResponse.Decode(responseBuf)
 
 	return offsetsResponse, nil
+}
+
+func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorReseponse, error) {
+	correlationID := int32(os.Getpid())
+
+	findCoordinatorRequest := NewFindCoordinatorRequest(correlationID, broker.clientID, groupID)
+	payload := findCoordinatorRequest.Encode()
+
+	responseBuf, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	findCoordinatorReseponse := &FindCoordinatorReseponse{}
+	findCoordinatorReseponse.Decode(responseBuf)
+
+	return findCoordinatorReseponse, nil
 }
