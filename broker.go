@@ -149,3 +149,7 @@ func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorRe
 
 	return findCoordinatorReseponse, nil
 }
+
+func (broker *Broker) requestFetch() {
+
+}
