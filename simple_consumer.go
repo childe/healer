@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -16,7 +14,8 @@ import (
 // SimpleConsumer instance is built to consume messages from kafka broker
 type SimpleConsumer struct {
 	ClientID    string
-	Brokers     string
+	Brokers     *Brokers
+	BrokerList  string
 	TopicName   string
 	Partition   uint32
 	FetchOffset int64
@@ -25,27 +24,14 @@ type SimpleConsumer struct {
 	MinBytes    int32
 }
 
-func NewSimpleConsumer(brokers *Brokers ) *SimpleConsumer {
+func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
 	return nil
 }
 
 // Consume consume  messages from kafka broker and send them to channels
 func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
-	var (
-		metadataResponse *MetadataResponse
-		err              error
-	)
-	pid := os.Getpid()
-	for _, broker := range strings.Split(simpleConsumer.Brokers, ",") {
-		metadataResponse, err = GetMetaData(broker, simpleConsumer.TopicName, int32(pid), simpleConsumer.ClientID)
-		if err != nil {
-			glog.Info(err)
-		} else {
-			break
-		}
-	}
-
-	if metadataResponse == nil {
+	metadataResponse, err := simpleConsumer.Brokers.RequestMetaData(&simpleConsumer.TopicName)
+	if err != nil {
 		glog.Fatalf("could not get metadata of topic[%s] from %s", simpleConsumer.TopicName, simpleConsumer.TopicName)
 	}
 
@@ -95,6 +81,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 		ClientId:      simpleConsumer.ClientID,
 	}
 
+	// TODO when stop??
 	for {
 		payload := fetchRequest.Encode()
 		conn.Write(payload)
