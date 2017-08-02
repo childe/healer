@@ -40,7 +40,7 @@ func GetOffset(broker string, topic string, partitionID int32, correlationID int
 
 	conn, connErr := dialer.Dial("tcp", broker)
 	if connErr != nil {
-		logger.Println(connErr)
+		//logger.Println(connErr)
 		return nil, connErr
 	}
 	conn.Write(payload)

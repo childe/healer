@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 type Broker struct {
@@ -63,7 +65,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 		}
 
 		if err != nil {
-			logger.Fatalln(err)
+			glog.Errorf("read response error:%s", err)
 			return nil, err
 		}
 

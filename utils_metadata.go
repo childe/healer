@@ -47,7 +47,7 @@ func GetMetaData(brokerList string, topic string, correlationID int32, clientID 
 			}
 
 			if err != nil {
-				logger.Fatalln(err)
+				//logger.Fatalln(err)
 				return nil, err
 			}
 

@@ -4,15 +4,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-)
 
-var logger = log.New(os.Stderr, "", log.LstdFlags)
+	"github.com/golang/glog"
+)
 
 // SimpleConsumer instance is built to consume messages from kafka broker
 type SimpleConsumer struct {
@@ -26,6 +25,10 @@ type SimpleConsumer struct {
 	MinBytes    int32
 }
 
+func NewSimpleConsumer(brokers *Brokers ) *SimpleConsumer {
+	return nil
+}
+
 // Consume consume  messages from kafka broker and send them to channels
 func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 	var (
@@ -36,14 +39,14 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 	for _, broker := range strings.Split(simpleConsumer.Brokers, ",") {
 		metadataResponse, err = GetMetaData(broker, simpleConsumer.TopicName, int32(pid), simpleConsumer.ClientID)
 		if err != nil {
-			logger.Println(err)
+			glog.Info(err)
 		} else {
 			break
 		}
 	}
 
 	if metadataResponse == nil {
-		logger.Fatalf("could not get metadata of topic[%s] from %s", simpleConsumer.TopicName, simpleConsumer.TopicName)
+		glog.Fatalf("could not get metadata of topic[%s] from %s", simpleConsumer.TopicName, simpleConsumer.TopicName)
 	}
 
 	partitionMetadatas := metadataResponse.TopicMetadatas[0].PartitionMetadatas
@@ -66,11 +69,10 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 			port = broker.Port
 		}
 	}
-	// logger.Printf("leader of %s:%d is %s:%d", simpleConsumer.TopicName, simpleConsumer.Partition, host, port)
 	leaderAddr := net.JoinHostPort(host, strconv.Itoa(int(port)))
 	conn, err := net.DialTimeout("tcp", leaderAddr, time.Second*5)
 	if err != nil {
-		logger.Fatalln(err)
+		glog.Fatal(err)
 	}
 	defer func() { conn.Close() }()
 
@@ -100,7 +102,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 		buf := make([]byte, 4)
 		_, err = conn.Read(buf)
 		if err != nil {
-			logger.Fatalln(err)
+			glog.Fatal(err)
 		}
 
 		responseLength := int(binary.BigEndian.Uint32(buf))
@@ -114,17 +116,17 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 				break
 			}
 			if err != nil {
-				logger.Fatalln(err)
+				glog.Fatal(err)
 			}
 			readLength += length
 			if readLength > responseLength {
-				logger.Fatalln("fetch more data than needed")
+				glog.Fatal("fetch more data than needed")
 			}
 		}
 		correlationID := int32(binary.BigEndian.Uint32(buf))
 		fetchResponse, err := DecodeFetchResponse(buf[4:])
 		if err != nil {
-			logger.Fatalln(err)
+			glog.Fatal(err)
 		}
 
 		for _, fetchResponsePiece := range fetchResponse {
@@ -135,9 +137,9 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 						messages <- message
 					}
 				} else if topicData.ErrorCode == -1 {
-					logger.Printf(AllError[0].Error())
+					glog.Info(AllError[0].Error())
 				} else {
-					logger.Printf(AllError[topicData.ErrorCode].Error())
+					glog.Info(AllError[topicData.ErrorCode].Error())
 				}
 			}
 		}

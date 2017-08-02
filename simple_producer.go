@@ -39,7 +39,7 @@ func (simpleProducer *SimpleProducer) Emit() {
 func (simpleProducer *SimpleProducer) emit() {
 	conn, err := net.DialTimeout("tcp", simpleProducer.Config.Broker, time.Second*5)
 	if err != nil {
-		logger.Fatalln(err)
+		//logger.Fatalln(err)
 	}
 	defer func() { conn.Close() }()
 
@@ -75,37 +75,37 @@ func (simpleProducer *SimpleProducer) emit() {
 
 	for {
 		payload := produceRequest.Encode()
-		logger.Println("request length", len(payload))
-		logger.Println(payload)
+		//logger.Println("request length", len(payload))
+		//logger.Println(payload)
 		conn.Write(payload)
 		buf := make([]byte, 4)
 		_, err = conn.Read(buf)
-		logger.Println(buf)
+		//logger.Println(buf)
 
 		if err != nil {
-			logger.Fatalln(err)
+			//logger.Fatalln(err)
 		}
 		responseLength := int(binary.BigEndian.Uint32(buf))
-		logger.Println("responseLength:", responseLength)
+		//logger.Println("responseLength:", responseLength)
 		buf = make([]byte, responseLength)
 
 		readLength := 0
 		for {
 			length, err := conn.Read(buf[readLength:])
-			logger.Println("length", length)
+			//logger.Println("length", length)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				logger.Fatalln(err)
+				//logger.Fatalln(err)
 			}
 			readLength += length
 			if readLength > responseLength {
-				logger.Fatalln("fetch more data than needed")
+				//logger.Fatalln("fetch more data than needed")
 			}
 		}
-		logger.Println(buf)
-		correlationId := int32(binary.BigEndian.Uint32(buf))
-		logger.Println("correlationId", correlationId)
+		//logger.Println(buf)
+		//correlationId := int32(binary.BigEndian.Uint32(buf))
+		//logger.Println("correlationId", correlationId)
 	}
 }
