@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 )
 
 var (
@@ -30,13 +31,18 @@ func main() {
 	flag.Parse()
 
 	if *topic == "" {
-		fmt.Println("need topic!")
 		flag.PrintDefaults()
+		fmt.Println("need topic name")
+		os.Exit(4)
 	}
 
+	var err error
 	simpleConsumer := &healer.SimpleConsumer{}
 	simpleConsumer.ClientID = *clientID
-	simpleConsumer.Brokers = *brokers
+	simpleConsumer.Brokers, err = healer.NewBrokers(*brokers, *clientID)
+	if err != nil {
+		glog.Fatalf("could not init brokers from %s:%s", *brokers, err)
+	}
 	simpleConsumer.TopicName = *topic
 	simpleConsumer.Partition = int32(*partition)
 	simpleConsumer.FetchOffset = *offset

@@ -30,27 +30,62 @@ FetchOffset		The offset to begin this fetch from.
 MaxBytes		The maximum bytes to include in the message set for this partition. This helps bound the size of the response.
 */
 
-type PartitonBlock struct {
-	Partition   uint32
+type PartitionBlock struct {
+	Partition   int32
 	FetchOffset int64
 	MaxBytes    int32
 }
 
+// version 0
 type FetchRequest struct {
 	RequestHeader *RequestHeader
 	ReplicaId     int32
 	MaxWaitTime   int32
 	MinBytes      int32
-	Topics        map[string][]*PartitonBlock
+	Topics        map[string][]*PartitionBlock
+}
+
+// TODO all partitions should have the SAME maxbytes?
+func NewFetchRequest(correlationID int32, clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
+	requestHeader := &RequestHeader{
+		ApiKey:        API_FetchRequest,
+		ApiVersion:    0,
+		CorrelationId: correlationID,
+		ClientId:      clientID,
+	}
+
+	topics := make(map[string][]*PartitionBlock)
+
+	return &FetchRequest{
+		RequestHeader: requestHeader,
+		ReplicaId:     -1,
+		MaxWaitTime:   maxWaitTime,
+		MinBytes:      minBytes,
+		Topics:        topics,
+	}
+}
+
+func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, fetchOffset int64, maxBytes int32) {
+	partitionBlock := &PartitionBlock{
+		Partition:   partitionID,
+		FetchOffset: fetchOffset,
+		MaxBytes:    maxBytes,
+	}
+
+	if value, ok := fetchRequest.Topics[topic]; ok {
+		value = append(value, partitionBlock)
+	} else {
+		fetchRequest.Topics[topic] = []*PartitionBlock{partitionBlock}
+	}
 }
 
 func (fetchRequest *FetchRequest) Encode() []byte {
 	requestHeaderLength := 8 + 2 + len(fetchRequest.RequestHeader.ClientId)
 	requestLength := requestHeaderLength + 12
 	requestLength += 4
-	for topicname, partitonBlocks := range fetchRequest.Topics {
+	for topicname, partitionBlocks := range fetchRequest.Topics {
 		requestLength += 2 + len(topicname) + 16
-		requestLength += 4 + len(partitonBlocks)*16
+		requestLength += 4 + len(partitionBlocks)*16
 	}
 
 	payload := make([]byte, requestLength+4)
@@ -70,20 +105,20 @@ func (fetchRequest *FetchRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.Topics)))
 	offset += 4
-	for topicname, partitonBlocks := range fetchRequest.Topics {
+	for topicname, partitionBlocks := range fetchRequest.Topics {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicname)))
 		offset += 2
 		copy(payload[offset:], topicname)
 		offset += len(topicname)
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitonBlocks)))
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitionBlocks)))
 		offset += 4
-		for _, partitonBlock := range partitonBlocks {
-			binary.BigEndian.PutUint32(payload[offset:], partitonBlock.Partition)
+		for _, partitionBlock := range partitionBlocks {
+			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionBlock.Partition))
 			offset += 4
-			binary.BigEndian.PutUint64(payload[offset:], uint64(partitonBlock.FetchOffset))
+			binary.BigEndian.PutUint64(payload[offset:], uint64(partitionBlock.FetchOffset))
 			offset += 8
-			binary.BigEndian.PutUint32(payload[offset:], uint32(partitonBlock.MaxBytes))
+			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionBlock.MaxBytes))
 			offset += 4
 		}
 	}

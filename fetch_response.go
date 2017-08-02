@@ -28,23 +28,31 @@ type TopicData struct {
 }
 
 // FetchResponse stores topicname and arrya of TopicData
-type FetchResponse []struct {
-	//CorrelationId int32
-	TopicName  string
-	TopicDatas []TopicData
+type FetchResponse struct {
+	CorrelationId int32
+	Responses     []struct {
+		TopicName  string
+		TopicDatas []TopicData
+	}
 }
 
-// DecodeFetchResponse decode payload stored in byte array to FetchResponse object
-func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
+// Decode payload stored in byte array to FetchResponse object
+func (fetchResponse *FetchResponse) Decode(payload []byte) {
 	offset := uint64(0)
 
-	//fetchResponse.CorrelationId = int32(binary.BigEndian.Uint32(payload[offset:]))
-	//offset += 4
+	responseLength := int(binary.BigEndian.Uint32(payload))
+	if responseLength+4 != len(payload) {
+		//TODO lenght does not match
+	}
+	offset += 4
+
+	fetchResponse.CorrelationId = int32(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
 
 	topicDataCount := binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	fetchResponse := make([]struct {
+	fetchResponse.Responses = make([]struct {
 		TopicName  string
 		TopicDatas []TopicData
 	}, topicDataCount)
@@ -52,59 +60,57 @@ func DecodeFetchResponse(payload []byte) (FetchResponse, error) {
 	for i := uint32(0); i < topicDataCount; i++ {
 		topicNameLength := uint64(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
-		fetchResponse[i].TopicName = string(payload[offset : offset+topicNameLength])
+		fetchResponse.Responses[i].TopicName = string(payload[offset : offset+topicNameLength])
 		offset += topicNameLength
 
 		topicDataCount := binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
-		fetchResponse[i].TopicDatas = make([]TopicData, topicDataCount)
+		fetchResponse.Responses[i].TopicDatas = make([]TopicData, topicDataCount)
 		for j := uint32(0); j < topicDataCount; j++ {
-			fetchResponse[i].TopicDatas[j].Partition = int32(binary.BigEndian.Uint32(payload[offset:]))
+			fetchResponse.Responses[i].TopicDatas[j].Partition = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
-			fetchResponse[i].TopicDatas[j].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+			fetchResponse.Responses[i].TopicDatas[j].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
-			fetchResponse[i].TopicDatas[j].HighwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
+			fetchResponse.Responses[i].TopicDatas[j].HighwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
 			offset += 8
-			fetchResponse[i].TopicDatas[j].MessageSetSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+			fetchResponse.Responses[i].TopicDatas[j].MessageSetSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
-			fetchResponse[i].TopicDatas[j].MessageSet = make([]Message, fetchResponse[i].TopicDatas[j].MessageSetSize/26)
-			for k := int32(0); k < fetchResponse[i].TopicDatas[j].MessageSetSize; k++ {
-				fetchResponse[i].TopicDatas[j].MessageSet[k].Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
+			fetchResponse.Responses[i].TopicDatas[j].MessageSet = make([]Message, fetchResponse.Responses[i].TopicDatas[j].MessageSetSize/26)
+			for k := int32(0); k < fetchResponse.Responses[i].TopicDatas[j].MessageSetSize; k++ {
+				fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
-				fetchResponse[i].TopicDatas[j].MessageSet[k].MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+				fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
-				fetchResponse[i].TopicDatas[j].MessageSet[k].Crc = binary.BigEndian.Uint32(payload[offset:])
+				fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Crc = binary.BigEndian.Uint32(payload[offset:])
 				offset += 4
-				fetchResponse[i].TopicDatas[j].MessageSet[k].MagicByte = int8(payload[offset])
+				fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].MagicByte = int8(payload[offset])
 				offset++
-				fetchResponse[i].TopicDatas[j].MessageSet[k].Attributes = int8(payload[offset])
+				fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Attributes = int8(payload[offset])
 				offset++
 				keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
 				if keyLength == -1 {
-					fetchResponse[i].TopicDatas[j].MessageSet[k].Key = nil
+					fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Key = nil
 				} else {
-					fetchResponse[i].TopicDatas[j].MessageSet[k].Key = make([]byte, keyLength)
-					copy(fetchResponse[i].TopicDatas[j].MessageSet[k].Key, payload[offset:offset+uint64(keyLength)])
+					fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Key = make([]byte, keyLength)
+					copy(fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Key, payload[offset:offset+uint64(keyLength)])
 					offset += uint64(keyLength)
 				}
 
 				valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
 				if valueLength == -1 {
-					fetchResponse[i].TopicDatas[j].MessageSet[k].Value = nil
+					fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Value = nil
 				} else {
-					fetchResponse[i].TopicDatas[j].MessageSet[k].Value = make([]byte, valueLength)
-					copy(fetchResponse[i].TopicDatas[j].MessageSet[k].Value, payload[offset:offset+uint64(valueLength)])
+					fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Value = make([]byte, valueLength)
+					copy(fetchResponse.Responses[i].TopicDatas[j].MessageSet[k].Value, payload[offset:offset+uint64(valueLength)])
 					offset += uint64(valueLength)
 				}
 				if offset == uint64(len(payload)) {
-					fetchResponse[i].TopicDatas[j].MessageSet = fetchResponse[i].TopicDatas[j].MessageSet[:k+1]
+					fetchResponse.Responses[i].TopicDatas[j].MessageSet = fetchResponse.Responses[i].TopicDatas[j].MessageSet[:k+1]
 					break
 				}
 			}
 		}
 	}
-
-	return fetchResponse, nil
 }

@@ -150,6 +150,15 @@ func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorRe
 	return findCoordinatorReseponse, nil
 }
 
-func (broker *Broker) requestFetch() {
+func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, error) {
+	payload := fetchRequest.Encode()
 
+	responseBuf, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	fetchResponse := &FetchResponse{}
+	fetchResponse.Decode(responseBuf)
+	return fetchResponse, nil
 }

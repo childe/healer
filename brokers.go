@@ -151,3 +151,17 @@ func (brokers *Brokers) RequestOffsets(topic string, partitionID int32, timeValu
 	}
 	return nil, nil
 }
+func (brokers *Brokers) findLeader(topic string, partitionID int32) (int32, error) {
+	metadataResponse, err := brokers.RequestMetaData(&topic)
+	if err != nil {
+		return -1, fmt.Errorf("could not get metadata of topic %s:%s", topic, err)
+	}
+
+	partitionMetadatas := metadataResponse.TopicMetadatas[0].PartitionMetadatas
+	for _, partitionMetadata := range partitionMetadatas {
+		if int32(partitionMetadata.PartitionId) == partitionID {
+			return partitionMetadata.Leader, nil
+		}
+	}
+	return -1, fmt.Errorf("could not find out leader of topic %s", topic)
+}
