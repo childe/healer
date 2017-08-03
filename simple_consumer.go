@@ -52,7 +52,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan Message) {
 		}
 
 		for _, fetchResponsePiece := range fetchResponse.Responses {
-			for _, topicData := range fetchResponsePiece.TopicDatas {
+			for _, topicData := range fetchResponsePiece.PartitionResponses {
 				if topicData.ErrorCode == 0 {
 					for _, message := range topicData.MessageSet {
 						fetchRequest.Topics[simpleConsumer.TopicName][0].FetchOffset = message.Offset + 1
