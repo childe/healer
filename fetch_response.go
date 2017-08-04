@@ -44,7 +44,7 @@ type FetchResponse struct {
 // Decode payload stored in byte array to FetchResponse object
 func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 	glog.V(10).Infof("playload length: %d", len(payload))
-	glog.V(10).Infof("playload %v", payload)
+	glog.V(20).Infof("playload %v", payload)
 	offset := uint64(0)
 
 	responseLength := uint64(binary.BigEndian.Uint32(payload))
@@ -84,7 +84,10 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 			glog.V(10).Infof("partition id is %d", fetchResponse.Responses[i].PartitionResponses[j].Partition)
 			offset += 4
 			fetchResponse.Responses[i].PartitionResponses[j].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
-			glog.V(10).Infof("errorcode is %d", fetchResponse.Responses[i].PartitionResponses[j].ErrorCode)
+			if fetchResponse.Responses[i].PartitionResponses[j].ErrorCode != 0 {
+				glog.V(10).Infof("errorcode is %d", fetchResponse.Responses[i].PartitionResponses[j].ErrorCode)
+				return AllError[fetchResponse.Responses[i].PartitionResponses[j].ErrorCode]
+			}
 			offset += 2
 			fetchResponse.Responses[i].PartitionResponses[j].HighwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
 			glog.V(10).Infof("HighwaterMarkOffset id is %d", fetchResponse.Responses[i].PartitionResponses[j].HighwaterMarkOffset)
@@ -95,26 +98,27 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 			//return
 			fetchResponse.Responses[i].PartitionResponses[j].MessageSet = make([]*Message, 0)
 			for {
-				//if responseLength+4 > offset+26 {
-				if responseLength < offset+22 { // truncated becaused of max-bytes parameter in fetch request
-					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request")
+				//if responseLength+4 < offset+26 {
+				if responseLength < offset+22 {
+					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d]+4 < offset[%d]+26).", responseLength, offset)
 					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
 						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
 					}
 					return nil
 				}
 				glog.V(10).Infof("offset: %d", offset)
-				glog.V(10).Infof("playload %v", payload[offset:])
+				glog.V(20).Infof("playload %v", payload[offset:])
 				message := &Message{}
 				message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
+				glog.V(10).Infof("message offset: %d", message.Offset)
 
 				message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 				glog.V(10).Infof("message size: %d", message.MessageSize)
 				offset += 4
 
-				if responseLength+4 < offset+uint64(message.MessageSize) { // truncated becaused of max-bytes parameter in fetch request
-					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request")
+				if responseLength+4 < offset+uint64(message.MessageSize) {
+					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d]+4 < offset[%d]+messageSize[%d]).", responseLength, offset, message.MessageSize)
 					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
 						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
 					}
@@ -144,7 +148,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 				} else {
 					message.Value = make([]byte, valueLength)
 					copy(message.Value, payload[offset:offset+uint64(valueLength)])
-					glog.V(10).Infof("message value: %s", message.Value)
+					glog.V(20).Infof("message value: %s", message.Value)
 					offset += uint64(valueLength)
 				}
 				fetchResponse.Responses[i].PartitionResponses[j].MessageSet = append(fetchResponse.Responses[i].PartitionResponses[j].MessageSet, message)

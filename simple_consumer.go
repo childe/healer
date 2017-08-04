@@ -21,7 +21,7 @@ func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
 
 // Consume consume  messages from kafka broker and send them to channels
 // TODO goroutine and return another chan? the return could control when to stop
-func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message) {
+func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message, maxMessages int) {
 	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error
@@ -44,6 +44,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message) {
 	fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.FetchOffset, simpleConsumer.MaxBytes)
 
 	// TODO when stop??
+	i := 0
 	for {
 		fetchResponse, err := leaderBroker.requestFetch(fetchRequest)
 		if err != nil {
@@ -57,8 +58,13 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message) {
 					for _, message := range topicData.MessageSet {
 						fetchRequest.Topics[simpleConsumer.TopicName][0].FetchOffset = message.Offset + 1
 						messages <- message
+						i++
+						glog.V(9).Infof("send %d messages to chan", i)
+						if i >= maxMessages {
+							return
+						}
 					}
-				} else if topicData.ErrorCode == -1 {
+				} else if topicData.ErrorCode == -1 { //TODO index -1?
 					glog.Info(AllError[0].Error())
 				} else {
 					glog.Info(AllError[topicData.ErrorCode].Error())
