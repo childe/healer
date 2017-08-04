@@ -150,6 +150,7 @@ func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorRe
 	return findCoordinatorReseponse, nil
 }
 
+// TODO should assemble MessageSets streamingly
 func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, error) {
 	payload := fetchRequest.Encode()
 
