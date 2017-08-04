@@ -110,7 +110,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 				offset += 8
 
 				message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
-				glog.Infof("message size: %d", message.MessageSize)
+				glog.V(10).Infof("message size: %d", message.MessageSize)
 				offset += 4
 
 				if responseLength+4 < offset+uint64(message.MessageSize) { // truncated becaused of max-bytes parameter in fetch request
