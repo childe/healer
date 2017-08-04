@@ -60,6 +60,7 @@ func getAllBrokersFromOne(broker *Broker, clientID string) (*Brokers, error) {
 func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
 		broker, err := NewBroker(brokerAddr, clientID, -1)
+		defer broker.conn.Close()
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
