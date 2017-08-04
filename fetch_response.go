@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/binary"
+	"errors"
 
 	"github.com/golang/glog"
 )
@@ -98,7 +99,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 				if responseLength < offset+22 { // truncated becaused of max-bytes parameter in fetch request
 					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request")
 					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
-						return AllError[400]
+						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
 					}
 					return nil
 				}
@@ -115,7 +116,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 				if responseLength+4 < offset+uint64(message.MessageSize) { // truncated becaused of max-bytes parameter in fetch request
 					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request")
 					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
-						return AllError[400]
+						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
 					}
 					return nil
 				}

@@ -10,7 +10,7 @@ func (healerError *Error) Error() string {
 	return healerError.ErrorDesc
 }
 
-var AllError []*Error = make([]*Error, 32)
+var AllError []*Error = make([]*Error, 56)
 
 func init() {
 	AllError[0] = &Error{
@@ -47,11 +47,5 @@ func init() {
 		Errorcode: 6,
 		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
 		ErrorDesc: "This server is not the leader for that topic-partition.",
-	}
-
-	AllError[400] = &Error{
-		Errorcode: 400,
-		ErrorMsg:  "MAX_BYTES TOO SMALL",
-		ErrorDesc: "MaxBytes parameter is to small for server to send back one whole message.",
 	}
 }
