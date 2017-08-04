@@ -43,13 +43,14 @@ type FetchResponse struct {
 
 // Decode payload stored in byte array to FetchResponse object
 func (fetchResponse *FetchResponse) Decode(payload []byte) error {
-	glog.V(10).Infof("playload length: %d", len(payload))
+	payloadLength := uint64(len(payload))
+	glog.V(5).Infof("start to decode fetch response playload, length: %d", payloadLength)
 	glog.V(20).Infof("playload %v", payload)
 	offset := uint64(0)
 
 	responseLength := uint64(binary.BigEndian.Uint32(payload))
 	glog.V(10).Infof("response length: %d", responseLength)
-	if responseLength+4 != uint64(len(payload)) {
+	if responseLength+4 != payloadLength {
 		//TODO lenght does not match
 		glog.Error("response length NOT match")
 	}
@@ -98,8 +99,11 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 			//return
 			fetchResponse.Responses[i].PartitionResponses[j].MessageSet = make([]*Message, 0)
 			for {
-				//if responseLength+4 < offset+26 {
-				if responseLength < offset+22 {
+				if payloadLength == offset {
+					break
+				}
+				//if payloadLength< offset+26 {
+				if payloadLength < offset+26 {
 					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d]+4 < offset[%d]+26).", responseLength, offset)
 					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
 						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
@@ -117,8 +121,8 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 				glog.V(10).Infof("message size: %d", message.MessageSize)
 				offset += 4
 
-				if responseLength+4 < offset+uint64(message.MessageSize) {
-					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d]+4 < offset[%d]+messageSize[%d]).", responseLength, offset, message.MessageSize)
+				if payloadLength < offset+uint64(message.MessageSize) {
+					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(payloadLength[%d] < offset[%d]+messageSize[%d]).", payloadLength, offset, message.MessageSize)
 					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
 						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
 					}
