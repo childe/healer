@@ -12,12 +12,12 @@ FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetS
   Partition => int32
   ErrorCode => int16
   HighwaterMarkOffset => int64
-  MessageSetSize => int32
+  MessageSetSizeBytes => int32
 
 Field					Description
 HighwaterMarkOffset		The offset at the end of the log for this partition. This can be used by the client to determine how many messages behind the end of the log they are.
 MessageSet				The message data fetched from this partition, in the format described above.
-MessageSetSize			The size in bytes of the message set for this partition
+MessageSetSizeBytes			The size in bytes of the message set for this partition
 Partition				The id of the partition this response is for.
 TopicName				The name of the topic this response entry is for.
 */
@@ -27,7 +27,7 @@ type PartitionResponse struct {
 	Partition           int32
 	ErrorCode           int16
 	HighwaterMarkOffset int64
-	MessageSetSize      int32
+	MessageSetSizeBytes int32
 	MessageSet          MessageSet
 }
 
@@ -35,18 +35,22 @@ type PartitionResponse struct {
 type FetchResponse struct {
 	CorrelationId int32
 	Responses     []struct {
-		TopicName  string
+		TopicName          string
 		PartitionResponses []PartitionResponse
 	}
 }
 
 // Decode payload stored in byte array to FetchResponse object
-func (fetchResponse *FetchResponse) Decode(payload []byte) {
+func (fetchResponse *FetchResponse) Decode(payload []byte) error {
+	glog.V(10).Infof("playload length: %d", len(payload))
+	glog.V(10).Infof("playload %v", payload)
 	offset := uint64(0)
 
-	responseLength := int(binary.BigEndian.Uint32(payload))
-	if responseLength+4 != len(payload) {
+	responseLength := uint64(binary.BigEndian.Uint32(payload))
+	glog.V(10).Infof("response length: %d", responseLength)
+	if responseLength+4 != uint64(len(payload)) {
 		//TODO lenght does not match
+		glog.Error("response length NOT match")
 	}
 	offset += 4
 
@@ -58,7 +62,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) {
 	glog.V(10).Infof("there is %d topic in fetch response", responsesCount)
 
 	fetchResponse.Responses = make([]struct {
-		TopicName  string
+		TopicName          string
 		PartitionResponses []PartitionResponse
 	}, responsesCount)
 
@@ -76,49 +80,75 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) {
 		for j := uint32(0); j < partitionResponseCount; j++ {
 			glog.V(10).Infof("now process partitionResponse %d", j)
 			fetchResponse.Responses[i].PartitionResponses[j].Partition = int32(binary.BigEndian.Uint32(payload[offset:]))
+			glog.V(10).Infof("partition id is %d", fetchResponse.Responses[i].PartitionResponses[j].Partition)
 			offset += 4
 			fetchResponse.Responses[i].PartitionResponses[j].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+			glog.V(10).Infof("errorcode is %d", fetchResponse.Responses[i].PartitionResponses[j].ErrorCode)
 			offset += 2
 			fetchResponse.Responses[i].PartitionResponses[j].HighwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
+			glog.V(10).Infof("HighwaterMarkOffset id is %d", fetchResponse.Responses[i].PartitionResponses[j].HighwaterMarkOffset)
 			offset += 8
-			fetchResponse.Responses[i].PartitionResponses[j].MessageSetSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+			fetchResponse.Responses[i].PartitionResponses[j].MessageSetSizeBytes = int32(binary.BigEndian.Uint32(payload[offset:]))
+			glog.V(10).Infof("there is %d bytes in messagesets", fetchResponse.Responses[i].PartitionResponses[j].MessageSetSizeBytes)
 			offset += 4
-			fetchResponse.Responses[i].PartitionResponses[j].MessageSet = make([]Message, fetchResponse.Responses[i].PartitionResponses[j].MessageSetSize/26)
-			for k := int32(0); k < fetchResponse.Responses[i].PartitionResponses[j].MessageSetSize; k++ {
-				fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
+			//return
+			fetchResponse.Responses[i].PartitionResponses[j].MessageSet = make([]*Message, 0)
+			for {
+				//if responseLength+4 > offset+26 {
+				if responseLength < offset+22 { // truncated becaused of max-bytes parameter in fetch request
+					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request")
+					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
+						return AllError[400]
+					}
+					return nil
+				}
+				glog.V(10).Infof("offset: %d", offset)
+				glog.V(10).Infof("playload %v", payload[offset:])
+				message := &Message{}
+				message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
-				fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+
+				message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+				glog.Infof("message size: %d", message.MessageSize)
 				offset += 4
-				fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Crc = binary.BigEndian.Uint32(payload[offset:])
+
+				if responseLength+4 < offset+uint64(message.MessageSize) { // truncated becaused of max-bytes parameter in fetch request
+					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request")
+					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
+						return AllError[400]
+					}
+					return nil
+				}
+
+				message.Crc = binary.BigEndian.Uint32(payload[offset:])
 				offset += 4
-				fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].MagicByte = int8(payload[offset])
+				message.MagicByte = int8(payload[offset])
 				offset++
-				fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Attributes = int8(payload[offset])
+				message.Attributes = int8(payload[offset])
 				offset++
 				keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
 				if keyLength == -1 {
-					fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Key = nil
+					message.Key = nil
 				} else {
-					fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Key = make([]byte, keyLength)
-					copy(fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Key, payload[offset:offset+uint64(keyLength)])
+					message.Key = make([]byte, keyLength)
+					copy(message.Key, payload[offset:offset+uint64(keyLength)])
 					offset += uint64(keyLength)
 				}
 
 				valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 				offset += 4
 				if valueLength == -1 {
-					fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Value = nil
+					message.Value = nil
 				} else {
-					fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Value = make([]byte, valueLength)
-					copy(fetchResponse.Responses[i].PartitionResponses[j].MessageSet[k].Value, payload[offset:offset+uint64(valueLength)])
+					message.Value = make([]byte, valueLength)
+					copy(message.Value, payload[offset:offset+uint64(valueLength)])
+					glog.V(10).Infof("message value: %s", message.Value)
 					offset += uint64(valueLength)
 				}
-				if offset == uint64(len(payload)) {
-					fetchResponse.Responses[i].PartitionResponses[j].MessageSet = fetchResponse.Responses[i].PartitionResponses[j].MessageSet[:k+1]
-					break
-				}
+				fetchResponse.Responses[i].PartitionResponses[j].MessageSet = append(fetchResponse.Responses[i].PartitionResponses[j].MessageSet, message)
 			}
 		}
 	}
+	return nil
 }

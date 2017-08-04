@@ -50,7 +50,7 @@ type Message struct {
 	Key        []byte
 	Value      []byte
 }
-type MessageSet []Message
+type MessageSet []*Message
 
 func (messageSet *MessageSet) Length() int {
 	length := 0

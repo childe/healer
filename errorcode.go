@@ -48,4 +48,10 @@ func init() {
 		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
 		ErrorDesc: "This server is not the leader for that topic-partition.",
 	}
+
+	AllError[400] = &Error{
+		Errorcode: 400,
+		ErrorMsg:  "MAX_BYTES TOO SMALL",
+		ErrorDesc: "MaxBytes parameter is to small for server to send back one whole message.",
+	}
 }

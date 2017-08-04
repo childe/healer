@@ -22,7 +22,7 @@ type SimpleProducer struct {
 	MessageSet     MessageSet
 }
 
-func (simpleProducer *SimpleProducer) AddMessage(message Message) {
+func (simpleProducer *SimpleProducer) AddMessage(message *Message) {
 	simpleProducer.MessageSet[simpleProducer.MessageSetSize] = message
 	simpleProducer.MessageSetSize++
 	if simpleProducer.MessageSetSize == simpleProducer.Config.MessageCap {
