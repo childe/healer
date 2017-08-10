@@ -7,12 +7,12 @@ import (
 
 
 // version 0
-type HeartbeatReseponse struct {
+type HeartbeatResponse struct {
 	CorrelationId uint32
 	ErrorCode     uint16
 }
 
-func (heartbeatReseponse *HeartbeatReseponse) Decode(payload []byte) error {
+func (heartbeatResponse *HeartbeatResponse) Decode(payload []byte) error {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
@@ -20,10 +20,10 @@ func (heartbeatReseponse *HeartbeatReseponse) Decode(payload []byte) error {
 	}
 	offset += 4
 
-	heartbeatReseponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	heartbeatResponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	heartbeatReseponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	heartbeatResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
 
 	return nil
 }

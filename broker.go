@@ -161,7 +161,7 @@ func (broker *Broker) requestOffsets(topic string, partitionIDs []uint32, timeVa
 	return offsetsResponse, nil
 }
 
-func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorReseponse, error) {
+func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorResponse, error) {
 	correlationID := int32(os.Getpid())
 
 	findCoordinatorRequest := NewFindCoordinatorRequest(correlationID, broker.clientID, groupID)
@@ -172,10 +172,10 @@ func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorRe
 		return nil, err
 	}
 
-	findCoordinatorReseponse := &FindCoordinatorReseponse{}
-	findCoordinatorReseponse.Decode(responseBuf)
+	findCoordinatorResponse := &FindCoordinatorResponse{}
+	findCoordinatorResponse.Decode(responseBuf)
 
-	return findCoordinatorReseponse, nil
+	return findCoordinatorResponse, nil
 }
 
 // TODO should assemble MessageSets streamingly

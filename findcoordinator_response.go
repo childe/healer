@@ -11,28 +11,28 @@ type Coordinator struct {
 	port   int32
 }
 
-type FindCoordinatorReseponse struct {
+type FindCoordinatorResponse struct {
 	CorrelationId uint32
 	ErrorCode     uint16
 	Coordinator   *Coordinator
 }
 
-func (findCoordinatorReseponse *FindCoordinatorReseponse) Decode(payload []byte) error {
+func (findCoordinatorResponse *FindCoordinatorResponse) Decode(payload []byte) error {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return fmt.Errorf("FindCoordinator Reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return fmt.Errorf("FindCoordinator Response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
-	findCoordinatorReseponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	findCoordinatorResponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	findCoordinatorReseponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	findCoordinatorResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
 	offset += 2
 
 	coordinator := &Coordinator{}
-	findCoordinatorReseponse.Coordinator = coordinator
+	findCoordinatorResponse.Coordinator = coordinator
 
 	coordinator.nodeID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
