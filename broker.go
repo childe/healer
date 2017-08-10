@@ -47,6 +47,10 @@ func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 	return broker, nil
 }
 
+func (broker *Broker) Close() error {
+	return broker.conn.Close()
+}
+
 func (broker *Broker) request(payload []byte) ([]byte, error) {
 	// TODO log?
 	broker.conn.Write(payload)
