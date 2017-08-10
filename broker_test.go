@@ -53,7 +53,7 @@ func _TestNewBroker(t *testing.T) {
 	}
 }
 
-func TestRequestFindCoordinator(t *testing.T) {
+func _TestRequestFindCoordinator(t *testing.T) {
 	broker, err := NewBroker(*brokerAddress, "healer", -1)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
@@ -67,4 +67,21 @@ func TestRequestFindCoordinator(t *testing.T) {
 	} else {
 		t.Logf("reqeust FindCoordinator for groupID[%s] OK", *groupID)
 	}
+}
+
+func TestRequestApiVersions(t *testing.T) {
+	broker, err := NewBroker(*brokerAddress, "healer", -1)
+	defer broker.Close()
+	if err != nil {
+		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
+	}
+
+	apiVersionsResponse, err := broker.requestApiVersions()
+	if apiVersionsResponse.ErrorCode != 0 {
+		t.Errorf("apiVersionsResponse error code is %d", apiVersionsResponse.ErrorCode)
+	} else {
+		t.Log("got apiversions response")
+	}
+
+	t.Logf("broker %s apiKey is %d, minVersion is %d, maxVersion is %d", *brokerAddress, apiVersionsResponse.ApiVersions.apiKey, apiVersionsResponse.ApiVersions.minVersion, apiVersionsResponse.ApiVersions.maxVersion)
 }

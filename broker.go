@@ -53,6 +53,7 @@ func (broker *Broker) Close() error {
 
 func (broker *Broker) request(payload []byte) ([]byte, error) {
 	// TODO log?
+	//glog.V(10).Infof("request length: %d", len(payload))
 	broker.conn.Write(payload)
 
 	responseLengthBuf := make([]byte, 4)
@@ -62,6 +63,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
+	//glog.V(10).Infof("response length: %d", responseLength)
 	responseBuf := make([]byte, 4+responseLength)
 
 	readLength := 0
@@ -90,7 +92,18 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 }
 
 func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
-	return nil, nil
+	correlationID := int32(os.Getpid())
+	apiVersionRequest := NewApiVersionsRequest(correlationID, broker.clientID)
+	response, err := broker.request(apiVersionRequest.Encode())
+	if err != nil {
+		return nil, err
+	}
+	apiVersionsResponse := &ApiVersionsResponse{}
+	err = apiVersionsResponse.Decode(response)
+	if err != nil {
+		return nil, err
+	}
+	return apiVersionsResponse, nil
 }
 
 func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {

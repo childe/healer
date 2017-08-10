@@ -1,14 +1,12 @@
 package healer
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
-type ApiVersionRequest struct {
+type ApiVersionsRequest struct {
 	RequestHeader *RequestHeader
 }
 
-func NewApiVersionsRequest(correlationID int32, clientID string) *FetchRequest {
+func NewApiVersionsRequest(correlationID int32, clientID string) *ApiVersionsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_ApiVersions,
 		ApiVersion:    0,
@@ -16,18 +14,18 @@ func NewApiVersionsRequest(correlationID int32, clientID string) *FetchRequest {
 		ClientId:      clientID,
 	}
 
-	return &FetchRequest{
+	return &ApiVersionsRequest{
 		RequestHeader: requestHeader,
 	}
 }
 
-func (apiVersionRequest *ApiVersionRequest) Encode() []byte {
-	payload := make([]byte, apiVersionRequest.RequestHeader.length()+4)
+func (apiVersionsRequest *ApiVersionsRequest) Encode() []byte {
+	payload := make([]byte, apiVersionsRequest.RequestHeader.length()+4)
 	offset := 0
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(apiVersionRequest.RequestHeader.length()))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(apiVersionsRequest.RequestHeader.length()))
 	offset += 4
 
-	apiVersionRequest.RequestHeader.Encode(payload, offset)
+	apiVersionsRequest.RequestHeader.Encode(payload, offset)
 	return payload
 }
