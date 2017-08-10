@@ -13,6 +13,7 @@ var API_OffsetCommitRequest uint16 = 8
 var API_OffsetFetchRequest uint16 = 9
 var API_FindCoordinator uint16 = 10
 var API_Heartbeat uint16 = 12
+var API_ApiVersions uint16 = 18
 
 type RequestHeader struct {
 	ApiKey        uint16
