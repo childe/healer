@@ -12,10 +12,13 @@ import (
 )
 
 type Broker struct {
-	nodeID   int32
-	address  string
-	clientID string
-	conn     net.Conn
+	nodeID      int32
+	address     string
+	clientID    string
+	conn        net.Conn
+	api_key     int16
+	min_version int16
+	max_version int16
 }
 
 var defaultClientID = "healer"
@@ -80,6 +83,31 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	copy(responseBuf[0:4], responseLengthBuf)
 
 	return responseBuf, nil
+}
+
+func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
+	return nil, nil
+}
+
+func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
+	// TODO log?
+	broker.conn.Write(payload)
+
+	buf := make([]byte, 65535)
+	for {
+		length, err := broker.conn.Read(buf)
+		buffers <- buf[:length]
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			glog.Errorf("read response error:%s", err)
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) {
@@ -162,4 +190,17 @@ func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, 
 	fetchResponse := &FetchResponse{}
 	fetchResponse.Decode(responseBuf)
 	return fetchResponse, nil
+}
+
+func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, messages chan *Message) error {
+	payload := fetchRequest.Encode()
+
+	// TODO 10?
+	buffers := make(chan []byte, 10)
+	err := broker.requestStreamingly(payload, buffers)
+	if err != nil {
+		return err
+	}
+	consumeFetchResponse(buffers, messages)
+	return nil
 }
