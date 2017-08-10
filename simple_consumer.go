@@ -51,6 +51,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message, maxMessage
 			glog.Errorf("request fetch error: %s", err)
 			continue
 		}
+		return
 
 		for _, fetchResponsePiece := range fetchResponse.Responses {
 			for _, topicData := range fetchResponsePiece.PartitionResponses {
@@ -74,4 +75,34 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message, maxMessage
 		correlationID++
 		fetchRequest.RequestHeader.CorrelationId = correlationID
 	}
+}
+
+func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(messages chan *Message, maxMessages int) error {
+	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.TopicName, simpleConsumer.Partition)
+	if err != nil {
+		//TODO NO fatal but return error
+		glog.Fatal("could not get leader of topic %s:%s", simpleConsumer.TopicName, err)
+	} else {
+		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
+	}
+
+	var leaderBroker *Broker
+	var ok bool
+	if leaderBroker, ok = simpleConsumer.Brokers.brokers[leaderID]; !ok {
+		//TODO NO fatal but return error
+		glog.Fatal("could not get broker %d. maybe should refresh metadata.", leaderID)
+	} else {
+		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
+	}
+
+	correlationID := int32(0)
+	fetchRequest := NewFetchRequest(correlationID, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
+	fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.FetchOffset, simpleConsumer.MaxBytes)
+
+	err = leaderBroker.requestFetchStreamingly(fetchRequest, messages)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

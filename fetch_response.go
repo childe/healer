@@ -100,6 +100,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 			fetchResponse.Responses[i].PartitionResponses[j].MessageSet = make([]*Message, 0)
 			for {
 				if payloadLength == offset {
+					// TODO break or return?
 					break
 				}
 				//if payloadLength< offset+26 {
@@ -160,4 +161,37 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 		}
 	}
 	return nil
+}
+
+func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
+	restBuf := make([]byte, 0)
+
+	// header
+	for {
+		buf, more := <-buffers
+		if more {
+			//responseLength := uint64(binary.BigEndian.Uint32(payload))
+			//fetchResponse.CorrelationId = int32(binary.BigEndian.Uint32(payload[offset:]))
+			//responsesCount := binary.BigEndian.Uint32(payload[offset:])
+			if len(buf) < 12 {
+				restBuf = append(restBuf, buf...)
+			} else {
+				restBuf = restBuf[12:]
+				break
+			}
+		} else {
+			glog.Error("NOT get enough data to build FetchResponse")
+			return
+		}
+	}
+	for {
+		_, more := <-buffers
+		if more {
+			//topicNameLength := uint64(binary.BigEndian.Uint16(payload[offset:]))
+			//offset += 2
+			//fetchResponse.Responses[i].TopicName = string(payload[offset : offset+topicNameLength])
+			//offset += topicNameLength
+		} else {
+		}
+	}
 }
