@@ -16,7 +16,7 @@ func init() {
 	flag.Parse()
 }
 
-func _TestNewBroker(t *testing.T) {
+func TestNewBroker(t *testing.T) {
 	_, err := NewBroker(*brokerAddress, "healer", -1)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
@@ -53,7 +53,7 @@ func _TestNewBroker(t *testing.T) {
 	}
 }
 
-func _TestRequestFindCoordinator(t *testing.T) {
+func TestRequestFindCoordinator(t *testing.T) {
 	broker, err := NewBroker(*brokerAddress, "healer", -1)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)

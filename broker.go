@@ -3,6 +3,7 @@ package healer
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -12,13 +13,13 @@ import (
 )
 
 type Broker struct {
-	nodeID      int32
-	address     string
-	clientID    string
-	conn        net.Conn
-	api_key     int16
-	min_version int16
-	max_version int16
+	nodeID     int32
+	address    string
+	clientID   string
+	conn       net.Conn
+	apiKey     int16
+	minVersion int16
+	maxVersion int16
 }
 
 var defaultClientID = "healer"
@@ -40,9 +41,18 @@ func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 
 	conn, err := net.DialTimeout("tcp", address, time.Second*5)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
 	broker.conn = conn
+
+	apiVersionsResponse, err := broker.requestApiVersions()
+	if err != nil {
+		return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
+	}
+
+	broker.apiKey = apiVersionsResponse.ApiVersions.apiKey
+	broker.minVersion = apiVersionsResponse.ApiVersions.minVersion
+	broker.maxVersion = apiVersionsResponse.ApiVersions.maxVersion
 
 	return broker, nil
 }
