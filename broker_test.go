@@ -17,35 +17,35 @@ func init() {
 }
 
 func TestNewBroker(t *testing.T) {
-	_, err := NewBroker(*brokerAddress, "healer", -1)
+	_, err := NewBroker(*brokerAddress, "healer", -1, 60, 30)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", -1)
 	}
 
-	_, err = NewBroker(*brokerAddress, "", -1)
+	_, err = NewBroker(*brokerAddress, "", -1, 60, 0)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "", -1)
 	}
 
-	_, err = NewBroker(*brokerAddress, "healer", 0)
+	_, err = NewBroker(*brokerAddress, "healer", 0, 0, 0)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", 0)
 	}
 
-	_, err = NewBroker(*brokerAddress, "", 0)
+	_, err = NewBroker(*brokerAddress, "", 0, 0, 0)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "", -1)
 	}
 
-	_, err = NewBroker("127.0.0.1:21010", "", 0)
+	_, err = NewBroker("127.0.0.1:21010", "", 0, 0, 0)
 	if err == nil {
 		t.Errorf("it should not get new broker from 127.0.0.1:10000")
 	} else {
@@ -54,7 +54,7 @@ func TestNewBroker(t *testing.T) {
 }
 
 func TestRequestFindCoordinator(t *testing.T) {
-	broker, err := NewBroker(*brokerAddress, "healer", -1)
+	broker, err := NewBroker(*brokerAddress, "healer", -1, 0, 0)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
@@ -70,7 +70,7 @@ func TestRequestFindCoordinator(t *testing.T) {
 }
 
 func TestRequestApiVersions(t *testing.T) {
-	broker, err := NewBroker(*brokerAddress, "healer", -1)
+	broker, err := NewBroker(*brokerAddress, "healer", -1, 0, 0)
 	defer broker.Close()
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)

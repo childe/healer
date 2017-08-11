@@ -12,7 +12,7 @@ type Brokers struct {
 	brokers map[int32]*Broker
 }
 
-func getAllBrokersFromOne(broker *Broker, clientID string) (*Brokers, error) {
+func getAllBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
 	brokers := &Brokers{}
 	brokers.brokers = make(map[int32]*Broker)
 
@@ -34,7 +34,7 @@ func getAllBrokersFromOne(broker *Broker, clientID string) (*Brokers, error) {
 
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokerAddr := fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port)
-		broker, err := NewBroker(brokerAddr, clientID, brokerInfo.NodeId)
+		broker, err := NewBroker(brokerAddr, clientID, brokerInfo.NodeId, connecTimeout, timeout)
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
@@ -57,15 +57,15 @@ func getAllBrokersFromOne(broker *Broker, clientID string) (*Brokers, error) {
 	return brokers, nil
 }
 
-func NewBrokers(brokerList string, clientID string) (*Brokers, error) {
+func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
-		broker, err := NewBroker(brokerAddr, clientID, -1)
+		broker, err := NewBroker(brokerAddr, clientID, -1, connecTimeout, timeout)
 		// TODO conn not established?
 		defer broker.conn.Close()
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
-			brokers, err := getAllBrokersFromOne(broker, clientID)
+			brokers, err := getAllBrokersFromOne(broker, clientID, connecTimeout, timeout)
 			if err != nil {
 				glog.Infof("could not get broker list from %s:%s", broker.address, err)
 			} else {

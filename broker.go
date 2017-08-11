@@ -13,18 +13,20 @@ import (
 )
 
 type Broker struct {
-	nodeID      int32
-	address     string
-	clientID    string
-	conn        net.Conn
-	apiVersions []*ApiVersion
+	nodeID        int32
+	address       string
+	clientID      string
+	conn          net.Conn
+	apiVersions   []*ApiVersion
+	timeout       time.Duration // Second
+	connecTimeout time.Duration // Second
 }
 
 var defaultClientID = "healer"
 
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
-func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
+func NewBroker(address string, clientID string, nodeID int32, connecTimeout int, timeout int) (*Broker, error) {
 	//TODO more parameters, timeout, keepalive, connect timeout ...
 	//TODO get available api versions
 	if clientID == "" {
@@ -35,9 +37,10 @@ func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 		nodeID:   nodeID,
 		address:  address,
 		clientID: clientID,
+		timeout:  time.Duration(timeout),
 	}
 
-	conn, err := net.DialTimeout("tcp", address, time.Second*5)
+	conn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
@@ -62,6 +65,9 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	broker.conn.Write(payload)
 
 	responseLengthBuf := make([]byte, 4)
+	if broker.timeout > 0 {
+		broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+	}
 	_, err := broker.conn.Read(responseLengthBuf)
 	if err != nil {
 		return nil, err
@@ -73,6 +79,9 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 	readLength := 0
 	for {
+		if broker.timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err == io.EOF {
 			break

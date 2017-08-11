@@ -17,6 +17,8 @@ var (
 	offsets    = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
 	clientID   = flag.String("clientID", "healer", "The ID of this client.")
 	format     = flag.String("format", "", "output original kafka response if set to original")
+	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
+	timeout        = flag.Int("timeout", 30, "default 30 Second. read timeout from connection to broker")
 )
 
 func main() {
@@ -28,7 +30,7 @@ func main() {
 		os.Exit(4)
 	}
 
-	brokers, err := healer.NewBrokers(*brokerList, *clientID)
+	brokers, err := healer.NewBrokers(*brokerList, *clientID, *connectTimeout, *timeout)
 	if err != nil {
 		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)
