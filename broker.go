@@ -108,6 +108,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
 	correlationID := int32(os.Getpid())
+
+	// TODO should always use v0?
 	apiVersionRequest := NewApiVersionsRequest(0, correlationID, broker.clientID)
 	response, err := broker.request(apiVersionRequest.Encode())
 	if err != nil {
