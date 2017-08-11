@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type ApiVersions struct {
+type ApiVersion struct {
 	apiKey     int16
 	minVersion int16
 	maxVersion int16
@@ -15,7 +15,7 @@ type ApiVersions struct {
 type ApiVersionsResponse struct {
 	CorrelationId uint32
 	ErrorCode     uint16
-	ApiVersions   ApiVersions
+	ApiVersions   []*ApiVersion
 }
 
 func (apiVersionsResponse *ApiVersionsResponse) Decode(payload []byte) error {
@@ -26,20 +26,29 @@ func (apiVersionsResponse *ApiVersionsResponse) Decode(payload []byte) error {
 	}
 	offset += 4
 
-	apiVersionsResponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	apiVersionsResponse.CorrelationId = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
 	apiVersionsResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
 	offset += 2
 
-	apiVersionsResponse.ApiVersions.apiKey = int16(binary.BigEndian.Uint16(payload[offset:]))
-	offset += 2
+	apiVersionsCount := binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
+	apiVersionsResponse.ApiVersions = make([]*ApiVersion, apiVersionsCount)
 
-	apiVersionsResponse.ApiVersions.minVersion = int16(binary.BigEndian.Uint16(payload[offset:]))
-	offset += 2
+	for i := uint32(0); i < apiVersionsCount; i++ {
+		apiVersion := &ApiVersion{}
+		apiVersion.apiKey = int16(binary.BigEndian.Uint16(payload[offset:]))
+		offset += 2
 
-	apiVersionsResponse.ApiVersions.maxVersion = int16(binary.BigEndian.Uint16(payload[offset:]))
-	offset += 2
+		apiVersion.minVersion = int16(binary.BigEndian.Uint16(payload[offset:]))
+		offset += 2
+
+		apiVersion.maxVersion = int16(binary.BigEndian.Uint16(payload[offset:]))
+		offset += 2
+
+		apiVersionsResponse.ApiVersions[i] = apiVersion
+	}
 
 	return nil
 }

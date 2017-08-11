@@ -13,13 +13,11 @@ import (
 )
 
 type Broker struct {
-	nodeID     int32
-	address    string
-	clientID   string
-	conn       net.Conn
-	apiKey     int16
-	minVersion int16
-	maxVersion int16
+	nodeID      int32
+	address     string
+	clientID    string
+	conn        net.Conn
+	apiVersions []*ApiVersion
 }
 
 var defaultClientID = "healer"
@@ -49,10 +47,7 @@ func NewBroker(address string, clientID string, nodeID int32) (*Broker, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
 	}
-
-	broker.apiKey = apiVersionsResponse.ApiVersions.apiKey
-	broker.minVersion = apiVersionsResponse.ApiVersions.minVersion
-	broker.maxVersion = apiVersionsResponse.ApiVersions.maxVersion
+	broker.apiVersions = apiVersionsResponse.ApiVersions
 
 	return broker, nil
 }
@@ -103,7 +98,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
 	correlationID := int32(os.Getpid())
-	apiVersionRequest := NewApiVersionsRequest(correlationID, broker.clientID)
+	apiVersionRequest := NewApiVersionsRequest(0, correlationID, broker.clientID)
 	response, err := broker.request(apiVersionRequest.Encode())
 	if err != nil {
 		return nil, err
