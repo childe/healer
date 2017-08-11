@@ -6,11 +6,14 @@ type ApiVersionsRequest struct {
 	RequestHeader *RequestHeader
 }
 
-func NewApiVersionsRequest(apiVersion uint16, correlationID int32, clientID string) Request {
-	if apiVersion == 0 {
-		return newApiVersionsRequestV0(correlationID, clientID)
-	}
-	return newApiVersionsRequestV1(correlationID, clientID)
+var funcs []func(int32, string) *ApiVersionsRequest
+
+func init() {
+	funcs = []func(int32, string) *ApiVersionsRequest{newApiVersionsRequestV0, newApiVersionsRequestV1}
+}
+
+func NewApiVersionsRequest(apiVersion int, correlationID int32, clientID string) Request {
+	return funcs[apiVersion](correlationID, clientID)
 }
 
 func newApiVersionsRequestV0(correlationID int32, clientID string) *ApiVersionsRequest {
