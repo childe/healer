@@ -43,3 +43,7 @@ func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 
 	return offset
 }
+
+type Request interface {
+	Encode() []byte
+}
