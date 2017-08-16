@@ -389,6 +389,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 		payloadLengthBuf := append(payloadLengthBuf, buffer...)
 		if len(payloadLengthBuf) >= 4 {
 			responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
+			glog.V(10).Infof("responseLength: %d", responseLength)
 			payload = make([]byte, responseLength+4)
 			copy(payloadLengthBuf, payload)
 			break
@@ -411,6 +412,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 	}
 
 	responsesCount := binary.BigEndian.Uint32(payload[8:])
+	glog.V(10).Infof("responsesCount: %d", responsesCount)
 	if responsesCount == 0 {
 		return
 	}
