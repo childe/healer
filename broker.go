@@ -269,10 +269,11 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, messag
 
 	// TODO 10?
 	buffers := make(chan []byte, 10)
+	go consumeFetchResponse(buffers, messages)
 	err := broker.requestStreamingly(payload, buffers)
+	close(buffers)
 	if err != nil {
 		return err
 	}
-	consumeFetchResponse(buffers, messages)
 	return nil
 }

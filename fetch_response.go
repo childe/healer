@@ -164,6 +164,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 }
 
 func encodeMessageSet(payload []byte, length int, offset int, partition int32, messageSetSizeBytes int32, buffers chan []byte, messages chan *Message) (int, int) {
+	glog.V(10).Info("encodeMessageSet")
 	//Offset      int64
 	//MessageSize int32
 
@@ -180,36 +181,33 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 	for {
 		for {
 			buffer, more := <-buffers
-			if !more {
-				return offset, length
+			if more {
+				copy(payload[length:], buffer)
+				length += len(buffer)
 			}
 
-			copy(buffer, payload[length:])
-			length += len(buffer)
-
-			if offset+12 < length {
+			if offset+12 > length {
 				continue
 			} else {
 				break
 			}
 		}
 		messageOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
-		glog.V(10).Infof("message offset: %s", messageOffset)
+		glog.V(10).Infof("message offset: %d", messageOffset)
 		offset += 8
 
 		messageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+		glog.V(10).Infof("message size: %d", messageSize)
 		offset += 4
 
 		for {
 			buffer, more := <-buffers
-			if !more {
-				return offset, length
+			if more {
+				copy(payload[length:], buffer)
+				length += len(buffer)
 			}
 
-			copy(buffer, payload[length:])
-			length += len(buffer)
-
-			if offset+int(messageSize) < length {
+			if offset+int(messageSize) > length {
 				continue
 			} else {
 				break
@@ -222,21 +220,25 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 		offset++
 		message.Attributes = int8(payload[offset])
 		offset++
-		keyLength := int(binary.BigEndian.Uint32(payload[offset:]))
+		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
+		glog.V(10).Infof("message key length: %d", keyLength)
 		offset += 4
 		if keyLength == -1 {
 			message.Key = nil
 		} else {
+			keyLength := int(keyLength)
 			message.Key = make([]byte, keyLength)
 			copy(message.Key, payload[offset:offset+keyLength])
 			offset += keyLength
 		}
 
-		valueLength := int(binary.BigEndian.Uint32(payload[offset:]))
+		valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
+		glog.V(10).Infof("message value length: %d", valueLength)
 		offset += 4
 		if valueLength == -1 {
 			message.Value = nil
 		} else {
+			valueLength := int(valueLength)
 			message.Value = make([]byte, valueLength)
 			copy(message.Value, payload[offset:offset+valueLength])
 			glog.V(20).Infof("message value: %s", message.Value)
@@ -253,27 +255,34 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 }
 
 func encodePartitionResponse(payload []byte, length int, offset int, buffers chan []byte, messages chan *Message) (int, int) {
+	glog.V(10).Info("encodePartitionResponse")
 	//Partition           int32
 	//ErrorCode           int16
 	//HighwaterMarkOffset int64
 	//MessageSetSizeBytes int32
 	//MessageSet          MessageSet
-	var partition int32 = -1
-	var errorCode int16 = -1
-	var highwaterMarkOffset int64 = -1
-	var messageSetSizeBytes int32 = -1
+	var (
+		partition           int32 = -1
+		errorCode           int16 = -1
+		highwaterMarkOffset int64 = -1
+		messageSetSizeBytes int32 = -1
+		more                bool  = true
+		buffer              []byte
+	)
 
 	for {
-		buffer, more := <-buffers
 		if !more {
 			return offset, length
 		}
+		buffer, more = <-buffers
 
-		copy(buffer, payload[length:])
-		length += len(buffer)
+		if more {
+			copy(payload[length:], buffer)
+			length += len(buffer)
+		}
 
 		if partition == -1 {
-			if offset+4 < length {
+			if offset+4 > length {
 				continue
 			}
 			partition = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -281,7 +290,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 		}
 
 		if errorCode == -1 {
-			if offset+2 < length {
+			if offset+2 > length {
 				continue
 			}
 			errorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
@@ -289,7 +298,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 		}
 
 		if highwaterMarkOffset == -1 {
-			if offset+8 < length {
+			if offset+8 > length {
 				continue
 			}
 			highwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
@@ -297,7 +306,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 		}
 
 		if messageSetSizeBytes == -1 {
-			if offset+4 < length {
+			if offset+4 > length {
 				continue
 			}
 			messageSetSizeBytes = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -309,20 +318,23 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 }
 
 func encodePartitionResponses(payload []byte, length int, offset int, buffers chan []byte, messages chan *Message) (int, int) {
-	var partitionResponseCount int = -1
-	var counter int = 0
+	var (
+		partitionResponseCount int = -1
+		counter                int = 0
+
+		buffer []byte
+		more   bool
+	)
 
 	for {
-		buffer, more := <-buffers
-		if !more {
-			return offset, length
+		buffer, more = <-buffers
+		if more {
+			copy(payload[length:], buffer)
+			length += len(buffer)
 		}
 
-		copy(buffer, payload[length:])
-		length += len(buffer)
-
 		if partitionResponseCount == -1 {
-			if offset+4 < length {
+			if offset+4 > length {
 				continue
 			}
 			partitionResponseCount = int(binary.BigEndian.Uint32(payload[offset:]))
@@ -334,6 +346,7 @@ func encodePartitionResponses(payload []byte, length int, offset int, buffers ch
 		}
 
 		encodePartitionResponse(payload, length, offset, buffers, messages)
+		counter++
 
 		if counter == partitionResponseCount {
 			return offset, length
@@ -348,31 +361,47 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 
 	var offset int = 12 // processed offset
 
+	var more bool = true
+	var buffer []byte
+
 	for {
-		buffer, more := <-buffers
 		if !more {
+			//if topicNameLength == -1 || topicName == "" {
+			//glog.Error("could not read more data from fetch response, but not get topicname yet")
+			//}
+			glog.Error("could not read more data from fetch response, but not get topicname yet")
 			return
 		}
 
-		copy(buffer, payload[length:])
-		length += len(buffer)
+		buffer, more = <-buffers
+		if more {
+			copy(payload[length:], buffer)
+			length += len(buffer)
+		}
+
+		glog.V(10).Infof("more: %v, topicNameLength: %d, topicName: %s, offset: %d, length: %d", more, topicNameLength, topicName, offset, length)
 
 		if topicNameLength == -1 {
-			if offset+2 < length {
+			if offset+2 > length {
 				continue
 			}
 			topicNameLength = int(binary.BigEndian.Uint16(payload[offset:]))
+			glog.V(10).Infof("topicNameLength: %d", topicNameLength)
 			offset += 2
 		}
 		if topicName == "" {
-			if offset+topicNameLength < length {
+			if offset+topicNameLength > length {
 				continue
 			}
 			topicName = string(payload[offset : offset+topicNameLength])
+			glog.V(10).Infof("topicName: %s", topicName)
 			offset += topicNameLength
 		}
 
 		offset, length = encodePartitionResponses(payload, length, offset, buffers, messages)
+		if !more {
+			return
+		}
 
 		topicName = ""
 		topicNameLength = -1
@@ -391,7 +420,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 			responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
 			glog.V(10).Infof("responseLength: %d", responseLength)
 			payload = make([]byte, responseLength+4)
-			copy(payloadLengthBuf, payload)
+			copy(payload, payloadLengthBuf)
 			break
 		}
 	}
@@ -400,7 +429,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 	for {
 		buffer, more := <-buffers
 		if more {
-			copy(payloadLengthBuf, payload[length:])
+			copy(payload[length:], buffer)
 			length += len(buffer)
 			if length >= 12 {
 				break
@@ -410,6 +439,9 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 			return
 		}
 	}
+
+	correlationID := binary.BigEndian.Uint32(payload[4:])
+	glog.V(10).Infof("correlationID: %d", correlationID)
 
 	responsesCount := binary.BigEndian.Uint32(payload[8:])
 	glog.V(10).Infof("responsesCount: %d", responsesCount)
