@@ -65,13 +65,20 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	//glog.V(10).Infof("request length: %d", len(payload))
 	broker.conn.Write(payload)
 
+	l := 0
 	responseLengthBuf := make([]byte, 4)
-	if broker.timeout > 0 {
-		broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
-	}
-	_, err := broker.conn.Read(responseLengthBuf)
-	if err != nil {
-		return nil, err
+	for {
+		if broker.timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		}
+		length, err := broker.conn.Read(responseLengthBuf[l:])
+		if err != nil {
+			return nil, err
+		}
+		if length+l == 4 {
+			break
+		}
+		l = length
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
@@ -95,7 +102,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 		readLength += length
 		if readLength > responseLength {
-			return nil, errors.New("fetch more data than needed while read getMetaData response")
+			return nil, errors.New("fetch more data than needed while read response")
 		}
 		if readLength == responseLength {
 			break
@@ -104,6 +111,58 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	copy(responseBuf[0:4], responseLengthBuf)
 
 	return responseBuf, nil
+}
+
+func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
+	// TODO log?
+	broker.conn.Write(payload)
+
+	l := 0
+	responseLengthBuf := make([]byte, 4)
+	for {
+		if broker.timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		}
+		length, err := broker.conn.Read(responseLengthBuf[l:])
+
+		buffers <- responseLengthBuf[:length]
+
+		if err != nil {
+			return err
+		}
+		if length+l == 4 {
+			break
+		}
+		l = length
+	}
+
+	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
+	glog.V(10).Infof("response length: %d", responseLength)
+
+	readLength := 0
+	buf := make([]byte, 65535)
+	for {
+		length, err := broker.conn.Read(buf)
+		glog.V(10).Infof("read %d bytes response", length)
+		buffers <- buf[:length]
+		if err == io.EOF {
+			glog.V(10).Info("read EOF")
+			return errors.New("encounter EOF while read fetch response")
+		}
+
+		if err != nil {
+			glog.Errorf("read response error:%s", err)
+			return err
+		}
+		readLength += length
+		if readLength > responseLength {
+			return errors.New("fetch more data than needed while read fetch response")
+		}
+		if readLength == responseLength {
+			return nil
+		}
+	}
+	return nil
 }
 
 func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
@@ -121,27 +180,6 @@ func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
 		return nil, err
 	}
 	return apiVersionsResponse, nil
-}
-
-func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
-	// TODO log?
-	broker.conn.Write(payload)
-
-	buf := make([]byte, 65535)
-	for {
-		length, err := broker.conn.Read(buf)
-		buffers <- buf[:length]
-		if err == io.EOF {
-			return nil
-		}
-
-		if err != nil {
-			glog.Errorf("read response error:%s", err)
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) {
