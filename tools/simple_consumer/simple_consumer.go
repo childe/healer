@@ -51,7 +51,7 @@ func main() {
 
 	i := 0
 	messages := make(chan *healer.Message)
-	go func() { simpleConsumer.Consume(messages, *maxMessages) }()
+	go func() { simpleConsumer.ConsumeStreamingly(messages, *maxMessages) }()
 	for {
 		message := <-messages
 		fmt.Printf("%d: %s\n", message.Offset, message.Value)
