@@ -61,10 +61,11 @@ func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout i
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
 		broker, err := NewBroker(brokerAddr, clientID, -1, connecTimeout, timeout)
 		// TODO conn not established?
-		defer broker.conn.Close()
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
+			defer broker.conn.Close()
+
 			brokers, err := getAllBrokersFromOne(broker, clientID, connecTimeout, timeout)
 			if err != nil {
 				glog.Infof("could not get broker list from %s:%s", broker.address, err)
