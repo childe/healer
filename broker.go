@@ -47,11 +47,11 @@ func NewBroker(address string, clientID string, nodeID int32, connecTimeout int,
 	broker.conn = conn
 
 	// TODO since ??
-	apiVersionsResponse, err := broker.requestApiVersions()
-	if err != nil {
-		return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
-	}
-	broker.apiVersions = apiVersionsResponse.ApiVersions
+	//apiVersionsResponse, err := broker.requestApiVersions()
+	//if err != nil {
+		//return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
+	//}
+	//broker.apiVersions = apiVersionsResponse.ApiVersions
 
 	return broker, nil
 }
