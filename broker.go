@@ -49,7 +49,7 @@ func NewBroker(address string, clientID string, nodeID int32, connecTimeout int,
 	// TODO since ??
 	//apiVersionsResponse, err := broker.requestApiVersions()
 	//if err != nil {
-		//return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
+	//return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
 	//}
 	//broker.apiVersions = apiVersionsResponse.ApiVersions
 
@@ -143,7 +143,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	buf := make([]byte, 65535)
 	for {
 		length, err := broker.conn.Read(buf)
-		glog.V(10).Infof("read %d bytes response", length)
+		glog.V(15).Infof("read %d bytes response", length)
 		buffers <- buf[:length]
 		if err == io.EOF {
 			glog.V(10).Info("read EOF")
@@ -159,6 +159,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 			return errors.New("fetch more data than needed while read fetch response")
 		}
 		if readLength == responseLength {
+			glog.V(10).Info("read enough data, return")
 			return nil
 		}
 	}
