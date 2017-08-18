@@ -51,7 +51,6 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message, maxMessage
 			glog.Errorf("request fetch error: %s", err)
 			continue
 		}
-		return
 
 		for _, fetchResponsePiece := range fetchResponse.Responses {
 			for _, topicData := range fetchResponsePiece.PartitionResponses {
