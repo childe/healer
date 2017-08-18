@@ -215,10 +215,15 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 		}
 		message := &Message{}
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
+		glog.V(10).Infof("Crc: %d", message.Crc)
 		offset += 4
 		message.MagicByte = int8(payload[offset])
+		glog.V(10).Infof("MagicByte: %d", message.MagicByte)
 		offset++
 		message.Attributes = int8(payload[offset])
+		glog.V(10).Infof("Attributes: %d", message.Attributes)
+		compression := message.Attributes & 7
+		glog.V(10).Infof("compression: %d", compression)
 		offset++
 		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 		glog.V(10).Infof("message key length: %d", keyLength)
@@ -286,6 +291,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 				continue
 			}
 			partition = int32(binary.BigEndian.Uint32(payload[offset:]))
+			glog.V(10).Infof("partition: %d", partition)
 			offset += 4
 		}
 
@@ -294,6 +300,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 				continue
 			}
 			errorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+			glog.V(10).Infof("errorCode: %d", errorCode)
 			offset += 2
 		}
 
@@ -302,6 +309,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 				continue
 			}
 			highwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
+			glog.V(10).Infof("highwaterMarkOffset: %d", highwaterMarkOffset)
 			offset += 8
 		}
 
@@ -310,6 +318,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 				continue
 			}
 			messageSetSizeBytes = int32(binary.BigEndian.Uint32(payload[offset:]))
+			glog.V(10).Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
 			offset += 4
 		}
 
@@ -379,8 +388,6 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 			length += len(buffer)
 		}
 
-		glog.V(10).Infof("more: %v, topicNameLength: %d, topicName: %s, offset: %d, length: %d", more, topicNameLength, topicName, offset, length)
-
 		if topicNameLength == -1 {
 			if offset+2 > length {
 				continue
@@ -394,9 +401,11 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 				continue
 			}
 			topicName = string(payload[offset : offset+topicNameLength])
-			glog.V(10).Infof("topicName: %s", topicName)
+			//glog.V(10).Infof("topicName: %s", topicName)
 			offset += topicNameLength
 		}
+
+		glog.V(10).Infof("more: %v, topicNameLength: %d, topicName: %s, offset: %d, length: %d", more, topicNameLength, topicName, offset, length)
 
 		offset, length = encodePartitionResponses(payload, length, offset, buffers, messages)
 		if !more {
