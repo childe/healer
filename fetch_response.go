@@ -2,7 +2,6 @@ package healer
 
 import (
 	"encoding/binary"
-	"errors"
 
 	"github.com/golang/glog"
 )
@@ -46,7 +45,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 	payloadLength := uint64(len(payload))
 	glog.V(5).Infof("start to decode fetch response playload, length: %d", payloadLength)
 	glog.V(20).Infof("playload %v", payload)
-	offset := uint64(0)
+	var offset uint64 = 0
 
 	responseLength := uint64(binary.BigEndian.Uint32(payload))
 	glog.V(10).Infof("response length: %d", responseLength)
@@ -96,67 +95,11 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 			fetchResponse.Responses[i].PartitionResponses[j].MessageSetSizeBytes = int32(binary.BigEndian.Uint32(payload[offset:]))
 			glog.V(10).Infof("there is %d bytes in messagesets", fetchResponse.Responses[i].PartitionResponses[j].MessageSetSizeBytes)
 			offset += 4
-			//return
-			fetchResponse.Responses[i].PartitionResponses[j].MessageSet = make([]*Message, 0)
-			for {
-				if payloadLength == offset {
-					// TODO break or return?
-					break
-				}
-				//if payloadLength< offset+26 {
-				if payloadLength < offset+26 {
-					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d]+4 < offset[%d]+26).", responseLength, offset)
-					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
-						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
-					}
-					return nil
-				}
-				glog.V(10).Infof("offset: %d", offset)
-				glog.V(20).Infof("playload %v", payload[offset:])
-				message := &Message{}
-				message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
-				offset += 8
-				glog.V(10).Infof("message offset: %d", message.Offset)
 
-				message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
-				glog.V(10).Infof("message size: %d", message.MessageSize)
-				offset += 4
-
-				if payloadLength < offset+uint64(message.MessageSize) {
-					glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(payloadLength[%d] < offset[%d]+messageSize[%d]).", payloadLength, offset, message.MessageSize)
-					if len(fetchResponse.Responses[i].PartitionResponses[j].MessageSet) == 0 {
-						return errors.New("MaxBytes parameter is to small for server to send back one whole message.")
-					}
-					return nil
-				}
-
-				message.Crc = binary.BigEndian.Uint32(payload[offset:])
-				offset += 4
-				message.MagicByte = int8(payload[offset])
-				offset++
-				message.Attributes = int8(payload[offset])
-				offset++
-				keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
-				offset += 4
-				if keyLength == -1 {
-					message.Key = nil
-				} else {
-					message.Key = make([]byte, keyLength)
-					copy(message.Key, payload[offset:offset+uint64(keyLength)])
-					offset += uint64(keyLength)
-				}
-
-				valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
-				offset += 4
-				if valueLength == -1 {
-					message.Value = nil
-				} else {
-					message.Value = make([]byte, valueLength)
-					copy(message.Value, payload[offset:offset+uint64(valueLength)])
-					glog.V(20).Infof("message value: %s", message.Value)
-					offset += uint64(valueLength)
-				}
-				fetchResponse.Responses[i].PartitionResponses[j].MessageSet = append(fetchResponse.Responses[i].PartitionResponses[j].MessageSet, message)
+			if messageSet, _, err := DecodeToMessageSet(payload[offset:]); err != nil {
+				return err
+			} else {
+				fetchResponse.Responses[i].PartitionResponses[j].MessageSet = messageSet
 			}
 		}
 	}
@@ -213,56 +156,15 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 				break
 			}
 		}
-		message := &Message{}
-		message.Crc = binary.BigEndian.Uint32(payload[offset:])
-		glog.V(10).Infof("Crc: %d", message.Crc)
-		offset += 4
-		message.MagicByte = int8(payload[offset])
-		glog.V(10).Infof("MagicByte: %d", message.MagicByte)
-		offset++
-		message.Attributes = int8(payload[offset])
-		glog.V(10).Infof("Attributes: %d", message.Attributes)
-		compression := message.Attributes & 7
-		glog.V(10).Infof("compression: %d", compression)
-		offset++
-		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(10).Infof("message key length: %d", keyLength)
-		offset += 4
-		if keyLength == -1 {
-			message.Key = nil
+		if messageSet, _offset, err := DecodeToMessageSet(payload[offset-12:]); err != nil {
+			// TODO
+			return offset, length
 		} else {
-			keyLength := int(keyLength)
-			message.Key = make([]byte, keyLength)
-			copy(message.Key, payload[offset:offset+keyLength])
-			offset += keyLength
-		}
-
-		valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(10).Infof("message value length: %d", valueLength)
-		offset += 4
-		if valueLength == -1 {
-			message.Value = nil
-		} else {
-			valueLength := int(valueLength)
-			message.Value = make([]byte, valueLength)
-			copy(message.Value, payload[offset:offset+valueLength])
-			glog.V(20).Infof("message value: %s", message.Value)
-			offset += valueLength
-		}
-
-		if compression != COMPRESSION_NONE {
-			value, _ := message.decompress()
-
-			messageSet := &MessageSet{}
-			messageSet.Decode(value)
-
-			for _, message := range *messageSet {
-				messages <- message
+			offset += _offset
+			for i := range messageSet {
+				messages <- messageSet[i]
 			}
-		} else {
-			messages <- message
 		}
-
 		if offset-originOffset >= int(messageSetSizeBytes) {
 			break
 		}
