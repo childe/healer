@@ -249,7 +249,19 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 			glog.V(20).Infof("message value: %s", message.Value)
 			offset += valueLength
 		}
-		messages <- message
+
+		if compression != COMPRESSION_NONE {
+			value, _ := message.decompress()
+
+			messageSet := &MessageSet{}
+			messageSet.Decode(value)
+
+			for _, message := range *messageSet {
+				messages <- message
+			}
+		} else {
+			messages <- message
+		}
 
 		if offset-originOffset >= int(messageSetSizeBytes) {
 			break

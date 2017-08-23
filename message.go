@@ -1,7 +1,13 @@
 package healer
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/binary"
+	"fmt"
+	"io/ioutil"
+
+	"github.com/golang/glog"
 	"github.com/klauspost/crc32"
 )
 
@@ -52,6 +58,30 @@ type Message struct {
 }
 type MessageSet []*Message
 
+const (
+	COMPRESSION_NONE   int8 = 0
+	COMPRESSION_GZIP   int8 = 1
+	COMPRESSION_SNAPPY int8 = 2
+)
+
+func (message *Message) decompress() ([]byte, error) {
+	compression := message.Attributes & 7
+	var rst []byte
+	switch compression {
+	case COMPRESSION_GZIP:
+		reader, err := gzip.NewReader(bytes.NewReader(message.Value))
+		if err != nil {
+			return nil, err
+		}
+		if rst, err = ioutil.ReadAll(reader); err != nil {
+			return nil, err
+		} else {
+			return rst, nil
+		}
+	}
+	return nil, fmt.Errorf("Unknown Compression Code %d", compression)
+}
+
 func (messageSet *MessageSet) Length() int {
 	length := 0
 	for _, message := range *messageSet {
@@ -98,4 +128,46 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 	}
 
 	return offset
+}
+
+func (messageSet *MessageSet) Decode(payload []byte) {
+	var offset uint64 = 0
+	for {
+		message := &Message{}
+		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
+		offset += 8
+		glog.V(10).Infof("message offset: %d", message.Offset)
+
+		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+		glog.V(10).Infof("message size: %d", message.MessageSize)
+		offset += 4
+
+		message.Crc = binary.BigEndian.Uint32(payload[offset:])
+		offset += 4
+		message.MagicByte = int8(payload[offset])
+		offset++
+		message.Attributes = int8(payload[offset])
+		offset++
+		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
+		offset += 4
+		if keyLength == -1 {
+			message.Key = nil
+		} else {
+			message.Key = make([]byte, keyLength)
+			copy(message.Key, payload[offset:offset+uint64(keyLength)])
+			offset += uint64(keyLength)
+		}
+
+		valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
+		offset += 4
+		if valueLength == -1 {
+			message.Value = nil
+		} else {
+			message.Value = make([]byte, valueLength)
+			copy(message.Value, payload[offset:offset+uint64(valueLength)])
+			glog.V(20).Infof("message value: %s", message.Value)
+			offset += uint64(valueLength)
+		}
+		*messageSet = append(*messageSet, message)
+	}
 }
