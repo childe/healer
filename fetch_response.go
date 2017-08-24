@@ -337,6 +337,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 	payloadLengthBuf := make([]byte, 0)
 	for {
 		buffer := <-buffers
+		glog.V(20).Infof("%v", buffer)
 		length += len(buffer)
 		payloadLengthBuf := append(payloadLengthBuf, buffer...)
 		if len(payloadLengthBuf) >= 4 {
@@ -352,6 +353,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 	for {
 		buffer, more := <-buffers
 		if more {
+			glog.V(20).Infof("%v", buffer)
 			copy(payload[length:], buffer)
 			length += len(buffer)
 			if length >= 12 {
@@ -363,6 +365,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 		}
 	}
 
+	glog.V(20).Infof("%d: %v", length, payload[:length])
 	correlationID := binary.BigEndian.Uint32(payload[4:])
 	glog.V(10).Infof("correlationID: %d", correlationID)
 

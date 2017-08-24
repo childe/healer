@@ -125,7 +125,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 
-		buffers <- responseLengthBuf[:length]
+		glog.V(20).Infof("%v", responseLengthBuf[l:length])
+		buffers <- responseLengthBuf[l:length]
 
 		if err != nil {
 			return err
@@ -143,12 +144,13 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	buf := make([]byte, 65535)
 	for {
 		length, err := broker.conn.Read(buf)
+		glog.V(20).Infof("%v", buf[:length])
 		glog.V(15).Infof("read %d bytes response", length)
 		buffers <- buf[:length]
-		if err == io.EOF {
-			glog.V(10).Info("read EOF")
-			return errors.New("encounter EOF while read fetch response")
-		}
+		//if err == io.EOF {
+		//glog.V(10).Info("read EOF")
+		//return errors.New("encounter EOF while read fetch response")
+		//}
 
 		if err != nil {
 			glog.Errorf("read response error:%s", err)
