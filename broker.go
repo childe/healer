@@ -141,8 +141,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	glog.V(10).Infof("response length: %d", responseLength)
 
 	readLength := 0
-	buf := make([]byte, 65535)
 	for {
+		buf := make([]byte, 65535)
 		length, err := broker.conn.Read(buf)
 		glog.V(20).Infof("%v", buf[:length])
 		glog.V(15).Infof("read %d bytes response", length)
