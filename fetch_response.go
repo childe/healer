@@ -332,6 +332,7 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 }
 
 func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
+	defer close(messages)
 	var payload []byte
 	length := 0
 	payloadLengthBuf := make([]byte, 0)

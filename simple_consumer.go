@@ -76,7 +76,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message, maxMessage
 	}
 }
 
-func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(messages chan *Message, maxMessages int) error {
+func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(offset int64, maxMessages int) (chan *Message, error) {
 	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error
@@ -94,14 +94,32 @@ func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(messages chan *Message,
 		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
 	}
 
-	correlationID := int32(0)
-	fetchRequest := NewFetchRequest(correlationID, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
-	fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.FetchOffset, simpleConsumer.MaxBytes)
+	var correlationID int32 = 0
+	var messages chan *Message = make(chan *Message, 10)
+	go func(chan *Message) {
+		for {
+			correlationID++
+			glog.V(10).Infof("correlationID: %d", correlationID)
+			fetchRequest := NewFetchRequest(correlationID, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
+			fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, offset, simpleConsumer.MaxBytes)
 
-	err = leaderBroker.requestFetchStreamingly(fetchRequest, messages)
-	if err != nil {
-		return err
-	}
+			buffers := make(chan []byte, 10)
+			innerMessages := make(chan *Message, 10)
+			go leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
+			go consumeFetchResponse(buffers, innerMessages)
+			for {
+				message, more := <-innerMessages
+				if more {
+					glog.V(10).Infof("more message: %d %s", message.Offset, string(message.Value))
+					offset = message.Offset + 1
+					messages <- message
+				} else {
+					glog.V(10).Info("NO more message")
+					break
+				}
+			}
+		}
+	}(messages)
 
-	return nil
+	return messages, nil
 }

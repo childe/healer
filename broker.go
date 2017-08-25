@@ -115,6 +115,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
 	// TODO log?
+	defer close(buffers)
 	broker.conn.Write(payload)
 
 	l := 0
@@ -267,16 +268,11 @@ func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, 
 	return fetchResponse, nil
 }
 
-func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, messages chan *Message) error {
+func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
 	payload := fetchRequest.Encode()
 
 	// TODO 10?
-	buffers := make(chan []byte, 10)
-	go consumeFetchResponse(buffers, messages)
+	//go consumeFetchResponse(buffers, messages)
 	err := broker.requestStreamingly(payload, buffers)
-	close(buffers)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

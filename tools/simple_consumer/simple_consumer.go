@@ -44,14 +44,18 @@ func main() {
 	}
 	simpleConsumer.TopicName = *topic
 	simpleConsumer.Partition = int32(*partition)
-	simpleConsumer.FetchOffset = *offset
+	//simpleConsumer.FetchOffset = *offset
 	simpleConsumer.MaxWaitTime = int32(*maxWaitTime)
 	simpleConsumer.MaxBytes = int32(*maxBytes)
 	simpleConsumer.MinBytes = int32(*minBytes)
 
 	i := 0
-	messages := make(chan *healer.Message)
-	go func() { simpleConsumer.ConsumeStreamingly(messages, *maxMessages) }()
+	var messages chan *healer.Message
+	messages, err = simpleConsumer.ConsumeStreamingly(*offset, *maxMessages)
+	if err != nil {
+		glog.Fatal(err)
+	}
+
 	for {
 		message := <-messages
 		fmt.Printf("%d: %s\n", message.Offset, message.Value)
