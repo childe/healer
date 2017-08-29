@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 
 	"github.com/golang/glog"
@@ -67,6 +68,7 @@ const (
 
 func (message *Message) decompress() ([]byte, error) {
 	compression := message.Attributes & 7
+	glog.V(10).Infof("compression: %d", compression)
 	var rst []byte
 	switch compression {
 	case COMPRESSION_GZIP:
@@ -74,7 +76,12 @@ func (message *Message) decompress() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if rst, err = ioutil.ReadAll(reader); err != nil {
+		//b := make([]byte, 65535)
+		//n, err := reader.Read(b)
+		//glog.V(10).Infof("%d %s", n, err)
+		if rst, err = ioutil.ReadAll(reader); err != nil && err != io.EOF {
+			glog.Info(err)
+			glog.Info(rst)
 			return nil, err
 		} else {
 			return rst, nil
@@ -132,6 +139,7 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 }
 
 func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
+	glog.V(10).Infof("DecodeToMessageSet %d", len(payload))
 	messageSet := MessageSet{}
 	var offset int = 0
 	payloadLength := len(payload)
@@ -148,8 +156,8 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		}
 		message := &Message{}
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
-		offset += 8
 		glog.V(10).Infof("message offset: %d", message.Offset)
+		offset += 8
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 		glog.V(10).Infof("message size: %d", message.MessageSize)
@@ -176,6 +184,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		} else {
 			message.Key = make([]byte, keyLength)
 			copy(message.Key, payload[offset:offset+int(keyLength)])
+			glog.V(20).Infof("message key: %v", message.Key)
 			offset += int(keyLength)
 		}
 
@@ -186,12 +195,17 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		} else {
 			message.Value = make([]byte, valueLength)
 			copy(message.Value, payload[offset:offset+int(valueLength)])
-			glog.V(20).Infof("message value: %s", message.Value)
+			glog.V(20).Infof("message value: %v", message.Value)
+			glog.V(15).Infof(string(message.Value))
 			offset += int(valueLength)
 		}
 		compression := message.Attributes & 7
+		glog.V(10).Infof("compression %d", compression)
 		if compression != COMPRESSION_NONE {
-			value, _ := message.decompress()
+			value, err := message.decompress()
+			if err != nil {
+				glog.Fatal(err)
+			}
 			if _messageSet, _, err := DecodeToMessageSet(value); err != nil {
 				return messageSet, offset, err
 			} else {

@@ -107,7 +107,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 }
 
 func encodeMessageSet(payload []byte, length int, offset int, partition int32, messageSetSizeBytes int32, buffers chan []byte, messages chan *Message) (int, int) {
-	glog.V(10).Info("encodeMessageSet")
+	glog.V(10).Infof("encodeMessageSet %d %d %d %d", length, offset, partition, messageSetSizeBytes)
 	//Offset      int64
 	//MessageSize int32
 
@@ -127,6 +127,9 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 			if more {
 				copy(payload[length:], buffer)
 				length += len(buffer)
+			} else {
+				glog.V(10).Infof("fetch response buffer chan closed. length %d", length)
+				break
 			}
 
 			if offset+12 > length {
@@ -135,6 +138,8 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 				break
 			}
 		}
+
+		glog.V(10).Infof("offset %d length %d", offset, length)
 		messageOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
 		glog.V(10).Infof("message offset: %d", messageOffset)
 		offset += 8
@@ -148,6 +153,9 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 			if more {
 				copy(payload[length:], buffer)
 				length += len(buffer)
+			} else {
+				glog.V(10).Infof("fetch response buffer chan closed. length %d", length)
+				break
 			}
 
 			if offset+int(messageSize) > length {
@@ -158,13 +166,18 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 		}
 		if messageSet, _offset, err := DecodeToMessageSet(payload[offset-12:]); err != nil {
 			// TODO
+			glog.Info(_offset)
+			glog.Fatal(err)
 			return offset, length
 		} else {
+			glog.Info(_offset)
+			//glog.Fatal("test")
 			offset += _offset
 			for i := range messageSet {
 				messages <- messageSet[i]
 			}
 		}
+		glog.V(10).Infof("offset %d originOffset %d messageSetSizeBytes %d", offset, originOffset, messageSetSizeBytes)
 		if offset-originOffset >= int(messageSetSizeBytes) {
 			break
 		}

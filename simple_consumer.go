@@ -110,7 +110,7 @@ func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(offset int64) (chan *Me
 			for {
 				message, more := <-innerMessages
 				if more {
-					glog.V(10).Infof("more message: %d %s", message.Offset, string(message.Value))
+					//glog.V(10).Infof("more message: %d %s", message.Offset, string(message.Value))
 					offset = message.Offset + 1
 					messages <- message
 				} else {
