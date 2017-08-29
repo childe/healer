@@ -76,7 +76,7 @@ func (simpleConsumer *SimpleConsumer) Consume(messages chan *Message, maxMessage
 	}
 }
 
-func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(offset int64, maxMessages int) (chan *Message, error) {
+func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(offset int64) (chan *Message, error) {
 	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error

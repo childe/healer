@@ -49,19 +49,14 @@ func main() {
 	simpleConsumer.MaxBytes = int32(*maxBytes)
 	simpleConsumer.MinBytes = int32(*minBytes)
 
-	i := 0
 	var messages chan *healer.Message
-	messages, err = simpleConsumer.ConsumeStreamingly(*offset, *maxMessages)
+	messages, err = simpleConsumer.ConsumeStreamingly(*offset)
 	if err != nil {
 		glog.Fatal(err)
 	}
 
-	for {
+	for i := 0; i < *maxMessages; i++ {
 		message := <-messages
 		fmt.Printf("%d: %s\n", message.Offset, message.Value)
-		i++
-		if i >= *maxMessages {
-			os.Exit(0)
-		}
 	}
 }
