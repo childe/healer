@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -146,9 +145,9 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 	if payloadLength < offset+26 {
 		glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d] < offset[%d]+26).", payloadLength, offset)
 		if len(messageSet) == 0 {
-			return messageSet, offset, errors.New("MaxBytes parameter is too small for server to send back one whole message.")
+			return messageSet, offset, &maxBytesTooSmall
 		}
-		return messageSet, offset, nil
+		return messageSet, offset, &fetchResponseTruncated
 	}
 	for {
 		if offset == payloadLength {
@@ -166,9 +165,9 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		if payloadLength < offset+int(message.MessageSize) {
 			glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(payloadLength[%d] < offset[%d]+messageSize[%d]).", payloadLength, offset, message.MessageSize)
 			if len(messageSet) == 0 {
-				return messageSet, offset, errors.New("MaxBytes parameter is too small for server to send back one whole message.")
+				return messageSet, offset, &maxBytesTooSmall
 			}
-			return messageSet, offset, nil
+			return messageSet, offset, &fetchResponseTruncated
 		}
 
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
