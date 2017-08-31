@@ -158,6 +158,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 			return err
 		}
 		readLength += length
+		glog.V(10).Infof("send %d bytes to fetch response payload", readLength+4)
 		if readLength > responseLength {
 			return errors.New("fetch more data than needed while read fetch response")
 		}

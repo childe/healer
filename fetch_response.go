@@ -127,6 +127,7 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 			if more {
 				copy(payload[length:], buffer)
 				length += len(buffer)
+				glog.V(10).Infof("%d bytes in fetch response payload", length)
 			} else {
 				glog.V(10).Infof("fetch response buffer chan closed. length %d", length)
 				break
@@ -153,6 +154,7 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 			if more {
 				copy(payload[length:], buffer)
 				length += len(buffer)
+				glog.V(10).Infof("%d bytes in fetch response payload", length)
 			} else {
 				glog.V(10).Infof("fetch response buffer chan closed. length %d", length)
 				break
@@ -164,14 +166,16 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 				break
 			}
 		}
-		if messageSet, _offset, err := DecodeToMessageSet(payload[offset-12:]); err != nil {
-			// TODO
-			glog.Info(_offset)
+		if messageSet, _offset, err := DecodeToMessageSet(payload[offset-12 : length]); err != nil {
+			// TODO how to pass out error
+			glog.V(10).Info(_offset)
+			if err == &fetchResponseTruncated {
+				return offset, length
+			}
 			glog.Fatal(err)
 			return offset, length
 		} else {
-			glog.Info(_offset)
-			//glog.Fatal("test")
+			glog.V(10).Info(_offset)
 			offset += _offset
 			for i := range messageSet {
 				messages <- messageSet[i]
@@ -211,6 +215,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 		if more {
 			copy(payload[length:], buffer)
 			length += len(buffer)
+			glog.V(10).Infof("%d bytes in fetch response payload", length)
 		}
 
 		if partition == -1 {
@@ -249,7 +254,7 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 			offset += 4
 		}
 
-		encodeMessageSet(payload, length, offset, partition, messageSetSizeBytes, buffers, messages)
+		offset, length = encodeMessageSet(payload, length, offset, partition, messageSetSizeBytes, buffers, messages)
 	}
 }
 
@@ -267,6 +272,7 @@ func encodePartitionResponses(payload []byte, length int, offset int, buffers ch
 		if more {
 			copy(payload[length:], buffer)
 			length += len(buffer)
+			glog.V(10).Infof("%d bytes in fetch response payload", length)
 		}
 
 		if partitionResponseCount == -1 {
@@ -313,6 +319,7 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 		if more {
 			copy(payload[length:], buffer)
 			length += len(buffer)
+			glog.V(10).Infof("%d bytes in fetch response payload", length)
 		}
 
 		if topicNameLength == -1 {
@@ -353,6 +360,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 		buffer := <-buffers
 		glog.V(20).Infof("%v", buffer)
 		length += len(buffer)
+		glog.V(10).Infof("%d bytes in fetch response payload", length)
 		payloadLengthBuf := append(payloadLengthBuf, buffer...)
 		if len(payloadLengthBuf) >= 4 {
 			responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
@@ -370,6 +378,7 @@ func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
 			glog.V(20).Infof("%v", buffer)
 			copy(payload[length:], buffer)
 			length += len(buffer)
+			glog.V(10).Infof("%d bytes in fetch response payload", length)
 			if length >= 12 {
 				break
 			}
