@@ -67,7 +67,6 @@ const (
 
 func (message *Message) decompress() ([]byte, error) {
 	compression := message.Attributes & 7
-	glog.V(10).Infof("compression: %d", compression)
 	var rst []byte
 	switch compression {
 	case COMPRESSION_GZIP:
@@ -142,17 +141,21 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 	messageSet := MessageSet{}
 	var offset int = 0
 	payloadLength := len(payload)
-	if payloadLength < offset+26 {
-		glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d] < offset[%d]+26).", payloadLength, offset)
-		if len(messageSet) == 0 {
-			return messageSet, offset, &maxBytesTooSmall
-		}
-		return messageSet, offset, &fetchResponseTruncated
-	}
 	for {
+		glog.V(10).Infof("offset %d payloadLength %d", offset, payloadLength)
+
 		if offset == payloadLength {
 			return messageSet, offset, nil
 		}
+
+		//if payloadLength < offset+26 {
+		//glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(resopnseLength[%d] < offset[%d]+26).", payloadLength, offset)
+		//if len(messageSet) == 0 {
+		//return messageSet, offset, &maxBytesTooSmall
+		//}
+		//return messageSet, offset, &fetchResponseTruncated
+		//}
+
 		message := &Message{}
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 		glog.V(10).Infof("message offset: %d", message.Offset)
@@ -172,11 +175,15 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
+
 		message.MagicByte = int8(payload[offset])
 		offset++
+
 		message.Attributes = int8(payload[offset])
 		offset++
+
 		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
+		glog.V(10).Infof("key length: %d", keyLength)
 		offset += 4
 		if keyLength == -1 {
 			message.Key = nil
@@ -187,16 +194,17 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 			offset += int(keyLength)
 		}
 
-		valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
+		valueLength := int(binary.BigEndian.Uint32(payload[offset:]))
+		glog.V(10).Infof("value length: %d", valueLength)
 		offset += 4
 		if valueLength == -1 {
 			message.Value = nil
 		} else {
 			message.Value = make([]byte, valueLength)
-			copy(message.Value, payload[offset:offset+int(valueLength)])
+			copy(message.Value, payload[offset:offset+valueLength])
 			glog.V(20).Infof("message value: %v", message.Value)
 			glog.V(15).Infof(string(message.Value))
-			offset += int(valueLength)
+			offset += valueLength
 		}
 		compression := message.Attributes & 7
 		glog.V(10).Infof("compression %d", compression)

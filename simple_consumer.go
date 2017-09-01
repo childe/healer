@@ -114,6 +114,11 @@ func (simpleConsumer *SimpleConsumer) ConsumeStreamingly(offset int64) (chan *Me
 					offset = message.Offset + 1
 					messages <- message
 				} else {
+					if buffer, ok := <-buffers; ok {
+						//glog.Info(buffer)
+						glog.Info(len(buffer))
+						glog.Fatal("buffers still open??")
+					}
 					glog.V(10).Info("NO more message")
 					break
 				}
