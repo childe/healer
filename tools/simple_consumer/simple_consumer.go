@@ -50,7 +50,7 @@ func main() {
 	simpleConsumer.MinBytes = int32(*minBytes)
 
 	var messages chan *healer.Message
-	messages, err = simpleConsumer.ConsumeStreamingly(*offset)
+	messages, err = simpleConsumer.Consume(*offset)
 	if err != nil {
 		glog.Fatal(err)
 	}
