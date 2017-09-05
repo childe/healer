@@ -46,6 +46,12 @@ Value			The value is the actual message contents as an opaque byte array. Kafka 
 //Value      []byte
 //}
 
+type FullMessage struct {
+	TopicName   string
+	PartitionID int32
+	Message     *Message
+}
+
 type Message struct {
 	Offset      int64
 	MessageSize int32

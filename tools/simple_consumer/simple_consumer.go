@@ -49,7 +49,7 @@ func main() {
 	simpleConsumer.MaxBytes = int32(*maxBytes)
 	simpleConsumer.MinBytes = int32(*minBytes)
 
-	var messages chan *healer.Message
+	var messages chan *healer.FullMessage
 	messages, err = simpleConsumer.Consume(*offset)
 	if err != nil {
 		glog.Fatal(err)
@@ -57,6 +57,6 @@ func main() {
 
 	for i := 0; i < *maxMessages; i++ {
 		message := <-messages
-		fmt.Printf("%d: %s\n", message.Offset, message.Value)
+		fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
 	}
 }

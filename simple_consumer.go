@@ -19,7 +19,7 @@ func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
 	return nil
 }
 
-func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *Message, error) {
+func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, error) {
 	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error
@@ -38,8 +38,8 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *Message, erro
 	}
 
 	var correlationID int32 = 0
-	var messages chan *Message = make(chan *Message, 10)
-	go func(chan *Message) {
+	var messages chan *FullMessage = make(chan *FullMessage, 10)
+	go func(chan *FullMessage) {
 		for {
 			correlationID++
 			glog.V(10).Infof("correlationID: %d", correlationID)
@@ -47,14 +47,14 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *Message, erro
 			fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, offset, simpleConsumer.MaxBytes)
 
 			buffers := make(chan []byte, 10)
-			innerMessages := make(chan *Message, 10)
+			innerMessages := make(chan *FullMessage, 10)
 			go leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 			go consumeFetchResponse(buffers, innerMessages)
 			for {
 				message, more := <-innerMessages
 				if more {
 					//glog.V(10).Infof("more message: %d %s", message.Offset, string(message.Value))
-					offset = message.Offset + 1
+					offset = message.Message.Offset + 1
 					messages <- message
 				} else {
 					if buffer, ok := <-buffers; ok {

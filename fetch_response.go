@@ -106,7 +106,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 	return nil
 }
 
-func encodeMessageSet(payload []byte, length int, offset int, partition int32, messageSetSizeBytes int32, buffers chan []byte, messages chan *Message) (int, int, error) {
+func encodeMessageSet(payload []byte, length int, offset int, partition int32, messageSetSizeBytes int32, buffers chan []byte, messages chan *FullMessage, topicName string, partitionID int32) (int, int, error) {
 	glog.V(10).Infof("encodeMessageSet %d %d %d %d", length, offset, partition, messageSetSizeBytes)
 	//Offset      int64
 	//MessageSize int32
@@ -184,7 +184,11 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 		if err != nil {
 			if err == &fetchResponseTruncated {
 				for i := range messageSet {
-					messages <- messageSet[i]
+					messages <- &FullMessage{
+						TopicName:   topicName,
+						PartitionID: partitionID,
+						Message:     messageSet[i],
+					}
 				}
 				return offset, length, err
 			} else {
@@ -193,7 +197,11 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 		} else {
 			offset += _offset - 12
 			for i := range messageSet {
-				messages <- messageSet[i]
+				messages <- &FullMessage{
+					TopicName:   topicName,
+					PartitionID: partitionID,
+					Message:     messageSet[i],
+				}
 			}
 		}
 		glog.V(10).Infof("offset %d originOffset %d messageSetSizeBytes %d", offset, originOffset, messageSetSizeBytes)
@@ -206,8 +214,7 @@ func encodeMessageSet(payload []byte, length int, offset int, partition int32, m
 }
 
 // TODO refactor
-func encodePartitionResponse(payload []byte, length int, offset int, buffers chan []byte, messages chan *Message) (int, int, error) {
-	glog.V(10).Info("encodePartitionResponse")
+func encodePartitionResponse(payload []byte, length int, offset int, buffers chan []byte, messages chan *FullMessage, topicName string) (int, int, error) {
 	//Partition           int32
 	//ErrorCode           int16
 	//HighwaterMarkOffset int64
@@ -271,14 +278,14 @@ func encodePartitionResponse(payload []byte, length int, offset int, buffers cha
 			offset += 4
 		}
 
-		offset, length, err = encodeMessageSet(payload, length, offset, partition, messageSetSizeBytes, buffers, messages)
+		offset, length, err = encodeMessageSet(payload, length, offset, partition, messageSetSizeBytes, buffers, messages, topicName, partition)
 		if err != nil {
 			return offset, length, err
 		}
 	}
 }
 
-func encodePartitionResponses(payload []byte, length int, offset int, buffers chan []byte, messages chan *Message) (int, int, error) {
+func encodePartitionResponses(payload []byte, length int, offset int, buffers chan []byte, messages chan *FullMessage, topicName string) (int, int, error) {
 	var (
 		partitionResponseCount int = -1
 		counter                int = 0
@@ -308,7 +315,7 @@ func encodePartitionResponses(payload []byte, length int, offset int, buffers ch
 			}
 		}
 
-		offset, length, err = encodePartitionResponse(payload, length, offset, buffers, messages)
+		offset, length, err = encodePartitionResponse(payload, length, offset, buffers, messages, topicName)
 		if err != nil {
 			return offset, length, err
 		}
@@ -320,7 +327,7 @@ func encodePartitionResponses(payload []byte, length int, offset int, buffers ch
 	}
 }
 
-func encodeResponses(payload []byte, length int, buffers chan []byte, messages chan *Message) error {
+func encodeResponses(payload []byte, length int, buffers chan []byte, messages chan *FullMessage) error {
 	var (
 		topicName       string = ""
 		topicNameLength int    = -1
@@ -365,7 +372,7 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 		glog.V(10).Infof("more: %v, topicNameLength: %d, offset: %d, length: %d", more, topicNameLength, offset, length)
 		glog.V(15).Infof("toppic name: %s", topicName)
 
-		offset, length, err = encodePartitionResponses(payload, length, offset, buffers, messages)
+		offset, length, err = encodePartitionResponses(payload, length, offset, buffers, messages, topicName)
 		if err != nil {
 			return err
 		}
@@ -378,7 +385,7 @@ func encodeResponses(payload []byte, length int, buffers chan []byte, messages c
 	}
 }
 
-func consumeFetchResponse(buffers chan []byte, messages chan *Message) {
+func consumeFetchResponse(buffers chan []byte, messages chan *FullMessage) {
 	defer func() {
 		glog.V(10).Info("consumeFetchResponse return")
 		close(messages)
