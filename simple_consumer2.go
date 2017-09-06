@@ -72,7 +72,14 @@ func (simpleConsumer2 *SimpleConsumer2) Consume(messages chan *FullMessage) erro
 			buffers := make(chan []byte, 10)
 			innerMessages := make(chan *FullMessage, 10)
 			go leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
-			go consumeFetchResponse(buffers, innerMessages)
+			streamDecoder := FetchResponseStreamDecoder{
+				totalLength: 0,
+				offset:      0,
+				length:      0,
+				buffers:     buffers,
+				messages:    innerMessages,
+			}
+			go streamDecoder.consumeFetchResponse()
 			for {
 				message, more := <-innerMessages
 				if more {

@@ -85,7 +85,8 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	}
 
 	messages := make(chan *FullMessage, 10)
-	for _, simpleConsumer2 := range consumer.SimpleConsumer2s {
+	for i, simpleConsumer2 := range consumer.SimpleConsumer2s {
+		glog.V(10).Infof("SimpleConsumer2 %d", i)
 		simpleConsumer2.Consume(messages)
 	}
 

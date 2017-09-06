@@ -49,7 +49,14 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, 
 			buffers := make(chan []byte, 10)
 			innerMessages := make(chan *FullMessage, 10)
 			go leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
-			go consumeFetchResponse(buffers, innerMessages)
+			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
+				totalLength: 0,
+				offset:      0,
+				length:      0,
+				buffers:     buffers,
+				messages:    innerMessages,
+			}
+			go fetchResponseStreamDecoder.consumeFetchResponse()
 			for {
 				message, more := <-innerMessages
 				if more {

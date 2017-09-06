@@ -171,6 +171,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		glog.V(10).Infof("message size: %d", message.MessageSize)
 		offset += 4
 
+		// TODO do NOT need
 		if payloadLength < offset+int(message.MessageSize) {
 			glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(payloadLength[%d] < offset[%d]+messageSize[%d]).", payloadLength, offset, message.MessageSize)
 			if len(messageSet) == 0 {
