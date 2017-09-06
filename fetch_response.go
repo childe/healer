@@ -132,27 +132,18 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 	var originOffset int = streamDecoder.offset
 
 	var buffer []byte
-	for {
-		for {
+	for streamDecoder.offset-originOffset < int(messageSetSizeBytes) {
+		for streamDecoder.more && streamDecoder.offset+12 > streamDecoder.length {
 			buffer, streamDecoder.more = <-streamDecoder.buffers
 			if streamDecoder.more {
 				copy(streamDecoder.payload[streamDecoder.length:], buffer)
 				streamDecoder.length += len(buffer)
 				glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
-			} else {
-				glog.V(10).Infof("fetch response buffer chan closed. length %d", streamDecoder.length)
-				break
-			}
-
-			if streamDecoder.offset+12 > streamDecoder.length {
-				continue
-			} else {
-				break
 			}
 		}
 
 		if streamDecoder.offset+12 > streamDecoder.length {
-			return &fetchResponseTruncated
+			return &fetchResponseTruncatedBeforeMessageSet
 		}
 
 		glog.V(10).Infof("offset %d length %d", streamDecoder.offset, streamDecoder.length)
@@ -165,26 +156,17 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		streamDecoder.offset += 4
 
 		var buffer []byte
-		for {
+		for streamDecoder.more && streamDecoder.offset+int(messageSize) > streamDecoder.length {
 			buffer, streamDecoder.more = <-streamDecoder.buffers
 			if streamDecoder.more {
 				copy(streamDecoder.payload[streamDecoder.length:], buffer)
 				streamDecoder.length += len(buffer)
 				glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
-			} else {
-				glog.V(10).Infof("fetch response buffer chan closed. length %d", streamDecoder.length)
-				break
-			}
-
-			if streamDecoder.offset+int(messageSize) > streamDecoder.length {
-				continue
-			} else {
-				break
 			}
 		}
 
 		if streamDecoder.offset+int(messageSize) > streamDecoder.length {
-			return &fetchResponseTruncated
+			return &fetchResponseTruncatedBeforeMessageSet
 		}
 
 		glog.V(10).Infof("messageSize:%d offset:%d length:%d", messageSize, streamDecoder.offset, streamDecoder.length)
@@ -194,18 +176,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		glog.V(10).Infof("messageSize:%d _offset:%d messageSet.Size:%d err:%v", messageSize, _offset, len(messageSet), err)
 
 		if err != nil {
-			if err == &fetchResponseTruncated {
-				for i := range messageSet {
-					streamDecoder.messages <- &FullMessage{
-						TopicName:   topicName,
-						PartitionID: partitionID,
-						Message:     messageSet[i],
-					}
-				}
-				return err
-			} else {
-				return err
-			}
+			return err
 		} else {
 			streamDecoder.offset += _offset - 12
 			for i := range messageSet {
@@ -217,119 +188,55 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 			}
 		}
 		glog.V(10).Infof("offset %d originOffset %d messageSetSizeBytes %d", streamDecoder.offset, originOffset, messageSetSizeBytes)
-		if streamDecoder.offset-originOffset >= int(messageSetSizeBytes) {
-			break
-		}
 	}
 
 	return nil
 }
 
-// TODO refactor
 func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicName string) error {
 	var (
-		partition           int32 = -1
-		errorCode           int16 = -1
-		highwaterMarkOffset int64 = -1
-		messageSetSizeBytes int32 = -1
+		partition           int32
+		errorCode           int16
+		highwaterMarkOffset int64
+		messageSetSizeBytes int32
 		buffer              []byte
 		err                 error
 	)
 
-	for {
-		if !streamDecoder.more {
-			return nil
-		}
-		buffer, streamDecoder.more = <-streamDecoder.buffers
-
-		if streamDecoder.more {
-			copy(streamDecoder.payload[streamDecoder.length:], buffer)
-			streamDecoder.length += len(buffer)
-			glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
-		}
-
-		if partition == -1 {
-			if streamDecoder.offset+4 > streamDecoder.length {
-				continue
-			}
-			partition = int32(binary.BigEndian.Uint32(streamDecoder.payload[streamDecoder.offset:]))
-			glog.V(10).Infof("partition: %d", partition)
-			streamDecoder.offset += 4
-		}
-
-		if errorCode == -1 {
-			if streamDecoder.offset+2 > streamDecoder.length {
-				continue
-			}
-			errorCode = int16(binary.BigEndian.Uint16(streamDecoder.payload[streamDecoder.offset:]))
-			glog.V(10).Infof("errorCode: %d", errorCode)
-			streamDecoder.offset += 2
-		}
-
-		if highwaterMarkOffset == -1 {
-			if streamDecoder.offset+8 > streamDecoder.length {
-				continue
-			}
-			highwaterMarkOffset = int64(binary.BigEndian.Uint64(streamDecoder.payload[streamDecoder.offset:]))
-			glog.V(10).Infof("highwaterMarkOffset: %d", highwaterMarkOffset)
-			streamDecoder.offset += 8
-		}
-
-		if messageSetSizeBytes == -1 {
-			if streamDecoder.offset+4 > streamDecoder.length {
-				continue
-			}
-			messageSetSizeBytes = int32(binary.BigEndian.Uint32(streamDecoder.payload[streamDecoder.offset:]))
-			glog.V(10).Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
-			streamDecoder.offset += 4
-		}
-
-		err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes)
-		if err != nil {
-			return err
-		}
-	}
-}
-
-func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponses(topicName string) error {
-	var (
-		partitionResponseCount int = -1
-		counter                int = 0
-
-		buffer []byte
-		err    error
-	)
-
-	for {
+	for streamDecoder.offset+18 > streamDecoder.length && streamDecoder.more {
 		buffer, streamDecoder.more = <-streamDecoder.buffers
 		if streamDecoder.more {
 			copy(streamDecoder.payload[streamDecoder.length:], buffer)
 			streamDecoder.length += len(buffer)
 			glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
 		}
-
-		if partitionResponseCount == -1 {
-			if streamDecoder.offset+4 > streamDecoder.length {
-				continue
-			}
-			partitionResponseCount = int(binary.BigEndian.Uint32(streamDecoder.payload[streamDecoder.offset:]))
-			streamDecoder.offset += 4
-
-			if partitionResponseCount == 0 {
-				return nil
-			}
-		}
-
-		err = streamDecoder.encodePartitionResponse(topicName)
-		if err != nil {
-			return err
-		}
-		counter++
-
-		if counter == partitionResponseCount {
-			return nil
-		}
 	}
+
+	if streamDecoder.offset+18 > streamDecoder.length {
+		return &fetchResponseTruncatedBeforeMessageSet
+	}
+
+	partition = int32(binary.BigEndian.Uint32(streamDecoder.payload[streamDecoder.offset:]))
+	glog.V(10).Infof("partition: %d", partition)
+	streamDecoder.offset += 4
+
+	errorCode = int16(binary.BigEndian.Uint16(streamDecoder.payload[streamDecoder.offset:]))
+	glog.V(10).Infof("errorCode: %d", errorCode)
+	streamDecoder.offset += 2
+
+	highwaterMarkOffset = int64(binary.BigEndian.Uint64(streamDecoder.payload[streamDecoder.offset:]))
+	glog.V(10).Infof("highwaterMarkOffset: %d", highwaterMarkOffset)
+	streamDecoder.offset += 8
+
+	messageSetSizeBytes = int32(binary.BigEndian.Uint32(streamDecoder.payload[streamDecoder.offset:]))
+	glog.V(10).Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
+	streamDecoder.offset += 4
+
+	err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
@@ -341,12 +248,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
 	)
 
 	for {
-		if !streamDecoder.more {
-			return &notEnoughDataInFetchResponse
-		}
-
 		buffer, streamDecoder.more = <-streamDecoder.buffers
-		glog.V(10).Info(streamDecoder.more)
 		if streamDecoder.more {
 			copy(streamDecoder.payload[streamDecoder.length:], buffer)
 			streamDecoder.length += len(buffer)
@@ -368,23 +270,42 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
 			topicName = string(streamDecoder.payload[streamDecoder.offset : streamDecoder.offset+topicNameLength])
 			glog.V(15).Infof("topicName: %s", topicName)
 			streamDecoder.offset += topicNameLength
+			break
 		}
+	}
 
-		glog.V(10).Infof("more: %v, topicNameLength: %d, offset: %d, length: %d", streamDecoder.more, topicNameLength, streamDecoder.offset, streamDecoder.length)
-		glog.V(15).Infof("toppic name: %s", topicName)
+	glog.V(10).Infof("more: %v, topicNameLength: %d, offset: %d, length: %d", streamDecoder.more, topicNameLength, streamDecoder.offset, streamDecoder.length)
+	glog.V(15).Infof("toppic name: %s", topicName)
 
-		err = streamDecoder.encodePartitionResponses(topicName)
+	var partitionResponseCount uint32
+	for streamDecoder.more && streamDecoder.offset+4 > streamDecoder.length {
+		buffer, streamDecoder.more = <-streamDecoder.buffers
+		if streamDecoder.more {
+			copy(streamDecoder.payload[streamDecoder.length:], buffer)
+			streamDecoder.length += len(buffer)
+			glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
+		}
+	}
+
+	if streamDecoder.offset+4 > streamDecoder.length {
+		return &fetchResponseTruncatedBeforeMessageSet
+	}
+
+	partitionResponseCount = binary.BigEndian.Uint32(streamDecoder.payload[streamDecoder.offset:])
+	streamDecoder.offset += 4
+
+	if partitionResponseCount == 0 {
+		return &noPartitionResponse
+	}
+
+	for ; partitionResponseCount > 0; partitionResponseCount-- {
+		err = streamDecoder.encodePartitionResponse(topicName)
 		glog.V(10).Infof("more %v offset %d length %d err %v", streamDecoder.more, streamDecoder.offset, streamDecoder.length, err)
 		if err != nil {
 			return err
 		}
-		if !streamDecoder.more {
-			return nil
-		}
-
-		topicName = ""
-		topicNameLength = -1
 	}
+	return nil
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
@@ -433,13 +354,16 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 	glog.V(10).Infof("correlationID: %d", correlationID)
 
 	responsesCount := binary.BigEndian.Uint32(streamDecoder.payload[8:])
+	streamDecoder.offset = 12
+
 	glog.V(10).Infof("responsesCount: %d", responsesCount)
 	if responsesCount == 0 {
 		return
 	}
-	streamDecoder.offset = 12
-	err := streamDecoder.encodeResponses()
-	if err != nil && err != &fetchResponseTruncated {
-		glog.Fatal(err)
+	for ; responsesCount > 0; responsesCount-- {
+		err := streamDecoder.encodeResponses()
+		if err != nil && err != &fetchResponseTruncatedInMessageSet {
+			glog.Fatal(err)
+		}
 	}
 }

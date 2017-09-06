@@ -172,13 +172,13 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		offset += 4
 
 		// TODO do NOT need
-		if payloadLength < offset+int(message.MessageSize) {
-			glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(payloadLength[%d] < offset[%d]+messageSize[%d]).", payloadLength, offset, message.MessageSize)
-			if len(messageSet) == 0 {
-				return messageSet, offset, &maxBytesTooSmall
-			}
-			return messageSet, offset, &fetchResponseTruncated
-		}
+		//if payloadLength < offset+int(message.MessageSize) {
+		//glog.V(5).Infof("response is truncated because of max-bytes parameter in fetch request(payloadLength[%d] < offset[%d]+messageSize[%d]).", payloadLength, offset, message.MessageSize)
+		//if len(messageSet) == 0 {
+		//return messageSet, offset, &maxBytesTooSmall
+		//}
+		//return messageSet, offset, &fetchResponseTruncated
+		//}
 
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
