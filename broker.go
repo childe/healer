@@ -16,6 +16,7 @@ type Broker struct {
 	nodeID        int32
 	address       string
 	clientID      string
+	metaConn      net.Conn
 	conn          net.Conn
 	apiVersions   []*ApiVersion
 	timeout       time.Duration // Second
@@ -40,6 +41,12 @@ func NewBroker(address string, clientID string, nodeID int32, connecTimeout int,
 		timeout:  time.Duration(timeout),
 	}
 
+	metaConn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
+	}
+	broker.metaConn = metaConn
+
 	conn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
@@ -56,22 +63,23 @@ func NewBroker(address string, clientID string, nodeID int32, connecTimeout int,
 	return broker, nil
 }
 
-func (broker *Broker) Close() error {
-	return broker.conn.Close()
+func (broker *Broker) Close() {
+	broker.metaConn.Close()
+	broker.conn.Close()
 }
 
 func (broker *Broker) request(payload []byte) ([]byte, error) {
 	// TODO log?
 	//glog.V(10).Infof("request length: %d", len(payload))
-	broker.conn.Write(payload)
+	broker.metaConn.Write(payload)
 
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
 		if broker.timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+			broker.metaConn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
-		length, err := broker.conn.Read(responseLengthBuf[l:])
+		length, err := broker.metaConn.Read(responseLengthBuf[l:])
 		if err != nil {
 			return nil, err
 		}
@@ -88,9 +96,9 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	readLength := 0
 	for {
 		if broker.timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+			broker.metaConn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
-		length, err := broker.conn.Read(responseBuf[4+readLength:])
+		length, err := broker.metaConn.Read(responseBuf[4+readLength:])
 		if err == io.EOF {
 			break
 		}
