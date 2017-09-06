@@ -113,6 +113,7 @@ type FetchResponseStreamDecoder struct {
 	offset      int
 	buffers     chan []byte
 	messages    chan *FullMessage
+	more        bool
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
@@ -130,10 +131,11 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 	var messageSize int32
 	var originOffset int = streamDecoder.offset
 
+	var buffer []byte
 	for {
 		for {
-			buffer, more := <-streamDecoder.buffers
-			if more {
+			buffer, streamDecoder.more = <-streamDecoder.buffers
+			if streamDecoder.more {
 				copy(streamDecoder.payload[streamDecoder.length:], buffer)
 				streamDecoder.length += len(buffer)
 				glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
@@ -162,9 +164,10 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		glog.V(10).Infof("message size: %d", messageSize)
 		streamDecoder.offset += 4
 
+		var buffer []byte
 		for {
-			buffer, more := <-streamDecoder.buffers
-			if more {
+			buffer, streamDecoder.more = <-streamDecoder.buffers
+			if streamDecoder.more {
 				copy(streamDecoder.payload[streamDecoder.length:], buffer)
 				streamDecoder.length += len(buffer)
 				glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
@@ -229,18 +232,17 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 		errorCode           int16 = -1
 		highwaterMarkOffset int64 = -1
 		messageSetSizeBytes int32 = -1
-		more                bool  = true
 		buffer              []byte
 		err                 error
 	)
 
 	for {
-		if !more {
+		if !streamDecoder.more {
 			return nil
 		}
-		buffer, more = <-streamDecoder.buffers
+		buffer, streamDecoder.more = <-streamDecoder.buffers
 
-		if more {
+		if streamDecoder.more {
 			copy(streamDecoder.payload[streamDecoder.length:], buffer)
 			streamDecoder.length += len(buffer)
 			glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
@@ -295,13 +297,12 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponses(topicN
 		counter                int = 0
 
 		buffer []byte
-		more   bool
 		err    error
 	)
 
 	for {
-		buffer, more = <-streamDecoder.buffers
-		if more {
+		buffer, streamDecoder.more = <-streamDecoder.buffers
+		if streamDecoder.more {
 			copy(streamDecoder.payload[streamDecoder.length:], buffer)
 			streamDecoder.length += len(buffer)
 			glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
@@ -335,19 +336,18 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
 	var (
 		topicName       string = ""
 		topicNameLength int    = -1
-		more            bool   = true
-		buffer          []byte
 		err             error
+		buffer          []byte
 	)
 
 	for {
-		if !more {
+		if !streamDecoder.more {
 			return &notEnoughDataInFetchResponse
 		}
 
-		buffer, more = <-streamDecoder.buffers
-		glog.V(10).Info(more)
-		if more {
+		buffer, streamDecoder.more = <-streamDecoder.buffers
+		glog.V(10).Info(streamDecoder.more)
+		if streamDecoder.more {
 			copy(streamDecoder.payload[streamDecoder.length:], buffer)
 			streamDecoder.length += len(buffer)
 			glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
@@ -370,15 +370,15 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
 			streamDecoder.offset += topicNameLength
 		}
 
-		glog.V(10).Infof("more: %v, topicNameLength: %d, offset: %d, length: %d", more, topicNameLength, streamDecoder.offset, streamDecoder.length)
+		glog.V(10).Infof("more: %v, topicNameLength: %d, offset: %d, length: %d", streamDecoder.more, topicNameLength, streamDecoder.offset, streamDecoder.length)
 		glog.V(15).Infof("toppic name: %s", topicName)
 
 		err = streamDecoder.encodePartitionResponses(topicName)
-		glog.V(10).Infof("more %v offset %d length %d err %v", more, streamDecoder.offset, streamDecoder.length, err)
+		glog.V(10).Infof("more %v offset %d length %d err %v", streamDecoder.more, streamDecoder.offset, streamDecoder.length, err)
 		if err != nil {
 			return err
 		}
-		if !more {
+		if !streamDecoder.more {
 			return nil
 		}
 
@@ -411,9 +411,10 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 	}
 
 	// header
+	var buffer []byte
 	for {
-		buffer, more := <-streamDecoder.buffers
-		if more {
+		buffer, streamDecoder.more = <-streamDecoder.buffers
+		if streamDecoder.more {
 			glog.V(20).Infof("%v", buffer)
 			copy(streamDecoder.payload[streamDecoder.length:], buffer)
 			streamDecoder.length += len(buffer)
