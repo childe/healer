@@ -15,6 +15,7 @@ var (
 	topic          = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	clientID       = flag.String("clientID", "healer", "The ID of this client.")
 	minBytes       = flag.Int("min-bytes", 1, "The fetch size of each request.")
+	fromBeginning  = flag.Bool("from-beginning", false, "default false")
 	maxWaitTime    = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
 	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 	maxBytes       = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
@@ -44,7 +45,7 @@ func main() {
 	consumer.MaxBytes = int32(*maxBytes)
 	consumer.MinBytes = int32(*minBytes)
 
-	messages, err := consumer.Consume()
+	messages, err := consumer.Consume(*fromBeginning)
 	if err != nil {
 		glog.Fatal(err)
 	}

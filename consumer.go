@@ -37,7 +37,7 @@ func findOffset(topicName string, partitionID int32, offsetsResponses []*Offsets
 	return -1
 }
 
-func (consumer *Consumer) Consume() (chan *FullMessage, error) {
+func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	// get partitions info
 	metadataResponse, err := consumer.Brokers.RequestMetaData(&consumer.TopicName)
 	if err != nil {
@@ -45,7 +45,13 @@ func (consumer *Consumer) Consume() (chan *FullMessage, error) {
 	}
 	glog.V(10).Info(metadataResponse)
 
-	offsetsResponses, err := consumer.Brokers.RequestOffsets(consumer.TopicName, -1, -2, 1)
+	var time int64
+	if fromBeginning {
+		time = -2
+	} else {
+		time = -1
+	}
+	offsetsResponses, err := consumer.Brokers.RequestOffsets(consumer.TopicName, -1, time, 1)
 	if err != nil {
 		glog.Fatal("could not get offset of topic %s:%s", consumer.TopicName, err)
 	}
