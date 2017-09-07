@@ -78,6 +78,7 @@ func (simpleConsumer2 *SimpleConsumer2) Consume(messages chan *FullMessage) erro
 				length:      0,
 				buffers:     buffers,
 				messages:    innerMessages,
+				more:        true,
 			}
 			go streamDecoder.consumeFetchResponse()
 			for {

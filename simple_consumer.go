@@ -55,6 +55,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, 
 				length:      0,
 				buffers:     buffers,
 				messages:    innerMessages,
+				more:        true,
 			}
 			go fetchResponseStreamDecoder.consumeFetchResponse()
 			for {
