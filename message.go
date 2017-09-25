@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/golang/glog"
+	"github.com/golang/snappy"
 	"github.com/klauspost/crc32"
 )
 
@@ -80,9 +81,6 @@ func (message *Message) decompress() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		//b := make([]byte, 65535)
-		//n, err := reader.Read(b)
-		//glog.V(10).Infof("%d %s", n, err)
 		if rst, err = ioutil.ReadAll(reader); err != nil && err != io.EOF {
 			glog.Info(err)
 			glog.Info(rst)
@@ -90,6 +88,8 @@ func (message *Message) decompress() ([]byte, error) {
 		} else {
 			return rst, nil
 		}
+	case COMPRESSION_SNAPPY:
+		return snappy.Decode(nil, message.Value)
 	}
 	return nil, fmt.Errorf("Unknown Compression Code %d", compression)
 }
