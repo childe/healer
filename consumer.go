@@ -53,7 +53,7 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	}
 	offsetsResponses, err := consumer.Brokers.RequestOffsets(consumer.TopicName, -1, time, 1)
 	if err != nil {
-		glog.Fatal("could not get offset of topic %s:%s", consumer.TopicName, err)
+		glog.Fatalf("could not get offset of topic %s:%s", consumer.TopicName, err)
 	}
 	glog.V(10).Info(offsetsResponses)
 
