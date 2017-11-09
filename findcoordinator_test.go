@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestGenFindCoordinatorRequest(t *testing.T) {
+func TestFindCoordinator(t *testing.T) {
 	correlationID := int32(os.Getpid())
 	clientID := "healer"
 	groupID := "healer.topicname"
@@ -14,7 +14,7 @@ func TestGenFindCoordinatorRequest(t *testing.T) {
 
 	payload := request.Encode()
 	if len(payload) != 38 {
-		t.Error("offsets request payload length should be 54")
+		t.Error("offsets request payload length should be 38")
 	}
 
 	broker, err := NewBroker(*brokerAddress, "healer", -1, 60, 30)
@@ -26,7 +26,7 @@ func TestGenFindCoordinatorRequest(t *testing.T) {
 
 	responseBytes, err := broker.request(payload)
 	if err != nil {
-		t.Errorf("send FindCoordinato request error:%s", err)
+		t.Errorf("send findcoordinator request error:%s", err)
 	} else {
 		t.Logf("got response from findcoordinator request:%d bytes", len(responseBytes))
 	}
