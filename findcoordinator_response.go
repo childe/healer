@@ -17,11 +17,12 @@ type FindCoordinatorResponse struct {
 	Coordinator   *Coordinator
 }
 
-func (findCoordinatorResponse *FindCoordinatorResponse) Decode(payload []byte) error {
+func NewFindCoordinatorResponse(payload []byte) (*FindCoordinatorResponse, error) {
+	findCoordinatorResponse := &FindCoordinatorResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return fmt.Errorf("FindCoordinator Response length did not match: %d!=%d", responseLength+4, len(payload))
+		return nil, fmt.Errorf("FindCoordinator Response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -44,5 +45,5 @@ func (findCoordinatorResponse *FindCoordinatorResponse) Decode(payload []byte) e
 
 	coordinator.port = int32(binary.BigEndian.Uint32(payload[offset:]))
 
-	return nil
+	return findCoordinatorResponse, nil
 }

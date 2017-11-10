@@ -31,8 +31,7 @@ func TestFindCoordinator(t *testing.T) {
 		t.Logf("got response from findcoordinator request:%d bytes", len(responseBytes))
 	}
 
-	response := &FindCoordinatorResponse{}
-	err = response.Decode(responseBytes)
+	response, err := NewFindCoordinatorResponse(responseBytes)
 	if err != nil {
 		t.Errorf("decode findcoordinator response error:%s", err)
 	} else {

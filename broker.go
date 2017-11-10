@@ -256,8 +256,10 @@ func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorRe
 		return nil, err
 	}
 
-	findCoordinatorResponse := &FindCoordinatorResponse{}
-	findCoordinatorResponse.Decode(responseBuf)
+	findCoordinatorResponse, err := NewFindCoordinatorResponse(responseBuf)
+	if err != nil {
+		return nil, err
+	}
 
 	return findCoordinatorResponse, nil
 }
