@@ -187,8 +187,7 @@ func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	apiVersionsResponse := &ApiVersionsResponse{}
-	err = apiVersionsResponse.Decode(response)
+	apiVersionsResponse, err := NewApiVersionsResponse(response)
 	if err != nil {
 		return nil, err
 	}

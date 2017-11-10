@@ -18,11 +18,12 @@ type ApiVersionsResponse struct {
 	ApiVersions   []*ApiVersion
 }
 
-func (apiVersionsResponse *ApiVersionsResponse) Decode(payload []byte) error {
+func NewApiVersionsResponse(payload []byte) (*ApiVersionsResponse, error) {
+	apiVersionsResponse := &ApiVersionsResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return fmt.Errorf("ApiVersions reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return nil, fmt.Errorf("ApiVersions reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -50,5 +51,5 @@ func (apiVersionsResponse *ApiVersionsResponse) Decode(payload []byte) error {
 		apiVersionsResponse.ApiVersions[i] = apiVersion
 	}
 
-	return nil
+	return apiVersionsResponse, nil
 }
