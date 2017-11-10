@@ -238,8 +238,10 @@ func (broker *Broker) requestOffsets(topic string, partitionIDs []uint32, timeVa
 		return nil, err
 	}
 
-	offsetsResponse := &OffsetsResponse{}
-	offsetsResponse.Decode(responseBuf)
+	offsetsResponse, err := NewOffsetsResponse(responseBuf)
+	if err != nil {
+		return nil, err
+	}
 
 	return offsetsResponse, nil
 }

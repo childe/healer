@@ -76,8 +76,10 @@ func GetOffset(broker string, topic string, partitionID int32, correlationID int
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
 
-	offsetsResponse := &OffsetsResponse{}
-	offsetsResponse.Decode(responseBuf)
+	offsetsResponse, err := NewOffsetsResponse(responseBuf)
+	if err != nil {
+		return nil, err
+	}
 
 	return offsetsResponse, nil
 }

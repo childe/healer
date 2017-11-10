@@ -22,7 +22,8 @@ type OffsetsResponse struct {
 	Info          map[string][]*PartitionOffset
 }
 
-func (offsetsResponse *OffsetsResponse) Decode(payload []byte) {
+func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
+	offsetsResponse := &OffsetsResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
@@ -63,4 +64,5 @@ func (offsetsResponse *OffsetsResponse) Decode(payload []byte) {
 			}
 		}
 	}
+	return offsetsResponse, nil
 }
