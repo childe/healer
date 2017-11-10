@@ -168,3 +168,16 @@ func (brokers *Brokers) findLeader(topic string, partitionID int32) (int32, erro
 	}
 	return -1, fmt.Errorf("could not find out leader of topic %s", topic)
 }
+
+func (brokers *Brokers) RequestListGroups() (*ListGroupsResponse, error) {
+	for _, broker := range brokers.brokers {
+		response, err := broker.requestListGroups()
+		if err != nil {
+			glog.Infof("could not get metadata from %s:%s", broker.address, err)
+		} else {
+			return response, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not list groups from all brokers")
+}

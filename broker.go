@@ -194,6 +194,26 @@ func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
 	return apiVersionsResponse, nil
 }
 
+func (broker *Broker) requestListGroups() (*ListGroupsResponse, error) {
+	correlationID := int32(os.Getpid())
+	request := NewListGroupsRequest(correlationID, broker.clientID)
+
+	payload := request.Encode()
+
+	responseBuf, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	listGroupsResponse, err := NewListGroupsResponse(responseBuf)
+	if err != nil {
+		return nil, err
+	}
+
+	//TODO error info in the response
+	return listGroupsResponse, nil
+}
+
 func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) {
 	correlationID := int32(os.Getpid())
 	metadataRequest := MetadataRequest{}
