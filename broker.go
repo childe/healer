@@ -217,8 +217,7 @@ func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) 
 		return nil, err
 	}
 
-	metadataResponse := &MetadataResponse{}
-	err = metadataResponse.Decode(responseBuf)
+	metadataResponse, err := NewMetadataResponse(responseBuf)
 	if err != nil {
 		return nil, err
 	}

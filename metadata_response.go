@@ -55,12 +55,13 @@ type MetadataResponse struct {
 	TopicMetadatas []TopicMetadata
 }
 
-func (metadataResponse *MetadataResponse) Decode(payload []byte) error {
+func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
+	metadataResponse := &MetadataResponse{}
 	//TODO: actually we have judged if the lenght matches while reading data from connection
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return fmt.Errorf("MetadataResponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return nil, fmt.Errorf("MetadataResponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -131,5 +132,5 @@ func (metadataResponse *MetadataResponse) Decode(payload []byte) error {
 	}
 	//end encode TopicMetadatas
 
-	return nil
+	return metadataResponse, nil
 }

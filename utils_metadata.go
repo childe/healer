@@ -61,8 +61,7 @@ func GetMetaData(brokerList string, topic string, correlationID int32, clientID 
 		}
 		copy(responseBuf[0:4], responseLengthBuf)
 
-		metadataResponse := &MetadataResponse{}
-		err = metadataResponse.Decode(responseBuf)
+		metadataResponse, err := NewMetadataResponse(responseBuf)
 		if err != nil {
 			return nil, err
 		}
