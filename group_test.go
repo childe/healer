@@ -3,8 +3,6 @@ package healer
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/golang/glog"
 )
 
 func TestGroup(t *testing.T) {
@@ -43,7 +41,7 @@ func TestGroup(t *testing.T) {
 		t.Errorf("try to get join_group response error:%s", err)
 	} else {
 		b, _ := json.Marshal(joinGroupResponse)
-		glog.Infof("%s", b)
+		t.Logf("%s", b)
 	}
 
 	// sync group
@@ -65,6 +63,6 @@ func TestGroup(t *testing.T) {
 		t.Errorf("try to get sync_group response error:%s", err)
 	} else {
 		b, _ := json.Marshal(syncGroupResponse)
-		glog.Infof("%s", b)
+		t.Logf("%s", b)
 	}
 }
