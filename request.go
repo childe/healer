@@ -14,6 +14,7 @@ var API_OffsetFetchRequest uint16 = 9
 var API_FindCoordinator uint16 = 10
 var API_JoinGroup uint16 = 11
 var API_Heartbeat uint16 = 12
+var API_LeaveGroup uint16 = 13
 var API_SyncGroup uint16 = 14
 var API_ListGroups uint16 = 16
 var API_ApiVersions uint16 = 18
