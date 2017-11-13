@@ -1,6 +1,11 @@
 package healer
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/golang/glog"
+)
 
 func TestSyncGroup(t *testing.T) {
 	var (
@@ -29,13 +34,11 @@ func TestSyncGroup(t *testing.T) {
 		t.Logf("got response from sync_group request:%d bytes", len(responseBytes))
 	}
 
-	//response, err := New(responseBytes)
-	//if err != nil {
-	//t.Errorf("try to get sync_group response error:%s", err)
-	//} else {
-	//t.Logf("sync_group response errorcode:%d", response.ErrorCode)
-	//}
-
-	//b, _ := json.Marshal(response)
-	//glog.Infof("%s", b)
+	response, err := NewSyncGroupResponse(responseBytes)
+	if err != nil {
+		t.Errorf("try to get sync_group response error:%s", err)
+	} else {
+		b, _ := json.Marshal(response)
+		glog.Infof("%s", b)
+	}
 }
