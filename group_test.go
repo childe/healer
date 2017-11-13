@@ -41,7 +41,7 @@ func TestGroup(t *testing.T) {
 		t.Errorf("try to get join_group response error:%s", err)
 	} else {
 		b, _ := json.Marshal(joinGroupResponse)
-		t.Logf("%s", b)
+		t.Logf("join group response: %s", b)
 	}
 
 	// sync group
@@ -63,6 +63,21 @@ func TestGroup(t *testing.T) {
 		t.Errorf("try to get sync_group response error:%s", err)
 	} else {
 		b, _ := json.Marshal(syncGroupResponse)
-		t.Logf("%s", b)
+		t.Logf("sync response: %s", b)
 	}
+
+	// leave group
+	leaveGroupRequest := NewLeaveGroupRequest(correlationID, clientID, groupID, memberID)
+	payload = leaveGroupRequest.Encode()
+
+	responseBytes, err = broker.request(payload)
+
+	leaveGroupResponse, err := NewLeaveGroupResponse(responseBytes)
+	if err != nil {
+		t.Errorf("try to get leave_group response error:%s", err)
+	} else {
+		b, _ := json.Marshal(leaveGroupResponse)
+		t.Logf("leave response: %s", b)
+	}
+
 }
