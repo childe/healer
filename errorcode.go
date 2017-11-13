@@ -48,4 +48,9 @@ func init() {
 		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
 		ErrorDesc: "This server is not the leader for that topic-partition.",
 	}
+	AllError[23] = &Error{
+		Errorcode: 23,
+		ErrorMsg:  "INCONSISTENT_GROUP_PROTOCOL",
+		ErrorDesc: "The group member's supported protocols are incompatible with those of existing members or first group member tried to join with empty protocol type or empty protocol list.",
+	}
 }
