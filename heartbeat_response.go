@@ -12,6 +12,7 @@ type HeartbeatResponse struct {
 }
 
 func NewHeartbeatResponse(payload []byte) (*HeartbeatResponse, error) {
+	var err error = nil
 	heartbeatResponse := &HeartbeatResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
@@ -25,5 +26,9 @@ func NewHeartbeatResponse(payload []byte) (*HeartbeatResponse, error) {
 
 	heartbeatResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
 
-	return heartbeatResponse, nil
+	if heartbeatResponse.ErrorCode != 0 {
+		err = AllError[heartbeatResponse.ErrorCode]
+	}
+
+	return heartbeatResponse, err
 }
