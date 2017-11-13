@@ -40,9 +40,7 @@ func TestJoinGroup(t *testing.T) {
 	if err != nil {
 		t.Errorf("try to get join_group response error:%s", err)
 	} else {
-		t.Logf("join_group response errorcode:%d", response.ErrorCode)
+		b, _ := json.Marshal(response)
+		glog.Infof("%s", b)
 	}
-
-	b, _ := json.Marshal(response)
-	glog.Infof("%s", b)
 }
