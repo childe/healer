@@ -41,6 +41,7 @@ type JoinGroupResponse struct {
 }
 
 func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
+	var err error = nil
 	r := &JoinGroupResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
@@ -53,6 +54,10 @@ func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
 	offset += 4
 
 	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	offset += 2
+	if r.ErrorCode != 0 {
+		err = AllError[r.ErrorCode]
+	}
 
 	r.GenerationID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
@@ -76,8 +81,10 @@ func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
 	offset += memberIDLength
 
 	membersLength := int(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
 	r.Members = make([]*Member, membersLength)
 	for i := 0; i < membersLength; i++ {
+		r.Members[i] = &Member{}
 		l := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 		r.Members[i].MemberID = string(payload[offset : offset+l])
@@ -90,5 +97,5 @@ func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
 		offset += ll
 	}
 
-	return r, nil
+	return r, err
 }
