@@ -53,4 +53,9 @@ func init() {
 		ErrorMsg:  "INCONSISTENT_GROUP_PROTOCOL",
 		ErrorDesc: "The group member's supported protocols are incompatible with those of existing members or first group member tried to join with empty protocol type or empty protocol list.",
 	}
+	AllError[25] = &Error{
+		Errorcode: 25,
+		ErrorMsg:  "UNKNOWN_MEMBER_ID",
+		ErrorDesc: "The coordinator is not aware of this member.",
+	}
 }
