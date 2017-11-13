@@ -1,24 +1,26 @@
 package healer
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
+
+	"github.com/golang/glog"
 )
 
 func TestJoinGroup(t *testing.T) {
 	correlationID := int32(os.Getpid())
+	correlationID = 9
 	clientID := "healer"
-	groupID := "healer.topicname"
-	var sessionTimeout int32 = 6000
+	groupID := "hangout.test"
+	var sessionTimeout int32 = 30000
 	memberID := ""
-	protocolType := ""
+	protocolType := "consumer"
 
 	request := NewJoinGroupRequest(correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
+	request.AddGroupProtocal("range", []byte{})
 
 	payload := request.Encode()
-	if len(payload) != 50 {
-		t.Error("offsets request payload length should be 50")
-	}
 
 	broker, err := NewBroker(*brokerAddress, "healer", -1, 60, 60)
 	if err != nil {
@@ -36,9 +38,11 @@ func TestJoinGroup(t *testing.T) {
 
 	response, err := NewJoinGroupResponse(responseBytes)
 	if err != nil {
-		t.Errorf("decode join_group response error:%s", err)
+		t.Errorf("try to get join_group response error:%s", err)
 	} else {
 		t.Logf("join_group response errorcode:%d", response.ErrorCode)
-		//t.Logf("join_group response Coordinator:%s:%d (%d)", response.Coordinator.host, response.Coordinator.port, response.Coordinator.nodeID)
 	}
+
+	b, _ := json.Marshal(response)
+	glog.Infof("%s", b)
 }
