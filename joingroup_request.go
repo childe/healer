@@ -101,5 +101,16 @@ func (r *JoinGroupRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.GroupProtocols)))
 	offset += 4
 
+	for _, gp := range r.GroupProtocols {
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(gp.ProtocolName)))
+		offset += 2
+		copy(payload[offset:], gp.ProtocolName)
+		offset += len(gp.ProtocolName)
+
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(gp.ProtocolMetadata)))
+		offset += 4
+		copy(payload[offset:], gp.ProtocolMetadata)
+		offset += len(gp.ProtocolMetadata)
+	}
 	return payload
 }
