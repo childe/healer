@@ -15,6 +15,7 @@ import (
 type Broker struct {
 	nodeID        int32
 	address       string
+	// todo move clientID to client
 	clientID      string
 	metaConn      net.Conn
 	conn          net.Conn
@@ -307,4 +308,16 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 	err := broker.requestStreamingly(payload, buffers)
 	glog.V(10).Info("requestFetchStreamingly return")
 	return err
+}
+
+func (broker *Broker) findCoordinator(correlationID int32, clientID, groupID string) (*FindCoordinatorResponse, error) {
+	request := NewFindCoordinatorRequest(correlationID, clientID, groupID)
+
+	payload := request.Encode()
+
+	responseBytes, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+	return NewFindCoordinatorResponse(responseBytes)
 }
