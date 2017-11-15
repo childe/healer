@@ -29,9 +29,9 @@ func main() {
 
 	var metadataResponse *healer.MetadataResponse
 	if *topic == "" {
-		metadataResponse, err = brokers.RequestMetaData(nil)
+		metadataResponse, err = brokers.RequestMetaData(*clientID, nil)
 	} else {
-		metadataResponse, err = brokers.RequestMetaData(topic)
+		metadataResponse, err = brokers.RequestMetaData(*clientID, topic)
 	}
 
 	if err != nil {

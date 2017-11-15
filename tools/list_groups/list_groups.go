@@ -26,7 +26,7 @@ func main() {
 		os.Exit(5)
 	}
 
-	response, err := brokers.RequestListGroups()
+	response, err := brokers.RequestListGroups(*clientID)
 
 	if err != nil {
 		glog.Errorf("failed to get list_groups response:%s", err)

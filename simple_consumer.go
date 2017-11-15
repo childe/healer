@@ -20,7 +20,7 @@ func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
 }
 
 func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, error) {
-	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.TopicName, simpleConsumer.Partition)
+	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error
 		glog.Fatal("could not get leader of topic %s:%s", simpleConsumer.TopicName, err)

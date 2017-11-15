@@ -17,7 +17,7 @@ func TestFindCoordinator(t *testing.T) {
 		t.Error("offsets request payload length should be 38")
 	}
 
-	broker, err := NewBroker(*brokerAddress, "healer", -1, 60, 30)
+	broker, err := NewBroker(*brokerAddress, -1, 60, 30)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {

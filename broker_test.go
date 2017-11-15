@@ -9,7 +9,8 @@ var (
 	brokerAddress = flag.String("broker", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
 	brokers       = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
 	topic         = flag.String("topic", "test", "topic name")
-	groupID       = flag.String("groupid", "healer", "groupid")
+	groupID       = flag.String("group", "healer", "groupid")
+	clientID      = flag.String("client", "healer", "groupid")
 )
 
 func init() {
@@ -17,35 +18,28 @@ func init() {
 }
 
 func TestNewBroker(t *testing.T) {
-	_, err := NewBroker(*brokerAddress, "healer", -1, 60, 30)
+	_, err := NewBroker(*brokerAddress, -1, 60, 30)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", -1)
 	}
 
-	_, err = NewBroker(*brokerAddress, "", -1, 60, 0)
+	_, err = NewBroker(*brokerAddress, -1, 60, 0)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "", -1)
 	}
 
-	_, err = NewBroker(*brokerAddress, "healer", 0, 0, 0)
+	_, err = NewBroker(*brokerAddress, 0, 0, 0)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", 0)
 	}
 
-	_, err = NewBroker(*brokerAddress, "", 0, 0, 0)
-	if err != nil {
-		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
-	} else {
-		t.Logf("got new broker from %s %s %d", *brokerAddress, "", -1)
-	}
-
-	_, err = NewBroker("127.0.0.1:21010", "", 0, 0, 0)
+	_, err = NewBroker("127.0.0.1:21010", 0, 0, 0)
 	if err == nil {
 		t.Errorf("it should not get new broker from 127.0.0.1:10000")
 	} else {
@@ -54,13 +48,13 @@ func TestNewBroker(t *testing.T) {
 }
 
 func TestRequestApiVersions(t *testing.T) {
-	broker, err := NewBroker(*brokerAddress, "healer", -1, 0, 0)
+	broker, err := NewBroker(*brokerAddress, -1, 0, 0)
 	defer broker.Close()
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	}
 
-	apiVersionsResponse, err := broker.requestApiVersions()
+	apiVersionsResponse, err := broker.requestApiVersions(*clientID)
 	if apiVersionsResponse.ErrorCode != 0 {
 		t.Errorf("apiVersionsResponse error code is %d", apiVersionsResponse.ErrorCode)
 	} else {

@@ -34,7 +34,7 @@ func (simpleConsumer2 *SimpleConsumer2) Consume(messages chan *FullMessage) erro
 	)
 
 	for partition, _ := range simpleConsumer2.Partitions {
-		_leaderID, err := simpleConsumer2.Brokers.findLeader(simpleConsumer2.TopicName, partition)
+		_leaderID, err := simpleConsumer2.Brokers.findLeader(simpleConsumer2.ClientID, simpleConsumer2.TopicName, partition)
 		if err != nil {
 			//TODO NO fatal but return error
 			glog.Fatal("could not get leader of %s[%d]:%s", simpleConsumer2.TopicName, partition, err)

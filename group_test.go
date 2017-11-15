@@ -22,7 +22,7 @@ func TestGroup(t *testing.T) {
 
 	payload := joinGroupRequest.Encode()
 
-	broker, err := NewBroker(*brokerAddress, "healer", -1, 60, 60)
+	broker, err := NewBroker(*brokerAddress, -1, 60, 60)
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
 	} else {

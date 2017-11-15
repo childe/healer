@@ -15,8 +15,6 @@ import (
 type Broker struct {
 	nodeID        int32
 	address       string
-	// todo move clientID to client
-	clientID      string
 	metaConn      net.Conn
 	conn          net.Conn
 	apiVersions   []*ApiVersion
@@ -28,18 +26,14 @@ var defaultClientID = "healer"
 
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
-func NewBroker(address string, clientID string, nodeID int32, connecTimeout int, timeout int) (*Broker, error) {
+func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*Broker, error) {
 	//TODO more parameters, timeout, keepalive, connect timeout ...
 	//TODO get available api versions
-	if clientID == "" {
-		clientID = defaultClientID
-	}
 
 	broker := &Broker{
-		nodeID:   nodeID,
-		address:  address,
-		clientID: clientID,
-		timeout:  time.Duration(timeout),
+		nodeID:  nodeID,
+		address: address,
+		timeout: time.Duration(timeout),
 	}
 
 	metaConn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
@@ -179,11 +173,11 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	return nil
 }
 
-func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
+func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse, error) {
 	correlationID := int32(os.Getpid())
 
 	// TODO should always use v0?
-	apiVersionRequest := NewApiVersionsRequest(0, correlationID, broker.clientID)
+	apiVersionRequest := NewApiVersionsRequest(0, correlationID, clientID)
 	response, err := broker.request(apiVersionRequest.Encode())
 	if err != nil {
 		return nil, err
@@ -195,9 +189,9 @@ func (broker *Broker) requestApiVersions() (*ApiVersionsResponse, error) {
 	return apiVersionsResponse, nil
 }
 
-func (broker *Broker) requestListGroups() (*ListGroupsResponse, error) {
+func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, error) {
 	correlationID := int32(os.Getpid())
-	request := NewListGroupsRequest(correlationID, broker.clientID)
+	request := NewListGroupsRequest(correlationID, clientID)
 
 	payload := request.Encode()
 
@@ -215,14 +209,14 @@ func (broker *Broker) requestListGroups() (*ListGroupsResponse, error) {
 	return listGroupsResponse, nil
 }
 
-func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) {
+func (broker *Broker) requestMetaData(clientID string, topic *string) (*MetadataResponse, error) {
 	correlationID := int32(os.Getpid())
 	metadataRequest := MetadataRequest{}
 	metadataRequest.RequestHeader = &RequestHeader{
 		ApiKey:        API_MetadataRequest,
 		ApiVersion:    0,
 		CorrelationId: correlationID,
-		ClientId:      broker.clientID,
+		ClientId:      clientID,
 	}
 
 	if topic != nil {
@@ -248,10 +242,10 @@ func (broker *Broker) requestMetaData(topic *string) (*MetadataResponse, error) 
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
-func (broker *Broker) requestOffsets(topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
+func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
 	correlationID := int32(os.Getpid())
 
-	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, correlationID, broker.clientID)
+	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, correlationID, clientID)
 	payload := offsetsRequest.Encode()
 
 	responseBuf, err := broker.request(payload)
@@ -267,10 +261,10 @@ func (broker *Broker) requestOffsets(topic string, partitionIDs []uint32, timeVa
 	return offsetsResponse, nil
 }
 
-func (broker *Broker) requestFindCoordinator(groupID string) (*FindCoordinatorResponse, error) {
+func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
 	correlationID := int32(os.Getpid())
 
-	findCoordinatorRequest := NewFindCoordinatorRequest(correlationID, broker.clientID, groupID)
+	findCoordinatorRequest := NewFindCoordinatorRequest(correlationID, clientID, groupID)
 	payload := findCoordinatorRequest.Encode()
 
 	responseBuf, err := broker.request(payload)
