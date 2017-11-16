@@ -1,5 +1,7 @@
 package healer
 
+import "github.com/golang/glog"
+
 type GroupConsumer struct {
 	// TODO do not nedd one connection to each broker
 	brokers       *Brokers
@@ -27,8 +29,15 @@ func NewGroupConsumer(brokerList, topic, clientID, groupID string) (*GroupConsum
 }
 
 func (c *GroupConsumer) Consume() (chan *FullMessage, error) {
+	// find coordinator
+	coordinatorResponse, err := c.brokers.FindCoordinator(c.correlationID, c.topic, c.groupID)
+	if err != nil {
+		glog.Fatalf("could not get coordinator:%s", err)
+	}
 	// join
-	c.brokers.FindCoordinator(c.correlationID, c.topic, c.groupID)
+	coordinatorBroker := c.brokers.brokers[int32(coordinatorResponse.CorrelationId)]
+	glog.Info(coordinatorBroker)
+	//coordinatorBroker.re
 	// sync
 	// go heartbeat
 	// consume
