@@ -1,17 +1,16 @@
 package healer
 
-import (
-	"os"
-	"testing"
-)
+import "testing"
 
 func TestGenOffsetsRequest(t *testing.T) {
-	correlationID := int32(os.Getpid())
-	partitionID := uint32(0)
-	clientID := "healer"
-	timeValue := int64(0)
-	offsets := uint32(10)
-	topic := "test"
+	var (
+		correlationID uint32 = 2
+		partitionID   uint32 = 0
+		clientID      string = "healer"
+		timeValue     int64  = 0
+		offsets       uint32 = 10
+		topic         string = "test"
+	)
 
 	offsetsRequest := NewOffsetsRequest(topic, []uint32{partitionID}, timeValue, offsets, correlationID, clientID)
 

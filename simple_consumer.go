@@ -37,7 +37,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, 
 		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
 	}
 
-	var correlationID int32 = 0
+	var correlationID uint32 = 0
 	var messages chan *FullMessage = make(chan *FullMessage, 10)
 	go func(chan *FullMessage) {
 		for {

@@ -37,7 +37,7 @@ type JoinGroupRequest struct {
 }
 
 func NewJoinGroupRequest(
-	correlationID int32, clientID, groupID string, sessionTimeout int32,
+	correlationID uint32, clientID, groupID string, sessionTimeout int32,
 	memberID, protocolType string) *JoinGroupRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_JoinGroup,

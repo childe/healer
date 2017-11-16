@@ -9,7 +9,7 @@ type ListGroupsRequest struct {
 	RequestHeader *RequestHeader
 }
 
-func NewListGroupsRequest(correlationID int32, clientID string) *ListGroupsRequest {
+func NewListGroupsRequest(correlationID uint32, clientID string) *ListGroupsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_ListGroups,
 		ApiVersion:    0,

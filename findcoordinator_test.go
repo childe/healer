@@ -4,7 +4,7 @@ import "testing"
 
 func TestFindCoordinator(t *testing.T) {
 	var (
-		correlationID int32  = 10
+		correlationID uint32 = 10
 		clientID      string = "healer"
 		groupID       string = "healer.topicname"
 	)

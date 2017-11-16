@@ -9,11 +9,11 @@ import (
 )
 
 // GetOffset return the offset values array from server
-func GetOffset(broker string, topic string, partitionID int32, correlationID int32, clientID string, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
+func GetOffset(broker string, topic string, partitionID int32, correlationID uint32, clientID string, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
-		CorrelationID: int32(correlationID),
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

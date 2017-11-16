@@ -46,7 +46,7 @@ type FetchRequest struct {
 }
 
 // TODO all partitions should have the SAME maxbytes?
-func NewFetchRequest(correlationID int32, clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
+func NewFetchRequest(correlationID uint32, clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_FetchRequest,
 		ApiVersion:    0,

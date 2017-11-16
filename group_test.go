@@ -7,7 +7,7 @@ import (
 
 func TestGroup(t *testing.T) {
 	var (
-		correlationID     int32  = 11
+		correlationID     uint32 = 11
 		clientID          string = "healer"
 		groupID           string = "hangout.test"
 		groupGenerationID int32

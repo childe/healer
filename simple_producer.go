@@ -17,7 +17,7 @@ type SimpleProducer struct {
 		Timeout      int32
 		MessageCap   int32
 	}
-	CorrelationID  int32
+	CorrelationID  uint32
 	MessageSetSize int32
 	MessageSet     MessageSet
 }

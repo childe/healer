@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"time"
 
 	"github.com/golang/glog"
@@ -20,6 +19,8 @@ type Broker struct {
 	apiVersions   []*ApiVersion
 	timeout       time.Duration // Second
 	connecTimeout time.Duration // Second
+
+	correlationID uint32
 }
 
 var defaultClientID = "healer"
@@ -34,6 +35,8 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 		nodeID:  nodeID,
 		address: address,
 		timeout: time.Duration(timeout),
+
+		correlationID: 0,
 	}
 
 	metaConn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
@@ -174,10 +177,9 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 }
 
 func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse, error) {
-	correlationID := int32(os.Getpid())
-
 	// TODO should always use v0?
-	apiVersionRequest := NewApiVersionsRequest(0, correlationID, clientID)
+	broker.correlationID++
+	apiVersionRequest := NewApiVersionsRequest(0, broker.correlationID, clientID)
 	response, err := broker.request(apiVersionRequest.Encode())
 	if err != nil {
 		return nil, err
@@ -190,8 +192,8 @@ func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse,
 }
 
 func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, error) {
-	correlationID := int32(os.Getpid())
-	request := NewListGroupsRequest(correlationID, clientID)
+	broker.correlationID++
+	request := NewListGroupsRequest(broker.correlationID, clientID)
 
 	payload := request.Encode()
 
@@ -210,12 +212,12 @@ func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, e
 }
 
 func (broker *Broker) requestMetaData(clientID string, topic *string) (*MetadataResponse, error) {
-	correlationID := int32(os.Getpid())
+	broker.correlationID++
 	metadataRequest := MetadataRequest{}
 	metadataRequest.RequestHeader = &RequestHeader{
 		ApiKey:        API_MetadataRequest,
 		ApiVersion:    0,
-		CorrelationID: correlationID,
+		CorrelationID: broker.correlationID,
 		ClientId:      clientID,
 	}
 
@@ -243,9 +245,8 @@ func (broker *Broker) requestMetaData(clientID string, topic *string) (*Metadata
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
 func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
-	correlationID := int32(os.Getpid())
-
-	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, correlationID, clientID)
+	broker.correlationID++
+	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, broker.correlationID, clientID)
 	payload := offsetsRequest.Encode()
 
 	responseBuf, err := broker.request(payload)
@@ -262,9 +263,8 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []uint
 }
 
 func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
-	correlationID := int32(os.Getpid())
-
-	findCoordinatorRequest := NewFindCoordinatorRequest(correlationID, clientID, groupID)
+	broker.correlationID++
+	findCoordinatorRequest := NewFindCoordinatorRequest(broker.correlationID, clientID, groupID)
 	payload := findCoordinatorRequest.Encode()
 
 	responseBuf, err := broker.request(payload)
@@ -304,8 +304,9 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 	return err
 }
 
-func (broker *Broker) findCoordinator(correlationID int32, clientID, groupID string) (*FindCoordinatorResponse, error) {
-	request := NewFindCoordinatorRequest(correlationID, clientID, groupID)
+func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
+	broker.correlationID++
+	request := NewFindCoordinatorRequest(broker.correlationID, clientID, groupID)
 
 	payload := request.Encode()
 
@@ -316,8 +317,9 @@ func (broker *Broker) findCoordinator(correlationID int32, clientID, groupID str
 	return NewFindCoordinatorResponse(responseBytes)
 }
 
-func (broker *Broker) requestJoinGroup(correlationID int32, clientID, groupID string, sessionTimeout int32, memberID, protocolType string) (*JoinGroupResponse, error) {
-	joinGroupRequest := NewJoinGroupRequest(correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
+func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout int32, memberID, protocolType string) (*JoinGroupResponse, error) {
+	broker.correlationID++
+	joinGroupRequest := NewJoinGroupRequest(broker.correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
 	joinGroupRequest.AddGroupProtocal("range", []byte{})
 
 	payload := joinGroupRequest.Encode()

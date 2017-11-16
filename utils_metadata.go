@@ -11,7 +11,7 @@ import (
 )
 
 // GetMetaData return one MetadataResponse object
-func GetMetaData(brokerList string, topic string, correlationID int32, clientID string) (*MetadataResponse, error) {
+func GetMetaData(brokerList string, topic string, correlationID uint32, clientID string) (*MetadataResponse, error) {
 	for _, broker := range strings.Split(brokerList, ",") {
 		fmt.Println(broker)
 		metadataRequest := MetadataRequest{}

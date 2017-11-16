@@ -25,7 +25,7 @@ type FindCoordinatorRequest struct {
 	GroupID       string
 }
 
-func NewFindCoordinatorRequest(correlationID int32, clientID, groupID string) *FindCoordinatorRequest {
+func NewFindCoordinatorRequest(correlationID uint32, clientID, groupID string) *FindCoordinatorRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_FindCoordinator,
 		ApiVersion:    0,

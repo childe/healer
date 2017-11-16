@@ -186,9 +186,9 @@ func (brokers *Brokers) RequestListGroups(clientID string) (*ListGroupsResponse,
 	return nil, fmt.Errorf("could not list groups from all brokers")
 }
 
-func (brokers *Brokers) FindCoordinator(correlationID int32, clientID, groupID string) (*FindCoordinatorResponse, error) {
+func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
 	for _, broker := range brokers.brokers {
-		response, err := broker.findCoordinator(correlationID, clientID, groupID)
+		response, err := broker.findCoordinator(clientID, groupID)
 		if err != nil {
 			glog.Infof("could not find coordinator from %s:%s", broker.address, err)
 		} else {

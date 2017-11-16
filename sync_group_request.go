@@ -53,7 +53,7 @@ type SyncGroupRequest struct {
 	GroupAssignments  []*GroupAssignment
 }
 
-func NewSyncGroupRequest(correlationID int32, clientID, groupID string,
+func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
 	groupGenerationID int32, memberID string) *SyncGroupRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_SyncGroup,

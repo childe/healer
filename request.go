@@ -22,7 +22,7 @@ var API_ApiVersions uint16 = 18
 type RequestHeader struct {
 	ApiKey        uint16
 	ApiVersion    uint16
-	CorrelationID int32
+	CorrelationID uint32
 	ClientId      string
 }
 

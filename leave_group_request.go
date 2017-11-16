@@ -20,7 +20,7 @@ type LeaveGroupRequest struct {
 }
 
 func NewLeaveGroupRequest(
-	correlationID int32, clientID, groupID, memberID string) *LeaveGroupRequest {
+	correlationID uint32, clientID, groupID, memberID string) *LeaveGroupRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_LeaveGroup,
 		ApiVersion:    0,

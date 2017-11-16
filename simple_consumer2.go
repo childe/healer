@@ -59,7 +59,7 @@ func (simpleConsumer2 *SimpleConsumer2) Consume(messages chan *FullMessage) erro
 		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
 	}
 
-	var correlationID int32 = 0
+	var correlationID uint32 = 0
 	go func(chan *FullMessage) {
 		for {
 			correlationID++

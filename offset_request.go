@@ -36,7 +36,7 @@ type OffsetsRequest struct {
 }
 
 // request only ONE topic
-func NewOffsetsRequest(topic string, partitionIDs []uint32, timeValue int64, offsets uint32, correlationID int32, clientID string) OffsetsRequest {
+func NewOffsetsRequest(topic string, partitionIDs []uint32, timeValue int64, offsets uint32, correlationID uint32, clientID string) OffsetsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
