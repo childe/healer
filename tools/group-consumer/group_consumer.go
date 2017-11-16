@@ -22,6 +22,7 @@ var (
 	maxBytes       = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
 	timeout        = flag.Int("timeout", 30, "default 30 Second. read timeout from connection to broker")
+	sessionTimeout = flag.Int("sessionTimeout", 30000, "The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.")
 )
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 		os.Exit(4)
 	}
 
-	c, err := healer.NewGroupConsumer(*brokers, *topic, *clientID, *groupID)
+	c, err := healer.NewGroupConsumer(*brokers, *topic, *clientID, *groupID, *sessionTimeout)
 	if err != nil {
 		glog.Fatalf("could not init GroupConsumer:%s", err)
 	}
