@@ -331,3 +331,17 @@ func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout 
 
 	return NewJoinGroupResponse(responseBytes)
 }
+
+func (broker *Broker) requestDescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
+	broker.correlationID++
+	joinGroupRequest := NewDescribeGroupsRequest(broker.correlationID, clientID, groups)
+
+	payload := joinGroupRequest.Encode()
+
+	responseBytes, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewDescribeGroupsResponse(responseBytes)
+}

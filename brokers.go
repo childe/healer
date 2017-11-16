@@ -198,3 +198,16 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordina
 
 	return nil, fmt.Errorf("could not list groups from all brokers")
 }
+
+func (brokers *Brokers) DescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
+	for _, broker := range brokers.brokers {
+		response, err := broker.requestDescribeGroups(clientID, groups)
+		if err != nil {
+			glog.Infof("post describe groups request from %s error:%s", broker.address, err)
+		} else {
+			return response, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not describe groups from all brokers")
+}
