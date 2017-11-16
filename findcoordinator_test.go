@@ -1,14 +1,13 @@
 package healer
 
-import (
-	"os"
-	"testing"
-)
+import "testing"
 
 func TestFindCoordinator(t *testing.T) {
-	correlationID := int32(os.Getpid())
-	clientID := "healer"
-	groupID := "healer.topicname"
+	var (
+		correlationID int32  = 10
+		clientID      string = "healer"
+		groupID       string = "healer.topicname"
+	)
 
 	request := NewFindCoordinatorRequest(correlationID, clientID, groupID)
 
