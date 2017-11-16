@@ -13,6 +13,13 @@ func (healerError *Error) Error() string {
 var AllError []*Error = make([]*Error, 56)
 
 func init() {
+	for i, _ := range AllError {
+		AllError[i] = &Error{
+			Errorcode: -1,
+			ErrorMsg:  "NOTDefinedYet",
+			ErrorDesc: "not defined yet...",
+		}
+	}
 	AllError[0] = &Error{
 		Errorcode: -1,
 		ErrorMsg:  "Unknown",
@@ -57,5 +64,10 @@ func init() {
 		Errorcode: 25,
 		ErrorMsg:  "UNKNOWN_MEMBER_ID",
 		ErrorDesc: "The coordinator is not aware of this member.",
+	}
+	AllError[26] = &Error{
+		Errorcode: 26,
+		ErrorMsg:  "INVALID_SESSION_TIMEOUT",
+		ErrorDesc: "The session timeout is not within the range allowed by the broker (as configured by group.min.session.timeout.ms and group.max.session.timeout.ms).",
 	}
 }
