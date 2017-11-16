@@ -315,3 +315,17 @@ func (broker *Broker) findCoordinator(correlationID int32, clientID, groupID str
 	}
 	return NewFindCoordinatorResponse(responseBytes)
 }
+
+func (broker *Broker) requestJoinGroup(correlationID int32, clientID, groupID string, sessionTimeout int32, memberID, protocolType string) (*JoinGroupResponse, error) {
+	joinGroupRequest := NewJoinGroupRequest(correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
+	joinGroupRequest.AddGroupProtocal("range", []byte{})
+
+	payload := joinGroupRequest.Encode()
+
+	responseBytes, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewJoinGroupResponse(responseBytes)
+}
