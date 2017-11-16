@@ -78,6 +78,10 @@ func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout i
 
 }
 
+func (brokers *Brokers) GetBroker(nodeID int32) *Broker {
+	return brokers.brokers[nodeID]
+}
+
 func (brokers *Brokers) RequestMetaData(clientID string, topic *string) (*MetadataResponse, error) {
 	for _, broker := range brokers.brokers {
 		metadataResponse, err := broker.requestMetaData(clientID, topic)
