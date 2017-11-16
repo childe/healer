@@ -31,7 +31,7 @@ type Member struct {
 	MemberMetadata []byte
 }
 type JoinGroupResponse struct {
-	CorrelationId uint32
+	CorrelationID uint32
 	ErrorCode     uint16
 	GenerationID  int32
 	GroupProtocol string
@@ -50,7 +50,7 @@ func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
 	}
 	offset += 4
 
-	r.CorrelationId = binary.BigEndian.Uint32(payload[offset:])
+	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
 	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])

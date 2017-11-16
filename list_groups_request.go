@@ -13,7 +13,7 @@ func NewListGroupsRequest(correlationID int32, clientID string) *ListGroupsReque
 	requestHeader := &RequestHeader{
 		ApiKey:        API_ListGroups,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 	return &ListGroupsRequest{requestHeader}

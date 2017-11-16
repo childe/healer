@@ -23,7 +23,7 @@ type Group struct {
 	ProtocolType string
 }
 type ListGroupsResponse struct {
-	CorrelationId uint32
+	CorrelationID uint32
 	ErrorCode     uint16
 	Groups        []*Group
 }
@@ -38,7 +38,7 @@ func NewListGroupsResponse(payload []byte) (*ListGroupsResponse, error) {
 	}
 	offset += 4
 
-	r.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])

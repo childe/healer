@@ -13,7 +13,7 @@ func GetOffset(broker string, topic string, partitionID int32, correlationID int
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
-		CorrelationId: int32(correlationID),
+		CorrelationID: int32(correlationID),
 		ClientId:      clientID,
 	}
 

@@ -13,7 +13,7 @@ type ApiVersion struct {
 
 // version 0
 type ApiVersionsResponse struct {
-	CorrelationId uint32
+	CorrelationID uint32
 	ErrorCode     uint16
 	ApiVersions   []*ApiVersion
 }
@@ -27,7 +27,7 @@ func NewApiVersionsResponse(payload []byte) (*ApiVersionsResponse, error) {
 	}
 	offset += 4
 
-	apiVersionsResponse.CorrelationId = binary.BigEndian.Uint32(payload[offset:])
+	apiVersionsResponse.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
 	apiVersionsResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])

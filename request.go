@@ -22,7 +22,7 @@ var API_ApiVersions uint16 = 18
 type RequestHeader struct {
 	ApiKey        uint16
 	ApiVersion    uint16
-	CorrelationId int32
+	CorrelationID int32
 	ClientId      string
 }
 
@@ -37,7 +37,7 @@ func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 	binary.BigEndian.PutUint16(payload[offset:], requestHeader.ApiVersion)
 	offset += 2
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(requestHeader.CorrelationId))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(requestHeader.CorrelationID))
 	offset += 4
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(requestHeader.ClientId)))

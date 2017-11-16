@@ -33,7 +33,7 @@ type PartitionResponse struct {
 
 // FetchResponse stores topicname and arrya of PartitionResponse
 type FetchResponse struct {
-	CorrelationId int32
+	CorrelationID int32
 	Responses     []struct {
 		TopicName          string
 		PartitionResponses []PartitionResponse
@@ -55,7 +55,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 	}
 	offset += 4
 
-	fetchResponse.CorrelationId = int32(binary.BigEndian.Uint32(payload[offset:]))
+	fetchResponse.CorrelationID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	responsesCount := binary.BigEndian.Uint32(payload[offset:])

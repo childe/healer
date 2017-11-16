@@ -42,7 +42,7 @@ func NewJoinGroupRequest(
 	requestHeader := &RequestHeader{
 		ApiKey:        API_JoinGroup,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

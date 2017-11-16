@@ -12,7 +12,7 @@ type Coordinator struct {
 }
 
 type FindCoordinatorResponse struct {
-	CorrelationId uint32
+	CorrelationID uint32
 	ErrorCode     uint16
 	Coordinator   *Coordinator
 }
@@ -26,7 +26,7 @@ func NewFindCoordinatorResponse(payload []byte) (*FindCoordinatorResponse, error
 	}
 	offset += 4
 
-	findCoordinatorResponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	findCoordinatorResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	findCoordinatorResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])

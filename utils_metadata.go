@@ -18,7 +18,7 @@ func GetMetaData(brokerList string, topic string, correlationID int32, clientID 
 		metadataRequest.RequestHeader = &RequestHeader{
 			ApiKey:        API_MetadataRequest,
 			ApiVersion:    0,
-			CorrelationId: correlationID,
+			CorrelationID: correlationID,
 			ClientId:      clientID,
 		}
 		metadataRequest.Topic = []string{topic}

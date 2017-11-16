@@ -58,7 +58,7 @@ func NewSyncGroupRequest(correlationID int32, clientID, groupID string,
 	requestHeader := &RequestHeader{
 		ApiKey:        API_SyncGroup,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

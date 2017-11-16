@@ -50,7 +50,7 @@ type TopicMetadata struct {
 }
 
 type MetadataResponse struct {
-	CorrelationId  uint32
+	CorrelationID  uint32
 	Brokers        []BrokerInfo
 	TopicMetadatas []TopicMetadata
 }
@@ -65,7 +65,7 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	}
 	offset += 4
 
-	metadataResponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	metadataResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	// encode Brokers

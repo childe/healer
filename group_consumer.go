@@ -35,7 +35,7 @@ func (c *GroupConsumer) Consume() (chan *FullMessage, error) {
 		glog.Fatalf("could not get coordinator:%s", err)
 	}
 	// join
-	coordinatorBroker := c.brokers.brokers[int32(coordinatorResponse.CorrelationId)]
+	coordinatorBroker := c.brokers.brokers[int32(coordinatorResponse.CorrelationID)]
 	glog.Info(coordinatorBroker)
 	//coordinatorBroker.re
 	// sync

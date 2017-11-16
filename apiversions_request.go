@@ -20,7 +20,7 @@ func newApiVersionsRequestV0(correlationID int32, clientID string) *ApiVersionsR
 	requestHeader := &RequestHeader{
 		ApiKey:        API_ApiVersions,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 
@@ -33,7 +33,7 @@ func newApiVersionsRequestV1(correlationID int32, clientID string) *ApiVersionsR
 	requestHeader := &RequestHeader{
 		ApiKey:        API_ApiVersions,
 		ApiVersion:    1,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

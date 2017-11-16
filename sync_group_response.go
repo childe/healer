@@ -17,7 +17,7 @@ import (
 
 // version 0
 type SyncGroupResponse struct {
-	CorrelationId    uint32
+	CorrelationID    uint32
 	ErrorCode        uint16
 	MemberAssignment []byte
 }
@@ -32,7 +32,7 @@ func NewSyncGroupResponse(payload []byte) (*SyncGroupResponse, error) {
 	}
 	offset += 4
 
-	r.CorrelationId = binary.BigEndian.Uint32(payload[offset:])
+	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
 	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])

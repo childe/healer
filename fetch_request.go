@@ -50,7 +50,7 @@ func NewFetchRequest(correlationID int32, clientID string, maxWaitTime int32, mi
 	requestHeader := &RequestHeader{
 		ApiKey:        API_FetchRequest,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

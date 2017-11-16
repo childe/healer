@@ -24,7 +24,7 @@ func NewLeaveGroupRequest(
 	requestHeader := &RequestHeader{
 		ApiKey:        API_LeaveGroup,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

@@ -7,7 +7,7 @@ import (
 
 // version 0
 type LeaveGroupResponse struct {
-	CorrelationId uint32
+	CorrelationID uint32
 	ErrorCode     uint16
 }
 
@@ -21,7 +21,7 @@ func NewLeaveGroupResponse(payload []byte) (*LeaveGroupResponse, error) {
 	}
 	offset += 4
 
-	r.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])

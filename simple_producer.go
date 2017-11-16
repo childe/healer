@@ -17,7 +17,7 @@ type SimpleProducer struct {
 		Timeout      int32
 		MessageCap   int32
 	}
-	CorrelationId  int32
+	CorrelationID  int32
 	MessageSetSize int32
 	MessageSet     MessageSet
 }
@@ -32,7 +32,7 @@ func (simpleProducer *SimpleProducer) AddMessage(message *Message) {
 
 func (simpleProducer *SimpleProducer) Emit() {
 	simpleProducer.emit()
-	simpleProducer.CorrelationId++
+	simpleProducer.CorrelationID++
 	simpleProducer.MessageSetSize = 0
 }
 
@@ -50,7 +50,7 @@ func (simpleProducer *SimpleProducer) emit() {
 	produceRequest.RequestHeader = &RequestHeader{
 		ApiKey:        API_ProduceRequest,
 		ApiVersion:    0,
-		CorrelationId: simpleProducer.CorrelationId,
+		CorrelationID: simpleProducer.CorrelationID,
 		ClientId:      simpleProducer.Config.ClientId,
 	}
 
@@ -105,7 +105,7 @@ func (simpleProducer *SimpleProducer) emit() {
 			}
 		}
 		//logger.Println(buf)
-		//correlationId := int32(binary.BigEndian.Uint32(buf))
-		//logger.Println("correlationId", correlationId)
+		//correlationID := int32(binary.BigEndian.Uint32(buf))
+		//logger.Println("correlationID", correlationID)
 	}
 }

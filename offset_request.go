@@ -40,7 +40,7 @@ func NewOffsetsRequest(topic string, partitionIDs []uint32, timeValue int64, off
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetRequest,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 

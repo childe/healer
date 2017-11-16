@@ -18,7 +18,7 @@ type PartitionOffset struct {
 	Offset    []uint64
 }
 type OffsetsResponse struct {
-	CorrelationId uint32
+	CorrelationID uint32
 	Info          map[string][]*PartitionOffset
 }
 
@@ -31,7 +31,7 @@ func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
 	}
 	offset += 4
 
-	offsetsResponse.CorrelationId = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	offsetsResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	topicLenght := int(binary.BigEndian.Uint32(payload[offset:]))

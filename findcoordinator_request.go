@@ -29,7 +29,7 @@ func NewFindCoordinatorRequest(correlationID int32, clientID, groupID string) *F
 	requestHeader := &RequestHeader{
 		ApiKey:        API_FindCoordinator,
 		ApiVersion:    0,
-		CorrelationId: correlationID,
+		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
 
