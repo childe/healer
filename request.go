@@ -5,19 +5,22 @@ import (
 )
 
 //var Non-user facing control APIs=4-7
-var API_ProduceRequest uint16 = 0
-var API_FetchRequest uint16 = 1
-var API_OffsetRequest uint16 = 2
-var API_MetadataRequest uint16 = 3
-var API_OffsetCommitRequest uint16 = 8
-var API_OffsetFetchRequest uint16 = 9
-var API_FindCoordinator uint16 = 10
-var API_JoinGroup uint16 = 11
-var API_Heartbeat uint16 = 12
-var API_LeaveGroup uint16 = 13
-var API_SyncGroup uint16 = 14
-var API_ListGroups uint16 = 16
-var API_ApiVersions uint16 = 18
+var (
+	API_ProduceRequest      uint16 = 0
+	API_FetchRequest        uint16 = 1
+	API_OffsetRequest       uint16 = 2
+	API_MetadataRequest     uint16 = 3
+	API_OffsetCommitRequest uint16 = 8
+	API_OffsetFetchRequest  uint16 = 9
+	API_FindCoordinator     uint16 = 10
+	API_JoinGroup           uint16 = 11
+	API_Heartbeat           uint16 = 12
+	API_LeaveGroup          uint16 = 13
+	API_SyncGroup           uint16 = 14
+	API_DescribeGroups      uint16 = 15
+	API_ListGroups          uint16 = 16
+	API_ApiVersions         uint16 = 18
+)
 
 type RequestHeader struct {
 	ApiKey        uint16
