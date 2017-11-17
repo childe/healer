@@ -7,9 +7,10 @@ import (
 
 func TestGroup(t *testing.T) {
 	var (
-		correlationID     uint32 = 11
-		clientID          string = "healer"
-		groupID           string = "hangout.test"
+		correlationID     uint32   = 11
+		clientID          string   = "healer"
+		groupID           string   = "hangout.test"
+		groups            []string = []string{"hangout", "hangout.test"}
 		groupGenerationID int32
 		memberID          string = ""
 		sessionTimeout    int32  = 30000
@@ -78,6 +79,21 @@ func TestGroup(t *testing.T) {
 	} else {
 		b, _ := json.Marshal(leaveGroupResponse)
 		t.Logf("leave response: %s", b)
+	}
+
+	// describe group
+	correlationID = 15
+	describeGroupRequest := NewDescribeGroupsRequest(correlationID, clientID, groups)
+	payload = describeGroupRequest.Encode()
+
+	responseBytes, err = broker.request(payload)
+
+	describeGroupResponse, err := NewDescribeGroupsResponse(responseBytes)
+	if err != nil {
+		t.Errorf("try to get describe_group response error:%s", err)
+	} else {
+		b, _ := json.Marshal(describeGroupResponse)
+		t.Logf("describe response: %s", b)
 	}
 
 }
