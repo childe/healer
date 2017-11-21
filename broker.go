@@ -317,10 +317,13 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinato
 	return NewFindCoordinatorResponse(responseBytes)
 }
 
-func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout int32, memberID, protocolType string) (*JoinGroupResponse, error) {
+func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
 	broker.correlationID++
-	joinGroupRequest := NewJoinGroupRequest(broker.correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
-	joinGroupRequest.AddGroupProtocal("range", []byte{})
+	joinGroupRequest := NewJoinGroupRequest(
+		broker.correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
+	for _, gp := range gps {
+		joinGroupRequest.AddGroupProtocal(gp)
+	}
 
 	payload := joinGroupRequest.Encode()
 
