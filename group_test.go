@@ -19,7 +19,7 @@ func TestGroup(t *testing.T) {
 
 	// join group
 	joinGroupRequest := NewJoinGroupRequest(correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
-	joinGroupRequest.AddGroupProtocal("range", []byte{})
+	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 
 	payload := joinGroupRequest.Encode()
 
@@ -95,5 +95,4 @@ func TestGroup(t *testing.T) {
 		b, _ := json.Marshal(describeGroupResponse)
 		t.Logf("describe response: %s", b)
 	}
-
 }

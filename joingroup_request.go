@@ -4,25 +4,51 @@ import (
 	"encoding/binary"
 )
 
-//JoinGroup Request (Version: 0) => group_id session_timeout member_id protocol_type [group_protocols]
-//group_id => STRING
-//session_timeout => INT32
-//member_id => STRING
-//protocol_type => STRING
-//group_protocols => protocol_name protocol_metadata
-//protocol_name => STRING
-//protocol_metadata => BYTES
+/*
+JoinGroup Request (Version: 0) => group_id session_timeout member_id protocol_type [group_protocols]
+  group_id => STRING
+  session_timeout => INT32
+  member_id => STRING
+  protocol_type => STRING
+  group_protocols => protocol_name protocol_metadata
+  protocol_name => STRING
+  protocol_metadata => BYTES
 
-//FIELD	DESCRIPTION
-//group_id	The unique group identifier
-//session_timeout	The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.
-//member_id	The member id assigned by the group coordinator or null if joining for the first time.
-//protocol_type	Unique name for class of protocols implemented by group
-//group_protocols	List of protocols that the member supports
-//protocol_name	null
-//protocol_metadata	null
+FIELD	DESCRIPTION
+  group_id	The unique group identifier
+  session_timeout	The coordinator considers the consumer dead if it receives no
+      heartbeat after this timeout in ms.
+  member_id	The member id assigned by the group coordinator or null if joining for the first time.
+  protocol_type	Unique name for class of protocols implemented by group
+  group_protocols	List of protocols that the member supports
+  protocol_name	null
+  protocol_metadata	null
 
+--- --- --- --- ---
+--- --- --- --- ---
+Consumer groups: Below we define the embedded protocol used by consumer groups.
+We recommend all consumer implementations follow this format so that
+tooling will work correctly across all clients.
+ProtocolType => "consumer"
+
+ProtocolName => AssignmentStrategy
+  AssignmentStrategy => string
+
+ProtocolMetadata => Version Subscription UserData
+  Version => int16
+  Subscription => [Topic]
+    Topic => string
+  UserData => bytes
+The UserData field can be used by custom partition assignment strategies.
+For example, in a sticky partitioning implementation, this field can contain
+the assignment from the previous generation. In a resource-based assignment strategy,
+it could include the number of cpus on the machine hosting each consumer instance.
+
+Kafka Connect uses the "connect" protocol type and its protocol details
+are internal to the Connect implementation.
+*/
 // version 0
+
 type GroupProtocol struct {
 	ProtocolName     string
 	ProtocolMetadata []byte
@@ -55,8 +81,8 @@ func NewJoinGroupRequest(
 		GroupProtocols: make([]*GroupProtocol, 0),
 	}
 }
-func (r *JoinGroupRequest) AddGroupProtocal(protocolName string, protocolMetadata []byte) {
-	r.GroupProtocols = append(r.GroupProtocols, &GroupProtocol{protocolName, protocolMetadata})
+func (r *JoinGroupRequest) AddGroupProtocal(gp *GroupProtocol) {
+	r.GroupProtocols = append(r.GroupProtocols, gp)
 }
 
 func (r *JoinGroupRequest) Length() int {
