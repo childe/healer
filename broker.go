@@ -361,3 +361,15 @@ func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID in
 
 	return NewSyncGroupResponse(responseBytes)
 }
+
+func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID int32, memberID string) (*HeartbeatResponse, error) {
+	broker.correlationID++
+	r := NewHeartbeatRequest(broker.correlationID, clientID, groupID, generationID, memberID)
+
+	responseBytes, err := broker.request(r.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	return NewHeartbeatResponse(responseBytes)
+}
