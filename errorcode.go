@@ -75,8 +75,8 @@ func init() {
 		ErrorMsg:  "INVALID_SESSION_TIMEOUT",
 		ErrorDesc: "The session timeout is not within the range allowed by the broker (as configured by group.min.session.timeout.ms and group.max.session.timeout.ms).",
 	}
-	AllError[26] = &Error{
-		Errorcode: 26,
+	AllError[27] = &Error{
+		Errorcode: 27,
 		ErrorMsg:  "REBALANCE_IN_PROGRESS",
 		ErrorDesc: "The group is rebalancing, so a rejoin is needed.",
 	}
