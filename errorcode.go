@@ -55,6 +55,11 @@ func init() {
 		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
 		ErrorDesc: "This server is not the leader for that topic-partition.",
 	}
+	AllError[22] = &Error{
+		Errorcode: 22,
+		ErrorMsg:  "ILLEGAL_GENERATION",
+		ErrorDesc: "Specified group generation id is not valid.",
+	}
 	AllError[23] = &Error{
 		Errorcode: 23,
 		ErrorMsg:  "INCONSISTENT_GROUP_PROTOCOL",
@@ -69,5 +74,10 @@ func init() {
 		Errorcode: 26,
 		ErrorMsg:  "INVALID_SESSION_TIMEOUT",
 		ErrorDesc: "The session timeout is not within the range allowed by the broker (as configured by group.min.session.timeout.ms and group.max.session.timeout.ms).",
+	}
+	AllError[26] = &Error{
+		Errorcode: 26,
+		ErrorMsg:  "REBALANCE_IN_PROGRESS",
+		ErrorDesc: "The group is rebalancing, so a rejoin is needed.",
 	}
 }
