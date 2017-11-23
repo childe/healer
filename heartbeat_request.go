@@ -58,6 +58,7 @@ func (heartbeatR *HeartbeatRequest) Encode() []byte {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(heartbeatR.GroupID)))
 	offset += 2
 	copy(payload[offset:], heartbeatR.GroupID)
+	offset += len(heartbeatR.GroupID)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(heartbeatR.GenerationID))
 	offset += 4
