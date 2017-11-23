@@ -4,6 +4,18 @@ import (
 	"encoding/binary"
 )
 
+/*
+Heartbeat Request (Version: 0) => group_id generation_id member_id
+  group_id => STRING
+  generation_id => INT32
+  member_id => STRING
+
+FIELD	DESCRIPTION
+group_id	The unique group identifier
+generation_id	The generation of the group.
+member_id	The member id assigned by the group coordinator or null if joining for the first time.
+*/
+
 // TODO version0
 type HeartbeatRequest struct {
 	RequestHeader *RequestHeader
@@ -27,8 +39,13 @@ func NewHeartbeatRequest(correlationID uint32, clientID, groupID string, generat
 	}
 }
 
+func (heartbeatR *HeartbeatRequest) Length() int {
+	requestLength := heartbeatR.RequestHeader.length() + 2 + len(heartbeatR.GroupID) + 4 + 2 + len(heartbeatR.MemberID)
+	return requestLength
+}
+
 func (heartbeatR *HeartbeatRequest) Encode() []byte {
-	requestLength := heartbeatR.RequestHeader.length() + 2 + len(heartbeatR.GroupID)
+	requestLength := heartbeatR.Length()
 
 	payload := make([]byte, requestLength+4)
 	offset := 0
