@@ -348,3 +348,16 @@ func (broker *Broker) requestDescribeGroups(clientID string, groups []string) (*
 
 	return NewDescribeGroupsResponse(responseBytes)
 }
+
+func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string) (*SyncGroupResponse, error) {
+	broker.correlationID++
+	syncGroupRequest := NewSyncGroupRequest(broker.correlationID, clientID, groupID, generationID, memberID)
+	payload := syncGroupRequest.Encode()
+
+	responseBytes, err := broker.request(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSyncGroupResponse(responseBytes)
+}
