@@ -46,15 +46,15 @@ type GroupAssignment struct {
 }
 
 type SyncGroupRequest struct {
-	RequestHeader     *RequestHeader
-	GroupID           string
-	GroupGenerationID int32
-	MemberID          string
-	GroupAssignments  []*GroupAssignment
+	RequestHeader    *RequestHeader
+	GroupID          string
+	GenerationID     int32
+	MemberID         string
+	GroupAssignments []*GroupAssignment
 }
 
 func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
-	groupGenerationID int32, memberID string) *SyncGroupRequest {
+	generationID int32, memberID string) *SyncGroupRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_SyncGroup,
 		ApiVersion:    0,
@@ -63,11 +63,11 @@ func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
 	}
 
 	return &SyncGroupRequest{
-		RequestHeader:     requestHeader,
-		GroupID:           groupID,
-		GroupGenerationID: groupGenerationID,
-		MemberID:          memberID,
-		GroupAssignments:  make([]*GroupAssignment, 0),
+		RequestHeader:    requestHeader,
+		GroupID:          groupID,
+		GenerationID:     generationID,
+		MemberID:         memberID,
+		GroupAssignments: make([]*GroupAssignment, 0),
 	}
 }
 
@@ -100,7 +100,7 @@ func (r *SyncGroupRequest) Encode() []byte {
 	copy(payload[offset:], r.GroupID)
 	offset += len(r.GroupID)
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(r.GroupGenerationID))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(r.GenerationID))
 	offset += 4
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.MemberID)))

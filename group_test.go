@@ -7,14 +7,14 @@ import (
 
 func TestGroup(t *testing.T) {
 	var (
-		correlationID     uint32   = 11
-		clientID          string   = "healer"
-		groupID           string   = "hangout.test"
-		groups            []string = []string{"hangout", "hangout.test"}
-		groupGenerationID int32
-		memberID          string = ""
-		sessionTimeout    int32  = 30000
-		protocolType      string = "consumer"
+		correlationID  uint32   = 11
+		clientID       string   = "healer"
+		groupID        string   = "hangout.test"
+		groups         []string = []string{"hangout", "hangout.test"}
+		generationID   int32
+		memberID       string = ""
+		sessionTimeout int32  = 30000
+		protocolType   string = "consumer"
 	)
 
 	// join group
@@ -47,9 +47,9 @@ func TestGroup(t *testing.T) {
 
 	// sync group
 	correlationID = 14
-	groupGenerationID = joinGroupResponse.GenerationID
+	generationID = joinGroupResponse.GenerationID
 	memberID = joinGroupResponse.MemberID
-	syncGroupRequest := NewSyncGroupRequest(correlationID, clientID, groupID, groupGenerationID, memberID)
+	syncGroupRequest := NewSyncGroupRequest(correlationID, clientID, groupID, generationID, memberID)
 	payload = syncGroupRequest.Encode()
 
 	responseBytes, err = broker.request(payload)
