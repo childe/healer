@@ -3,8 +3,6 @@ package healer
 import (
 	"encoding/binary"
 	"fmt"
-
-	"github.com/golang/glog"
 )
 
 //SyncGroup Response (Version: 0) => error_code member_assignment
@@ -36,7 +34,6 @@ func NewSyncGroupResponse(payload []byte) (*SyncGroupResponse, error) {
 	offset += 4
 
 	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
-	glog.Info(r.ErrorCode)
 	offset += 2
 	if r.ErrorCode != 0 {
 		err = AllError[r.ErrorCode]
@@ -44,6 +41,7 @@ func NewSyncGroupResponse(payload []byte) (*SyncGroupResponse, error) {
 
 	memberAssignmentLength := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
+	r.MemberAssignment = make([]byte, memberAssignmentLength)
 	copy(r.MemberAssignment, payload[offset:offset+memberAssignmentLength])
 	offset += memberAssignmentLength
 
