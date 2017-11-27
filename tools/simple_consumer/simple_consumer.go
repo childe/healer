@@ -44,13 +44,11 @@ func main() {
 	}
 	simpleConsumer.TopicName = *topic
 	simpleConsumer.Partition = int32(*partition)
-	//simpleConsumer.FetchOffset = *offset
 	simpleConsumer.MaxWaitTime = int32(*maxWaitTime)
 	simpleConsumer.MaxBytes = int32(*maxBytes)
 	simpleConsumer.MinBytes = int32(*minBytes)
 
-	var messages chan *healer.FullMessage
-	messages, err = simpleConsumer.Consume(*offset)
+	messages, err := simpleConsumer.Consume(*offset, nil)
 	if err != nil {
 		glog.Fatal(err)
 	}
