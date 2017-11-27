@@ -49,6 +49,17 @@ MemberAssignment => Version PartitionAssignment
 --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 */
 
+type PartitionAssignment struct {
+	Topic     string
+	Partition int32
+}
+
+type MemberAssignment struct {
+	Version             int16
+	PartitionAssignment []PartitionAssignment
+	UserData            []byte
+}
+
 // TODO version0
 type GroupAssignment struct {
 	MemberID         string
