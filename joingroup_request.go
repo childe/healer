@@ -23,32 +23,9 @@ FIELD	DESCRIPTION
   group_protocols	List of protocols that the member supports
   protocol_name	null
   protocol_metadata	null
-
---- --- --- --- ---
---- --- --- --- ---
-Consumer groups: Below we define the embedded protocol used by consumer groups.
-We recommend all consumer implementations follow this format so that
-tooling will work correctly across all clients.
-ProtocolType => "consumer"
-
-ProtocolName => AssignmentStrategy
-  AssignmentStrategy => string
-
-ProtocolMetadata => Version Subscription UserData
-  Version => int16
-  Subscription => [Topic]
-    Topic => string
-  UserData => bytes
-The UserData field can be used by custom partition assignment strategies.
-For example, in a sticky partitioning implementation, this field can contain
-the assignment from the previous generation. In a resource-based assignment strategy,
-it could include the number of cpus on the machine hosting each consumer instance.
-
-Kafka Connect uses the "connect" protocol type and its protocol details
-are internal to the Connect implementation.
 */
-// version 0
 
+// version 0
 type GroupProtocol struct {
 	ProtocolName     string
 	ProtocolMetadata []byte

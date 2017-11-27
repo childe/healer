@@ -38,34 +38,9 @@ group_assignment	null
 member_id	The member id assigned by the group coordinator or null if joining for the first time.
 member_assignment	null
 
---- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-Consumer Groups: The format of the MemberAssignment field for consumer groups is included below:
-MemberAssignment => Version PartitionAssignment
-  Version => int16
-  PartitionAssignment => [Topic [Partition]]
-    Topic => string
-    Partition => int32
-  UserData => bytes
---- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 */
 
-type PartitionAssignment struct {
-	Topic     string
-	Partition int32
-}
-
-type MemberAssignment struct {
-	Version             int16
-	PartitionAssignment []PartitionAssignment
-	UserData            []byte
-}
-
 // TODO version0
-type GroupAssignment struct {
-	MemberID         string
-	MemberAssignment []byte
-}
-
 type SyncGroupRequest struct {
 	RequestHeader    *RequestHeader
 	GroupID          string
