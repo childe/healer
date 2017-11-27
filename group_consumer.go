@@ -17,10 +17,11 @@ type GroupConsumer struct {
 	groupID        string
 	sessionTimeout int
 
-	coordinator  *Broker
-	generationID int32
-	memberID     string
-	ifLeader     bool
+	coordinator          *Broker
+	generationID         int32
+	memberID             string
+	ifLeader             bool
+	PartitionAssignments PartitionAssignments
 
 	mutex sync.Locker
 }
@@ -130,7 +131,12 @@ func (c *GroupConsumer) heartbeat() {
 	}
 }
 
-func (c *GroupConsumer) parseGroupAssignments(memberAssignment []byte) {
+func (c *GroupConsumer) parseGroupAssignments(memberAssignment []byte) error {
+	memberAssignment, err := NewMemberAssignment(MemberAssignment)
+	if err != nil {
+		return err
+	}
+	c.PartitionAssignments = memberAssignment.PartitionAssignments
 }
 
 func (c *GroupConsumer) Consume() (chan *FullMessage, error) {
