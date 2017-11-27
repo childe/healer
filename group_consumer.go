@@ -133,7 +133,7 @@ func (c *GroupConsumer) heartbeat() {
 		}
 	}
 	if r != nil {
-		glog.Info(r.ErrorCode)
+		glog.V(5).Infof("heartbeat errorcode:%d", r.ErrorCode)
 	}
 }
 
