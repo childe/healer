@@ -70,6 +70,11 @@ func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 		}
 	}
 
+	count = int(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+	r.UserData = make([]byte, count)
+	copy(r.UserData, payload)
+
 	return r, nil
 }
 
