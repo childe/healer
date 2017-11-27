@@ -114,11 +114,7 @@ func NewDescribeGroupsResponse(payload []byte) (*DescribeGroupsResponse, error) 
 		offset += 4
 
 		group.Members = make([]*MemberDetail, memberCount)
-		//MemberID         string
-		//ClientID         string
-		//ClientHost       string
-		//MemberMetadata   []byte
-		//MemberAssignment []byte
+
 		for i := range group.Members {
 			group.Members[i] = &MemberDetail{}
 
@@ -144,6 +140,7 @@ func NewDescribeGroupsResponse(payload []byte) (*DescribeGroupsResponse, error) 
 
 			l = int(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
+			group.Members[i].MemberAssignment = make([]byte, l)
 			copy(group.Members[i].MemberAssignment, payload[offset:offset+l])
 			offset += l
 		}
