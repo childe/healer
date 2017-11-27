@@ -44,5 +44,14 @@ func main() {
 	if err != nil {
 		glog.Fatalf("could not init GroupConsumer:%s", err)
 	}
-	c.Consume()
+
+	messages, err := c.Consume(*fromBeginning)
+	if err != nil {
+		glog.Fatalf("could not get messages channel:%s", err)
+	}
+
+	for i := 0; i < *maxMessages; i++ {
+		message := <-messages
+		fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+	}
 }

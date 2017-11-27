@@ -16,12 +16,17 @@ type GroupConsumer struct {
 	clientID       string
 	groupID        string
 	sessionTimeout int
+	maxWaitTime    int32
+	maxBytes       int32
+	minBytes       int32
+	fromBeginning  bool
 
 	coordinator          *Broker
 	generationID         int32
 	memberID             string
 	ifLeader             bool
-	PartitionAssignments PartitionAssignments
+	partitionAssignments []*PartitionAssignment
+	simpleConsumers      []*SimpleConsumer
 
 	mutex sync.Locker
 }
@@ -103,6 +108,7 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 
 	return syncGroupResponse, nil
 }
+
 func (c *GroupConsumer) joinAndSync() {
 	c.mutex.Lock()
 	c.join()
@@ -131,15 +137,31 @@ func (c *GroupConsumer) heartbeat() {
 	}
 }
 
-func (c *GroupConsumer) parseGroupAssignments(memberAssignment []byte) error {
-	memberAssignment, err := NewMemberAssignment(MemberAssignment)
+func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) error {
+	memberAssignment, err := NewMemberAssignment(memberAssignmentPayload)
 	if err != nil {
 		return err
 	}
-	c.PartitionAssignments = memberAssignment.PartitionAssignments
+	c.partitionAssignments = memberAssignment.PartitionAssignments
+	c.simpleConsumers = make([]*SimpleConsumer, len(c.partitionAssignments))
+
+	for i, partitionAssignment := range c.partitionAssignments {
+		simpleConsumer := &SimpleConsumer{}
+		simpleConsumer.ClientID = c.clientID
+		simpleConsumer.Brokers = c.brokers
+		simpleConsumer.TopicName = partitionAssignment.Topic
+		simpleConsumer.Partition = partitionAssignment.Partition
+		simpleConsumer.MaxWaitTime = c.maxWaitTime
+		simpleConsumer.MaxBytes = c.maxBytes
+		simpleConsumer.MinBytes = c.minBytes
+
+		c.simpleConsumers[i] = simpleConsumer
+	}
+
+	return nil
 }
 
-func (c *GroupConsumer) Consume() (chan *FullMessage, error) {
+func (c *GroupConsumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	err := c.getCoordinator()
 	if err != nil {
 		glog.Fatalf("could not find coordinator:%s", err)
@@ -156,8 +178,20 @@ func (c *GroupConsumer) Consume() (chan *FullMessage, error) {
 		}
 	}()
 
-	time.Sleep(time.Second * 3600)
-
 	// consume
-	return nil, nil
+	var messages chan *FullMessage
+	for _, simpleConsumer := range c.simpleConsumers {
+		if err != nil {
+			glog.Fatalf("could not get offset:%s", err)
+		}
+		var offset int64
+		if fromBeginning {
+			offset = -2
+		} else {
+			offset = -1
+		}
+		simpleConsumer.Consume(offset, messages)
+	}
+
+	return messages, nil
 }
