@@ -16,11 +16,33 @@ type SimpleConsumer struct {
 }
 
 func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
+	// TODO
 	return nil
 }
 
-func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, error) {
-	leaderID, err := simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
+func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
+	var time int64
+	if fromBeginning {
+		time = -2
+	} else {
+		time = -1
+	}
+	offsetsResponses, err := sc.Brokers.RequestOffsets(sc.ClientID, sc.TopicName, sc.Partition, time, 1)
+	if err != nil {
+		return -1, err
+	}
+
+	return int64(offsetsResponses[0].Info[sc.TopicName][0].Offset[0]), nil
+}
+
+func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
+	var (
+		err          error
+		leaderBroker *Broker
+		ok           bool
+		leaderID     int32
+	)
+	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error
 		glog.Fatal("could not get leader of topic %s:%s", simpleConsumer.TopicName, err)
@@ -28,8 +50,6 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, 
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
 	}
 
-	var leaderBroker *Broker
-	var ok bool
 	if leaderBroker, ok = simpleConsumer.Brokers.brokers[leaderID]; !ok {
 		//TODO NO fatal but return error
 		glog.Fatal("could not get broker %d. maybe should refresh metadata.", leaderID)
@@ -37,8 +57,22 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64) (chan *FullMessage, 
 		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
 	}
 
+	if offset == -1 {
+		offset, err = simpleConsumer.getOffset(false)
+	} else if offset == -2 {
+		offset, err = simpleConsumer.getOffset(true)
+	}
+	if err != nil {
+		glog.Fatalf("could not get offset %s[%d]:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+	}
+
 	var correlationID uint32 = 0
-	var messages chan *FullMessage = make(chan *FullMessage, 10)
+	var messages chan *FullMessage
+	if messageChan == nil {
+		messages = make(chan *FullMessage, 10)
+	} else {
+		messages = messageChan
+	}
 	go func(chan *FullMessage) {
 		for {
 			correlationID++
