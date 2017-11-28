@@ -50,7 +50,7 @@ type SyncGroupRequest struct {
 }
 
 func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
-	generationID int32, memberID string) *SyncGroupRequest {
+	generationID int32, memberID string, groupAssignments []*GroupAssignment) *SyncGroupRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_SyncGroup,
 		ApiVersion:    0,
@@ -63,12 +63,8 @@ func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
 		GroupID:          groupID,
 		GenerationID:     generationID,
 		MemberID:         memberID,
-		GroupAssignments: make([]*GroupAssignment, 0),
+		GroupAssignments: groupAssignments,
 	}
-}
-
-func (r *SyncGroupRequest) AddGroupProtocal(memberID string, memberAssignment []byte) {
-	r.GroupAssignments = append(r.GroupAssignments, &GroupAssignment{memberID, memberAssignment})
 }
 
 func (r *SyncGroupRequest) Length() int {
