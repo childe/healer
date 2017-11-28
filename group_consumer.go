@@ -27,7 +27,7 @@ type GroupConsumer struct {
 	members              []*Member
 	ifLeader             bool
 	partitionAssignments []*PartitionAssignment
-	TopicMetadatas       []TopicMetadata
+	topicMetadatas       []*TopicMetadata
 	simpleConsumers      []*SimpleConsumer
 
 	mutex              sync.Locker
@@ -65,8 +65,8 @@ func (c *GroupConsumer) getTopicPartitionInfo() error {
 
 	b, _ := json.Marshal(metaDataResponse)
 	glog.V(5).Infof("topic[%s] metadata:%s", c.topic, b)
-	c.TopicMetadatas = metaDataResponse.TopicMetadatas
-	glog.Infof("there is %d partitions in topic[%s]", len(c.TopicMetadatas[0].PartitionMetadatas), c.topic)
+	c.topicMetadatas = metaDataResponse.TopicMetadatas
+	glog.Infof("there is %d partitions in topic[%s]", len(c.topicMetadatas[0].PartitionMetadatas), c.topic)
 	return nil
 }
 
@@ -128,7 +128,7 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	var groupAssignments []*GroupAssignment
 	groupAssignments = make([]*GroupAssignment, 0)
 	if c.ifLeader {
-		groupAssignments = c.assignmentStrategy.assign(c.members, c.TopicMetadatas[0].PartitionMetadatas)
+		groupAssignments = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
 	} else {
 		groupAssignments = nil
 	}
