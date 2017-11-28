@@ -51,8 +51,8 @@ type TopicMetadata struct {
 
 type MetadataResponse struct {
 	CorrelationID  uint32
-	Brokers        []BrokerInfo
-	TopicMetadatas []TopicMetadata
+	Brokers        []*BrokerInfo
+	TopicMetadatas []*TopicMetadata
 }
 
 func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
@@ -71,8 +71,9 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	// encode Brokers
 	brokersCount := uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	metadataResponse.Brokers = make([]BrokerInfo, brokersCount)
+	metadataResponse.Brokers = make([]*BrokerInfo, brokersCount)
 	for i := uint32(0); i < brokersCount; i++ {
+		metadataResponse.Brokers[i] = &BrokerInfo{}
 		metadataResponse.Brokers[i].NodeId = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 		HostLength := int(binary.BigEndian.Uint16(payload[offset:]))
@@ -87,8 +88,9 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	// encode TopicMetadatas
 	topicMetadatasCount := uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	metadataResponse.TopicMetadatas = make([]TopicMetadata, topicMetadatasCount)
+	metadataResponse.TopicMetadatas = make([]*TopicMetadata, topicMetadatasCount)
 	for i := uint32(0); i < topicMetadatasCount; i++ {
+		metadataResponse.TopicMetadatas[i] = &TopicMetadata{}
 		metadataResponse.TopicMetadatas[i].TopicErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 		topicNameLength := int(binary.BigEndian.Uint16(payload[offset:]))
