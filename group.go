@@ -44,6 +44,39 @@ type MemberAssignment struct {
 	UserData             []byte
 }
 
+func (memberAssignment *MemberAssignment) Length() int {
+	length := 2 + 4
+	for _, p := range memberAssignment.PartitionAssignments {
+		length += 2 + len(p.Topic) + 4
+	}
+	length += 4 + len(memberAssignment.UserData)
+	return length
+}
+
+func (memberAssignment *MemberAssignment) Encode() []byte {
+	payload := make([]byte, memberAssignment.Length())
+	offset := 0
+
+	binary.BigEndian.PutUint16(payload[offset:], uint16(memberAssignment.Version))
+	offset += 2
+
+	binary.BigEndian.PutUint16(payload[offset:], uint32(len(memberAssignment.PartitionAssignments)))
+	offset += 4
+	for _, p := range memberAssignment.PartitionAssignments {
+		binary.BigEndian.PutUint16(payload[offset:], uint32(len(p.Topic)))
+		offset += 2
+
+		copy(payload[offset:], p.Topic)
+		offset += len(p.Topic)
+
+		binary.BigEndian.PutUint32(payload[offset:], uint32(p.Partition))
+		offset += 4
+	}
+	copy(payload[offset:], memberAssignment.UserData)
+
+	return payload
+}
+
 func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 	r := &MemberAssignment{}
 	offset := 0
