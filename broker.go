@@ -349,9 +349,9 @@ func (broker *Broker) requestDescribeGroups(clientID string, groups []string) (*
 	return NewDescribeGroupsResponse(responseBytes)
 }
 
-func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string) (*SyncGroupResponse, error) {
+func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string, groupAssignments []*GroupAssignment) (*SyncGroupResponse, error) {
 	broker.correlationID++
-	syncGroupRequest := NewSyncGroupRequest(broker.correlationID, clientID, groupID, generationID, memberID)
+	syncGroupRequest := NewSyncGroupRequest(broker.correlationID, clientID, groupID, generationID, memberID, groupAssignments)
 	payload := syncGroupRequest.Encode()
 
 	responseBytes, err := broker.request(payload)
