@@ -46,7 +46,7 @@ type PartitionMetadataInfo struct {
 type TopicMetadata struct {
 	TopicErrorCode     int16
 	TopicName          string
-	PartitionMetadatas []PartitionMetadataInfo
+	PartitionMetadatas []*PartitionMetadataInfo
 }
 
 type MetadataResponse struct {
@@ -89,9 +89,6 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	offset += 4
 	metadataResponse.TopicMetadatas = make([]TopicMetadata, topicMetadatasCount)
 	for i := uint32(0); i < topicMetadatasCount; i++ {
-		//TopicErrorCode     int16
-		//TopicName          string
-		//PartitionMetadatas []PartitionMetadataInfo
 		metadataResponse.TopicMetadatas[i].TopicErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 		topicNameLength := int(binary.BigEndian.Uint16(payload[offset:]))
@@ -101,13 +98,9 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 
 		partitionMetadataInfoCount := uint32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
-		metadataResponse.TopicMetadatas[i].PartitionMetadatas = make([]PartitionMetadataInfo, partitionMetadataInfoCount)
+		metadataResponse.TopicMetadatas[i].PartitionMetadatas = make([]*PartitionMetadataInfo, partitionMetadataInfoCount)
 		for j := uint32(0); j < partitionMetadataInfoCount; j++ {
-			//PartitionErrorCode int16
-			//PartitionId        int32
-			//Leader             int32
-			//Replicas           []int32
-			//Isr                []int32
+			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j] = &PartitionMetadataInfo{}
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionId = binary.BigEndian.Uint32(payload[offset:])
