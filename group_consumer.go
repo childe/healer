@@ -131,7 +131,11 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	} else {
 		groupAssignment = nil
 	}
-	syncGroupResponse, err := c.coordinator.requestSyncGroup(c.clientID, c.groupID, c.generationID, c.memberID, groupAssignment)
+	glog.V(5).Infof("group assignment:%v", groupAssignment)
+
+	syncGroupResponse, err := c.coordinator.requestSyncGroup(
+		c.clientID, c.groupID, c.generationID, c.memberID, groupAssignment)
+
 	if err != nil {
 		return nil, err
 	}
