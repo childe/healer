@@ -60,10 +60,10 @@ func (memberAssignment *MemberAssignment) Encode() []byte {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(memberAssignment.Version))
 	offset += 2
 
-	binary.BigEndian.PutUint16(payload[offset:], uint32(len(memberAssignment.PartitionAssignments)))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(memberAssignment.PartitionAssignments)))
 	offset += 4
 	for _, p := range memberAssignment.PartitionAssignments {
-		binary.BigEndian.PutUint16(payload[offset:], uint32(len(p.Topic)))
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(p.Topic)))
 		offset += 2
 
 		copy(payload[offset:], p.Topic)
