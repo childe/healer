@@ -50,7 +50,7 @@ func TestGroup(t *testing.T) {
 	correlationID = uint32(API_SyncGroup)
 	generationID = joinGroupResponse.GenerationID
 	memberID = joinGroupResponse.MemberID
-	syncGroupRequest := NewSyncGroupRequest(correlationID, clientID, groupID, generationID, memberID)
+	syncGroupRequest := NewSyncGroupRequest(correlationID, clientID, groupID, generationID, memberID, nil)
 	payload = syncGroupRequest.Encode()
 
 	responseBytes, err = broker.request(payload)
