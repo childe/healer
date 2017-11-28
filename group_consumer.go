@@ -24,8 +24,10 @@ type GroupConsumer struct {
 	coordinator          *Broker
 	generationID         int32
 	memberID             string
+	members              []*Member
 	ifLeader             bool
 	partitionAssignments []*PartitionAssignment
+	TopicMetadatas       []TopicMetadata
 	simpleConsumers      []*SimpleConsumer
 
 	mutex sync.Locker
@@ -51,15 +53,29 @@ func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeou
 	return c, nil
 }
 
+// request metadata and set partition metadat to group-consumer
+func (c *GroupConsumer) getTopicPartitionInfo() error {
+	metaDataResponse, err := c.brokers.RequestMetaData(c.clientID, &c.topic)
+	if err != nil {
+		return err
+	}
+
+	b, _ := json.Marshal(metaDataResponse)
+	glog.V(5).Infof("topic[%s] metadata:%s", c.topic, b)
+	c.TopicMetadatas = metaDataResponse.TopicMetadatas
+	glog.Infof("there is %d partitions in topic[%s]", len(c.TopicMetadatas[0].PartitionMetadatas), c.topic)
+	return nil
+}
+
 func (c *GroupConsumer) getCoordinator() error {
 	// find coordinator
-	coordinatorResponse, err := c.brokers.FindCoordinator(c.topic, c.groupID)
+	coordinatorResponse, err := c.brokers.FindCoordinator(c.clientID, c.groupID)
 	if err != nil {
 		return err
 	}
 
 	coordinatorBroker := c.brokers.GetBroker(coordinatorResponse.Coordinator.nodeID)
-	glog.Info(coordinatorBroker.address)
+	glog.Infof("coordinator for group[%s]:%s", c.groupID, coordinatorBroker.address)
 	c.coordinator = coordinatorBroker
 
 	return nil
@@ -87,10 +103,18 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 		glog.Fatalf("could not join group:%s", err)
 	}
 	b, _ := json.Marshal(joinGroupResponse)
-	glog.Infof("%s", b)
+	glog.V(5).Infof("joingroup response:%s", b)
 
 	c.generationID = joinGroupResponse.GenerationID
 	c.memberID = joinGroupResponse.MemberID
+	glog.V(2).Infof("memberID now is %s", c.memberID)
+
+	if joinGroupResponse.LeaderID == c.memberID {
+		c.ifLeader = true
+		c.members = joinGroupResponse.Members
+	} else {
+		c.ifLeader = false
+	}
 	return joinGroupResponse, nil
 }
 
@@ -98,30 +122,34 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 //to all members of the current generation. All members send SyncGroup immediately after
 //joining the group, but only the leader provides the group's assignment.
 func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
-	syncGroupResponse, err := c.coordinator.requestSyncGroup(c.clientID, c.groupID, c.generationID, c.memberID)
+	var groupAssignments []*GroupAssignment
+	groupAssignments = make([]*GroupAssignment, 0)
+	if c.ifLeader {
+		for _, member := range c.members {
+		}
+		groupAssignment := &GroupAssignment{}
+	} else {
+		groupAssignments = nil
+	}
+	syncGroupResponse, err := c.coordinator.requestSyncGroup(c.clientID, c.groupID, c.generationID, c.memberID, groupAssignments)
 	if err != nil {
 		return nil, err
 	}
 
 	b, _ := json.Marshal(syncGroupResponse)
-	glog.Infof("%s", b)
+	glog.V(5).Infof("syncgroup response:%s", b)
 
 	return syncGroupResponse, nil
 }
 
 func (c *GroupConsumer) joinAndSync() {
 	c.mutex.Lock()
+	// TODO: handle error
 	c.join()
-	syncGroupResponse, err := c.sync()
-
-	b, _ := json.Marshal(syncGroupResponse)
-	glog.Infof("%s", b)
-
-	if err != nil {
-		glog.Fatalf("could not sync group:%s", err)
-	}
+	c.sync()
 	c.mutex.Unlock()
 }
+
 func (c *GroupConsumer) heartbeat() {
 	r, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
 	if err != nil {
@@ -133,7 +161,7 @@ func (c *GroupConsumer) heartbeat() {
 		}
 	}
 	if r != nil {
-		glog.V(5).Infof("heartbeat errorcode:%d", r.ErrorCode)
+		glog.V(8).Infof("heartbeat errorcode:%d", r.ErrorCode)
 	}
 }
 
@@ -167,10 +195,10 @@ func (c *GroupConsumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 		glog.Fatalf("could not find coordinator:%s", err)
 	}
 
+	c.getTopicPartitionInfo()
 	c.joinAndSync()
 
 	// go heartbeat
-	glog.Info(c.sessionTimeout)
 	ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 10)
 	go func() {
 		for range ticker.C {
