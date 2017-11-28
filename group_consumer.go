@@ -30,7 +30,8 @@ type GroupConsumer struct {
 	TopicMetadatas       []TopicMetadata
 	simpleConsumers      []*SimpleConsumer
 
-	mutex sync.Locker
+	mutex              sync.Locker
+	assignmentStrategy AssignmentStrategy
 }
 
 func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int) (*GroupConsumer, error) {
@@ -47,13 +48,15 @@ func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeou
 		groupID:        groupID,
 		sessionTimeout: sessionTimeout,
 
-		mutex: &sync.Mutex{},
+		mutex:              &sync.Mutex{},
+		assignmentStrategy: &RangeAssignmentStrategy{},
 	}
 
 	return c, nil
 }
 
 // request metadata and set partition metadat to group-consumer
+// TODO maybe only leader should request this???
 func (c *GroupConsumer) getTopicPartitionInfo() error {
 	metaDataResponse, err := c.brokers.RequestMetaData(c.clientID, &c.topic)
 	if err != nil {
@@ -125,9 +128,7 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	var groupAssignments []*GroupAssignment
 	groupAssignments = make([]*GroupAssignment, 0)
 	if c.ifLeader {
-		for _, member := range c.members {
-		}
-		groupAssignment := &GroupAssignment{}
+		groupAssignments = c.assignmentStrategy.assign(c.members, c.TopicMetadatas[0].PartitionMetadatas)
 	} else {
 		groupAssignments = nil
 	}
