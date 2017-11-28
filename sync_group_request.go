@@ -46,11 +46,11 @@ type SyncGroupRequest struct {
 	GroupID          string
 	GenerationID     int32
 	MemberID         string
-	GroupAssignments []*GroupAssignment
+	GroupAssignment GroupAssignment
 }
 
 func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
-	generationID int32, memberID string, groupAssignments []*GroupAssignment) *SyncGroupRequest {
+	generationID int32, memberID string, groupAssignment GroupAssignment) *SyncGroupRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_SyncGroup,
 		ApiVersion:    0,
@@ -63,16 +63,16 @@ func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
 		GroupID:          groupID,
 		GenerationID:     generationID,
 		MemberID:         memberID,
-		GroupAssignments: groupAssignments,
+		GroupAssignment: groupAssignment,
 	}
 }
 
 func (r *SyncGroupRequest) Length() int {
 	requestLength := r.RequestHeader.length() + 2 + len(r.GroupID) + 4 + 2 + len(r.MemberID)
 	requestLength += 4
-	for _, ga := range r.GroupAssignments {
-		requestLength += 2 + len(ga.MemberID)
-		requestLength += 4 + len(ga.MemberAssignment)
+	for _, x := range r.GroupAssignment {
+		requestLength += 2 + len(x.MemberID)
+		requestLength += 4 + len(x.MemberAssignment)
 	}
 	return requestLength
 }
@@ -100,18 +100,18 @@ func (r *SyncGroupRequest) Encode() []byte {
 	copy(payload[offset:], r.MemberID)
 	offset += len(r.MemberID)
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.GroupAssignments)))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.GroupAssignment)))
 	offset += 4
-	for _, ga := range r.GroupAssignments {
-		binary.BigEndian.PutUint16(payload[offset:], uint16(len(ga.MemberID)))
+	for _, x := range r.GroupAssignment {
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(x.MemberID)))
 		offset += 2
-		copy(payload[offset:], ga.MemberID)
-		offset += len(ga.MemberID)
+		copy(payload[offset:], x.MemberID)
+		offset += len(x.MemberID)
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(len(ga.MemberID)))
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(x.MemberID)))
 		offset += 4
-		copy(payload[offset:], ga.MemberAssignment)
-		offset += len(ga.MemberID)
+		copy(payload[offset:], x.MemberAssignment)
+		offset += len(x.MemberID)
 	}
 
 	return payload

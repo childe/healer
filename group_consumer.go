@@ -125,14 +125,13 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 //to all members of the current generation. All members send SyncGroup immediately after
 //joining the group, but only the leader provides the group's assignment.
 func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
-	var groupAssignments []*GroupAssignment
-	groupAssignments = make([]*GroupAssignment, 0)
+	var groupAssignment GroupAssignment
 	if c.ifLeader {
-		groupAssignments = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
+		groupAssignment = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
 	} else {
-		groupAssignments = nil
+		groupAssignment = nil
 	}
-	syncGroupResponse, err := c.coordinator.requestSyncGroup(c.clientID, c.groupID, c.generationID, c.memberID, groupAssignments)
+	syncGroupResponse, err := c.coordinator.requestSyncGroup(c.clientID, c.groupID, c.generationID, c.memberID, groupAssignment)
 	if err != nil {
 		return nil, err
 	}

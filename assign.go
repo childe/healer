@@ -4,7 +4,7 @@ import "sort"
 
 type AssignmentStrategy interface {
 	// generally topicMetadatas is returned by metaDataRequest sent by GroupConsumer
-	Assign([]*Member, []*TopicMetadata) []*GroupAssignment
+	Assign([]*Member, []*TopicMetadata) GroupAssignment
 }
 
 type RangeAssignmentStrategy struct {
@@ -35,7 +35,7 @@ type MemberAssignment struct {
 	UserData             []byte
 }
 
-type GroupAssignment struct {
+type GroupAssignment []struct {
 	MemberID         string
 	MemberAssignment []byte
 }
@@ -59,15 +59,16 @@ func (a ByPartitionID) Len() int           { return len(a) }
 func (a ByPartitionID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByPartitionID) Less(i, j int) bool { return a[i].PartitionId < a[j].PartitionId }
 
-func (r *RangeAssignmentStrategy) Assign(members []*Member, topicMetadatas []*TopicMetadata) []*GroupAssignment {
+func (r *RangeAssignmentStrategy) Assign(members []*Member, topicMetadatas []*TopicMetadata) GroupAssignment {
 
-	groupAssignments := make([]*GroupAssignment, len(members))
-	for i, member := range members {
-		memberAssignment := &MemberAssignment{
-			Version:  0,
-			UserData: nil,
-		}
-	}
+	groupAssignment := GroupAssignment{}
+	//for _, member := range members {
+	//memberAssignment := &MemberAssignment{
+	//Version:  0,
+	//UserData: nil,
+	//}
+	//}
+
 	for _, topicMetadata := range topicMetadatas {
 		sort.Sort(ByPartitionID(topicMetadata.PartitionMetadatas))
 		partitions := r.assignPartitions(len(members), len(topicMetadata.PartitionMetadatas))
@@ -90,5 +91,5 @@ func (r *RangeAssignmentStrategy) Assign(members []*Member, topicMetadatas []*To
 	//}
 	//}
 
-	return groupAssignments
+	return groupAssignment
 }

@@ -111,7 +111,7 @@ func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 	return r, nil
 }
 
-type GroupAssignment struct {
+type GroupAssignment []struct {
 	MemberID         string
 	MemberAssignment []byte
 }
