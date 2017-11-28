@@ -59,7 +59,8 @@ func (a ByPartitionID) Len() int           { return len(a) }
 func (a ByPartitionID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByPartitionID) Less(i, j int) bool { return a[i].PartitionId < a[j].PartitionId }
 
-func (r *RangeAssignmentStrategy) Assign(members []*Member, topicMetadatas []*TopicMetadata) GroupAssignment {
+func (r *RangeAssignmentStrategy) Assign(
+	members []*Member, topicMetadatas []*TopicMetadata) GroupAssignment {
 
 	groupAssignment := make([]struct {
 		MemberID         string
@@ -97,6 +98,9 @@ func (r *RangeAssignmentStrategy) Assign(members []*Member, topicMetadatas []*To
 				idx++
 			}
 		}
+	}
+	for i := range groupAssignment {
+		groupAssignment[i].MemberAssignment = memberAssignments[i].Encode()
 	}
 	return groupAssignment
 }
