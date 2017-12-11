@@ -40,7 +40,7 @@ func main() {
 		os.Exit(4)
 	}
 
-	c, err := healer.NewGroupConsumer(*brokers, *topic, *clientID, *groupID, *sessionTimeout)
+	c, err := healer.NewGroupConsumer(*brokers, *topic, *clientID, *groupID, *sessionTimeout, int32(*maxWaitTime), int32(*minBytes), int32(*maxBytes))
 	if err != nil {
 		glog.Fatalf("could not init GroupConsumer:%s", err)
 	}

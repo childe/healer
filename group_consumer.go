@@ -34,7 +34,7 @@ type GroupConsumer struct {
 	assignmentStrategy AssignmentStrategy
 }
 
-func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int) (*GroupConsumer, error) {
+func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32) (*GroupConsumer, error) {
 
 	brokers, err := NewBrokers(brokerList, clientID, 0, 0)
 	if err != nil {
@@ -47,6 +47,9 @@ func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeou
 		clientID:       clientID,
 		groupID:        groupID,
 		sessionTimeout: sessionTimeout,
+		maxWaitTime:    maxWaitTime,
+		minBytes:       minBytes,
+		maxBytes:       maxBytes,
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
@@ -124,6 +127,8 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 //The sync group request is used by the group leader to assign state (e.g. partition assignments)
 //to all members of the current generation. All members send SyncGroup immediately after
 //joining the group, but only the leader provides the group's assignment.
+
+//TODO need SyncGroupResponse returned?
 func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	var groupAssignment GroupAssignment
 	if c.ifLeader {
@@ -142,31 +147,11 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 
 	b, _ := json.Marshal(syncGroupResponse)
 	glog.V(5).Infof("syncgroup response:%s", b)
+	glog.V(5).Infof("%v", syncGroupResponse)
+
+	c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
 
 	return syncGroupResponse, nil
-}
-
-func (c *GroupConsumer) joinAndSync() {
-	c.mutex.Lock()
-	// TODO: handle error
-	c.join()
-	c.sync()
-	c.mutex.Unlock()
-}
-
-func (c *GroupConsumer) heartbeat() {
-	r, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
-	if err != nil {
-		glog.Errorf("failed to send heartbeat:%s", err)
-
-		//The group is rebalancing, so a rejoin is needed
-		if err == AllError[27] {
-			c.joinAndSync()
-		}
-	}
-	if r != nil {
-		glog.V(8).Infof("heartbeat errorcode:%d", r.ErrorCode)
-	}
 }
 
 func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) error {
@@ -193,6 +178,37 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 	return nil
 }
 
+func (c *GroupConsumer) joinAndSync() {
+	c.mutex.Lock()
+	// TODO: handle error
+	c.join()
+	c.sync()
+	c.mutex.Unlock()
+}
+
+// connection is reset
+func (c *GroupConsumer) resetConn() {
+}
+
+// TODO when need?
+func (c *GroupConsumer) restart() {
+}
+
+func (c *GroupConsumer) heartbeat() {
+	r, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
+	if err != nil {
+		glog.Errorf("failed to send heartbeat:%s", err)
+
+		//The group is rebalancing, so a rejoin is needed
+		if err == AllError[27] {
+			c.joinAndSync()
+		}
+	}
+	if r != nil {
+		glog.V(8).Infof("heartbeat errorcode:%d", r.ErrorCode)
+	}
+}
+
 func (c *GroupConsumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	err := c.getCoordinator()
 	if err != nil {
@@ -211,11 +227,9 @@ func (c *GroupConsumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	}()
 
 	// consume
-	var messages chan *FullMessage
+	var messages chan *FullMessage = make(chan *FullMessage, 10)
 	for _, simpleConsumer := range c.simpleConsumers {
-		if err != nil {
-			glog.Fatalf("could not get offset:%s", err)
-		}
+		glog.Info(simpleConsumer)
 		var offset int64
 		if fromBeginning {
 			offset = -2
