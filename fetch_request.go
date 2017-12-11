@@ -2,6 +2,8 @@ package healer
 
 import (
 	"encoding/binary"
+
+	"github.com/golang/glog"
 )
 
 /*
@@ -66,6 +68,7 @@ func NewFetchRequest(correlationID uint32, clientID string, maxWaitTime int32, m
 }
 
 func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, fetchOffset int64, maxBytes int32) {
+	glog.V(10).Infof("fetch request:%s[%d]:%d", topic, partitionID, fetchOffset)
 	partitionBlock := &PartitionBlock{
 		Partition:   partitionID,
 		FetchOffset: fetchOffset,
@@ -80,11 +83,10 @@ func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, 
 }
 
 func (fetchRequest *FetchRequest) Encode() []byte {
-	requestHeaderLength := 8 + 2 + len(fetchRequest.RequestHeader.ClientId)
-	requestLength := requestHeaderLength + 12
+	requestLength := fetchRequest.RequestHeader.length() + 4 + 4 + 4
 	requestLength += 4
 	for topicname, partitionBlocks := range fetchRequest.Topics {
-		requestLength += 2 + len(topicname) + 16
+		requestLength += 2 + len(topicname)
 		requestLength += 4 + len(partitionBlocks)*16
 	}
 
