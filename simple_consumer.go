@@ -66,7 +66,6 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		glog.Fatalf("could not get offset %s[%d]:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
 	}
 
-	var correlationID uint32 = 0
 	var messages chan *FullMessage
 	if messageChan == nil {
 		messages = make(chan *FullMessage, 10)
@@ -75,9 +74,8 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	}
 	go func(chan *FullMessage) {
 		for {
-			correlationID++
-			glog.V(10).Infof("correlationID: %d", correlationID)
-			fetchRequest := NewFetchRequest(correlationID, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
+			// TODO set CorrelationID to 0 firstly and then set by broker
+			fetchRequest := NewFetchRequest(0, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
 			fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, offset, simpleConsumer.MaxBytes)
 
 			buffers := make(chan []byte, 10)

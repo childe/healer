@@ -88,7 +88,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	//glog.V(10).Infof("response length: %d", responseLength)
+	glog.V(10).Infof("response length: %d", responseLength)
 	responseBuf := make([]byte, 4+responseLength)
 
 	readLength := 0
@@ -115,6 +115,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 		}
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
+	glog.V(100).Infof("response:%q", responseBuf)
 
 	return responseBuf, nil
 }
@@ -295,6 +296,8 @@ func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, 
 }
 
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
+	broker.correlationID++
+	fetchRequest.RequestHeader.CorrelationID = broker.correlationID
 	payload := fetchRequest.Encode()
 
 	// TODO 10?
@@ -353,6 +356,7 @@ func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID in
 	broker.correlationID++
 	syncGroupRequest := NewSyncGroupRequest(broker.correlationID, clientID, groupID, generationID, memberID, groupAssignment)
 	payload := syncGroupRequest.Encode()
+	glog.Info(payload)
 
 	responseBytes, err := broker.request(payload)
 	if err != nil {
