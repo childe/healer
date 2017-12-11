@@ -1,8 +1,6 @@
 package healer
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
 /*
 The sync group request is used by the group leader to assign state (e.g. partition assignments) to
@@ -42,10 +40,10 @@ member_assignment	null
 
 // TODO version0
 type SyncGroupRequest struct {
-	RequestHeader    *RequestHeader
-	GroupID          string
-	GenerationID     int32
-	MemberID         string
+	RequestHeader   *RequestHeader
+	GroupID         string
+	GenerationID    int32
+	MemberID        string
 	GroupAssignment GroupAssignment
 }
 
@@ -59,10 +57,10 @@ func NewSyncGroupRequest(correlationID uint32, clientID, groupID string,
 	}
 
 	return &SyncGroupRequest{
-		RequestHeader:    requestHeader,
-		GroupID:          groupID,
-		GenerationID:     generationID,
-		MemberID:         memberID,
+		RequestHeader:   requestHeader,
+		GroupID:         groupID,
+		GenerationID:    generationID,
+		MemberID:        memberID,
 		GroupAssignment: groupAssignment,
 	}
 }
@@ -108,7 +106,7 @@ func (r *SyncGroupRequest) Encode() []byte {
 		copy(payload[offset:], x.MemberID)
 		offset += len(x.MemberID)
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(len(x.MemberID)))
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(x.MemberAssignment)))
 		offset += 4
 		copy(payload[offset:], x.MemberAssignment)
 		offset += len(x.MemberID)
