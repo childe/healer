@@ -51,6 +51,7 @@ func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 	return offset
 }
 
+// TODO setCorrelationID
 type Request interface {
 	Encode() []byte
 }
