@@ -126,6 +126,8 @@ func (streamDecoder *FetchResponseStreamDecoder) read() {
 	} else {
 		glog.V(10).Infof("fetch response buffers closed")
 	}
+
+	glog.V(10).Infof("%p %d %d", streamDecoder, streamDecoder.length, len(streamDecoder.payload))
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
@@ -299,19 +301,21 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 	payloadLengthBuf := make([]byte, 0)
 	for {
 		buffer := <-streamDecoder.buffers
-		glog.V(20).Infof("%v", buffer)
+		glog.V(20).Infof("%p: %v", streamDecoder, buffer)
 		streamDecoder.length += len(buffer)
-		glog.V(10).Infof("%d bytes in fetch response payload", streamDecoder.length)
+		glog.V(10).Infof("%p: %d bytes in fetch response payload", streamDecoder, streamDecoder.length)
 		payloadLengthBuf := append(payloadLengthBuf, buffer...)
 		if len(payloadLengthBuf) >= 4 {
 			responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
 			streamDecoder.totalLength = int(responseLength) + 4
-			glog.V(10).Infof("responseLength: %d", responseLength)
+			glog.V(10).Infof("%p: responseLength: %d", streamDecoder, responseLength)
 			streamDecoder.payload = make([]byte, responseLength+4)
+			glog.V(10).Infof("%p: payload length: %d", streamDecoder, len(streamDecoder.payload))
 			copy(streamDecoder.payload, payloadLengthBuf)
 			break
 		}
 	}
+	glog.V(10).Infof("%p %d %d", streamDecoder, streamDecoder.length, len(streamDecoder.payload))
 
 	// header
 	for streamDecoder.more && streamDecoder.length < 12 {
@@ -322,6 +326,7 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 		glog.Fatal("NOT get enough data in fetch response")
 	}
 
+	glog.V(10).Infof("%d, %d", streamDecoder.length, len(streamDecoder.payload))
 	glog.V(20).Infof("%d: %v", streamDecoder.length, streamDecoder.payload[:streamDecoder.length])
 	correlationID := binary.BigEndian.Uint32(streamDecoder.payload[4:])
 	glog.V(10).Infof("correlationID: %d", correlationID)
