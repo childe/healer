@@ -14,7 +14,6 @@ import (
 type Broker struct {
 	nodeID        int32
 	address       string
-	metaConn      net.Conn
 	conn          net.Conn
 	apiVersions   []*ApiVersion
 	timeout       time.Duration // Second
@@ -39,12 +38,6 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 		correlationID: 0,
 	}
 
-	metaConn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
-	}
-	broker.metaConn = metaConn
-
 	conn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
@@ -62,22 +55,22 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 }
 
 func (broker *Broker) Close() {
-	broker.metaConn.Close()
 	broker.conn.Close()
 }
 
 func (broker *Broker) request(payload []byte) ([]byte, error) {
 	// TODO log?
-	//glog.V(10).Infof("request length: %d", len(payload))
-	broker.metaConn.Write(payload)
+	glog.V(10).Info(broker.conn.LocalAddr())
+	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
+	broker.conn.Write(payload)
 
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
 		if broker.timeout > 0 {
-			broker.metaConn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
-		length, err := broker.metaConn.Read(responseLengthBuf[l:])
+		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
 			return nil, err
 		}
@@ -88,15 +81,15 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	glog.V(10).Infof("response length: %d", responseLength)
+	glog.V(10).Infof("response length: %d", responseLength+4)
 	responseBuf := make([]byte, 4+responseLength)
 
 	readLength := 0
 	for {
 		if broker.timeout > 0 {
-			broker.metaConn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
-		length, err := broker.metaConn.Read(responseBuf[4+readLength:])
+		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err == io.EOF {
 			break
 		}
@@ -115,6 +108,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 		}
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
+	glog.V(10).Infof("response length: %d. CorrelationID: %d", len(responseBuf), binary.BigEndian.Uint32(responseBuf[4:]))
 	glog.V(100).Infof("response:%q", responseBuf)
 
 	return responseBuf, nil
