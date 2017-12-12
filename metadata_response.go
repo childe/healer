@@ -113,7 +113,7 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 		metadataResponse.TopicMetadatas[i].PartitionMetadatas = make([]*PartitionMetadataInfo, partitionMetadataInfoCount)
 		for j := uint32(0); j < partitionMetadataInfoCount; j++ {
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j] = &PartitionMetadataInfo{}
-			partitionErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+			partitionErrorCode := int16(binary.BigEndian.Uint16(payload[offset:]))
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = partitionErrorCode
 			if err != nil && partitionErrorCode != 0 {
 				err = AllError[int(partitionErrorCode)]
