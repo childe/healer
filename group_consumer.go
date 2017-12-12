@@ -80,7 +80,10 @@ func (c *GroupConsumer) getCoordinator() error {
 		return err
 	}
 
-	coordinatorBroker := c.brokers.GetBroker(coordinatorResponse.Coordinator.nodeID)
+	coordinatorBroker, err := c.brokers.GetBroker(coordinatorResponse.Coordinator.nodeID)
+	if err != nil {
+		return err
+	}
 	glog.Infof("coordinator for group[%s]:%s", c.groupID, coordinatorBroker.address)
 	c.coordinator = coordinatorBroker
 
