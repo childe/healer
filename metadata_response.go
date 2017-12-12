@@ -58,6 +58,7 @@ type MetadataResponse struct {
 }
 
 func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
+	var err error = nil
 	glog.V(20).Infof("%d %v", len(payload), payload)
 	metadataResponse := &MetadataResponse{}
 	//TODO: actually we have judged if the lenght matches while reading data from connection
@@ -98,6 +99,9 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	for i := uint32(0); i < topicMetadatasCount; i++ {
 		metadataResponse.TopicMetadatas[i] = &TopicMetadata{}
 		metadataResponse.TopicMetadatas[i].TopicErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+		if err != nil && metadataResponse.TopicMetadatas[i].TopicErrorCode != 0 {
+			err = AllError[int(metadataResponse.TopicMetadatas[i].TopicErrorCode)]
+		}
 		offset += 2
 		topicNameLength := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
@@ -109,7 +113,11 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 		metadataResponse.TopicMetadatas[i].PartitionMetadatas = make([]*PartitionMetadataInfo, partitionMetadataInfoCount)
 		for j := uint32(0); j < partitionMetadataInfoCount; j++ {
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j] = &PartitionMetadataInfo{}
-			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+			partitionErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
+			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = partitionErrorCode
+			if err != nil && partitionErrorCode != 0 {
+				err = AllError[int(partitionErrorCode)]
+			}
 			offset += 2
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionId = binary.BigEndian.Uint32(payload[offset:])
 			offset += 4
@@ -133,5 +141,5 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	}
 	//end encode TopicMetadatas
 
-	return metadataResponse, nil
+	return metadataResponse, err
 }
