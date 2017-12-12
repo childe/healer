@@ -109,7 +109,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
 	glog.V(10).Infof("response length: %d. CorrelationID: %d", len(responseBuf), binary.BigEndian.Uint32(responseBuf[4:]))
-	glog.V(100).Infof("response:%q", responseBuf)
+	glog.V(100).Infof("response:%v", responseBuf)
 
 	return responseBuf, nil
 }
