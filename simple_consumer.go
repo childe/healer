@@ -57,6 +57,12 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
 	}
 
+	// TODO brokers may not need? it should just reserve some meta info
+	leaderBroker, err = NewBroker(leaderBroker.address, leaderBroker.nodeID, 30, 60)
+	if err != nil {
+		glog.Fatal(err)
+	}
+
 	if offset == -1 {
 		offset, err = simpleConsumer.getOffset(false)
 	} else if offset == -2 {
