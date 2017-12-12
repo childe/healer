@@ -39,7 +39,6 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	var (
 		err          error
 		leaderBroker *Broker
-		ok           bool
 		leaderID     int32
 	)
 	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
@@ -50,18 +49,21 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
 	}
 
-	if leaderBroker, ok = simpleConsumer.Brokers.brokers[leaderID]; !ok {
+	// TODO
+	leaderBroker, err = simpleConsumer.Brokers.GetBroker(leaderID)
+	if err != nil {
 		//TODO NO fatal but return error
-		glog.Fatal("could not get broker %d. maybe should refresh metadata.", leaderID)
+		glog.Fatalf("could not get broker %d. maybe should refresh metadata.", leaderID)
 	} else {
 		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
 	}
 
-	// TODO brokers may not need? it should just reserve some meta info
 	leaderBroker, err = NewBroker(leaderBroker.address, leaderBroker.nodeID, 30, 60)
 	if err != nil {
-		glog.Fatal(err)
+		glog.Fatalf("could not init leader broker:%s", err)
 	}
+
+	glog.Info(offset)
 
 	if offset == -1 {
 		offset, err = simpleConsumer.getOffset(false)
