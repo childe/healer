@@ -103,6 +103,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topic *string) (*Metada
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeId)
 		if err != nil {
+			glog.Infof("could not get metadata from %s:%d:%s", brokerInfo.Host, brokerInfo.Port, err)
 			continue
 		}
 		metadataResponse, err := broker.requestMetaData(clientID, topic)
