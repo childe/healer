@@ -80,7 +80,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	} else {
 		messages = messageChan
 	}
-	go func(chan *FullMessage) {
+	go func(messages chan *FullMessage) {
 		for {
 			// TODO set CorrelationID to 0 firstly and then set by broker
 			fetchRequest := NewFetchRequest(0, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
