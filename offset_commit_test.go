@@ -9,31 +9,46 @@ func TestGenOffsetCommitRequest(t *testing.T) {
 		clientID      string = "healer"
 		offset        uint64 = 10
 		topic         string = "test"
+		groupID       string = "hangout"
 	)
+	broker, err := NewBroker(*brokerAddress, -1, 60, 60)
 
-	r := NewOffsetCommitRequest(correlationID, clientID)
+	r := NewOffsetCommitRequest(correlationID, clientID, groupID)
 
-	if r.Length() != 22 {
-		t.Error("offsetcommit request payload length should be 22")
+	if r.Length() != 29 {
+		t.Error("offsetcommit request payload length should be 29")
 	}
 
 	r.AddPartiton(topic, partitionID, offset, "")
-	if r.Length() != 46 {
-		t.Error("offsetcommit request payload length should be 46")
+	if r.Length() != 53 {
+		t.Error("offsetcommit request payload length should be 53")
 	}
 
 	r.AddPartiton(topic, partitionID, offset, "")
-	if r.Length() != 46 {
-		t.Error("offsetcommit request payload length should be 46")
+	if r.Length() != 53 {
+		t.Error("offsetcommit request payload length should be 53")
 	}
 
 	r.AddPartiton(topic, partitionID+1, offset+1, "")
-	if r.Length() != 60 {
-		t.Error("offsetcommit request payload length should be 60")
+	if r.Length() != 67 {
+		t.Error("offsetcommit request payload length should be 67")
 	}
 
 	payload := r.Encode()
-	if len(payload) != 64 {
-		t.Error("offsetcommit request payload length should be 64")
+	if len(payload) != 71 {
+		t.Error("offsetcommit request payload length should be 71")
 	}
+
+	responseBuf, err := broker.request(payload)
+	if err != nil {
+		t.Errorf("requet offsetcommit error:%s", err)
+	}
+
+	_, err = NewOffsetCommitResponse(responseBuf)
+	if err != nil {
+		t.Errorf("parse offsetcommit response error:%s", err)
+	}
+	t.Log("get offsetcommit response")
+
+	broker.Close()
 }

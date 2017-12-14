@@ -40,7 +40,7 @@ type OffsetCommitRequest struct {
 }
 
 // request only ONE topic
-func NewOffsetCommitRequest(correlationID uint32, clientID string) *OffsetCommitRequest {
+func NewOffsetCommitRequest(correlationID uint32, clientID, groupID string) *OffsetCommitRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetCommitRequest,
 		ApiVersion:    0,
@@ -50,6 +50,7 @@ func NewOffsetCommitRequest(correlationID uint32, clientID string) *OffsetCommit
 
 	r := &OffsetCommitRequest{
 		RequestHeader: requestHeader,
+		GroupID:       groupID,
 	}
 
 	r.Topics = make([]*OffsetCommitRequestTopic, 0)
@@ -117,6 +118,11 @@ func (r *OffsetCommitRequest) Encode() []byte {
 	offset += 4
 
 	offset = r.RequestHeader.Encode(payload, offset)
+
+	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
+	offset += 2
+	copy(payload[offset:], r.GroupID)
+	offset += len(r.GroupID)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Topics)))
 	offset += 4
