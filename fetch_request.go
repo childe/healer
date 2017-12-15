@@ -126,3 +126,11 @@ func (fetchRequest *FetchRequest) Encode() []byte {
 	}
 	return payload
 }
+
+func (req *FetchRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *FetchRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

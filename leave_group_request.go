@@ -64,3 +64,11 @@ func (r *LeaveGroupRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *LeaveGroupRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *LeaveGroupRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

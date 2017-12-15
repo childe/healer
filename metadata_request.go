@@ -57,3 +57,11 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 	}
 	return payload
 }
+
+func (req *MetadataRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *MetadataRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

@@ -114,3 +114,11 @@ func (r *SyncGroupRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *SyncGroupRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *SyncGroupRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

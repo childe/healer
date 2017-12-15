@@ -124,3 +124,11 @@ func (r *OffsetFetchRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *OffsetFetchRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *OffsetFetchRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

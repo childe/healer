@@ -87,3 +87,11 @@ func (produceRequest *ProduceRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *ProduceRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *ProduceRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

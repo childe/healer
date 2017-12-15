@@ -32,3 +32,11 @@ func (ListGroupsR *ListGroupsRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *ListGroupsRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *ListGroupsRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

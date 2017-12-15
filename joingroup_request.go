@@ -117,3 +117,11 @@ func (r *JoinGroupRequest) Encode() []byte {
 	}
 	return payload
 }
+
+func (req *JoinGroupRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *JoinGroupRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

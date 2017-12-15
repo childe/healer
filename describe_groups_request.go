@@ -61,3 +61,11 @@ func (r *DescribeGroupsRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *DescribeGroupsRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *DescribeGroupsRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

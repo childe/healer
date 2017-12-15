@@ -69,3 +69,11 @@ func (heartbeatR *HeartbeatRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *HeartbeatRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *HeartbeatRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}

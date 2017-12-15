@@ -57,3 +57,11 @@ func (findCoordinatorR *FindCoordinatorRequest) Encode() []byte {
 
 	return payload
 }
+
+func (req *FindCoordinatorRequest) API() uint16 {
+	return req.RequestHeader.ApiKey
+}
+
+func (req *FindCoordinatorRequest) SetCorrelationID(c uint32) {
+	req.RequestHeader.CorrelationID = c
+}
