@@ -47,16 +47,16 @@ func TestOffsetFetchRequest(t *testing.T) {
 		t.Error("offsetcommit request payload length should be 51")
 	}
 
-	_, err = broker.request(payload)
+	responseBuf, err := broker.request(payload)
 	if err != nil {
 		t.Errorf("requet offsetcommit error:%s", err)
 	}
 
-	//_, err = NewOffsetCommitResponse(responseBuf)
-	//if err != nil {
-	//t.Errorf("parse offsetfetch response error:%s", err)
-	//}
-	//t.Log("get offsetfetch response")
+	_, err = NewOffsetFetchResponse(responseBuf)
+	if err != nil {
+		t.Errorf("parse offsetfetch response error:%s", err)
+	}
+	t.Log("get offsetfetch response")
 
 	broker.Close()
 }
