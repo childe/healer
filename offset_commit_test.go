@@ -2,7 +2,7 @@ package healer
 
 import "testing"
 
-func TestGenOffsetCommitRequest(t *testing.T) {
+func TestOffsetCommitRequest(t *testing.T) {
 	var (
 		correlationID uint32 = uint32(API_OffsetCommitRequest)
 		partitionID   int32  = 0
