@@ -1,5 +1,7 @@
 package healer
 
+import "fmt"
+
 type Error struct {
 	Errorcode int
 	ErrorMsg  string
@@ -22,9 +24,9 @@ func getErrorFromErrorCode(errorcode int16) error {
 func init() {
 	for i, _ := range AllError {
 		AllError[i] = &Error{
-			Errorcode: -1,
-			ErrorMsg:  "NOTDefinedYet",
-			ErrorDesc: "not defined yet...",
+			Errorcode: i,
+			ErrorMsg:  fmt.Sprintf("NOTDefinedYet%d", i),
+			ErrorDesc: fmt.Sprintf("%d not defined yet...", i),
 		}
 	}
 	AllError[0] = &Error{
@@ -61,6 +63,11 @@ func init() {
 		Errorcode: 6,
 		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
 		ErrorDesc: "This server is not the leader for that topic-partition.",
+	}
+	AllError[17] = &Error{
+		Errorcode: 17,
+		ErrorMsg:  "INVALID_TOPIC_EXCEPTION",
+		ErrorDesc: "The request attempted to perform an operation on an invalid topic.",
 	}
 	AllError[22] = &Error{
 		Errorcode: 22,
