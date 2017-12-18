@@ -129,10 +129,6 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	// TODO only one topic
 	topicMetadata := metadataResponse.TopicMetadatas[0]
 
-	if topicMetadata.TopicErrorCode != 0 {
-		return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, AllError[topicMetadata.TopicErrorCode].ErrorMsg)
-	}
-
 	if partitionID >= 0 {
 		uID := uint32(partitionID)
 		for _, x := range topicMetadata.PartitionMetadatas {
