@@ -99,8 +99,8 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	for i := uint32(0); i < topicMetadatasCount; i++ {
 		metadataResponse.TopicMetadatas[i] = &TopicMetadata{}
 		metadataResponse.TopicMetadatas[i].TopicErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
-		if err != nil && metadataResponse.TopicMetadatas[i].TopicErrorCode != 0 {
-			err = AllError[int(metadataResponse.TopicMetadatas[i].TopicErrorCode)]
+		if err == nil && metadataResponse.TopicMetadatas[i].TopicErrorCode != 0 {
+			err = getErrorFromErrorCode(metadataResponse.TopicMetadatas[i].TopicErrorCode)
 		}
 		offset += 2
 		topicNameLength := int(binary.BigEndian.Uint16(payload[offset:]))
@@ -115,8 +115,8 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j] = &PartitionMetadataInfo{}
 			partitionErrorCode := int16(binary.BigEndian.Uint16(payload[offset:]))
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = partitionErrorCode
-			if err != nil && partitionErrorCode != 0 {
-				err = AllError[int(partitionErrorCode)]
+			if err == nil && partitionErrorCode != 0 {
+				err = getErrorFromErrorCode(partitionErrorCode)
 			}
 			offset += 2
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionId = binary.BigEndian.Uint32(payload[offset:])

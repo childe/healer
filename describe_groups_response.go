@@ -45,7 +45,7 @@ type MemberDetail struct {
 }
 
 type GroupDetail struct {
-	ErrorCode    uint16
+	ErrorCode    int16
 	GroupID      string
 	State        string
 	ProtocolType string
@@ -83,11 +83,11 @@ func NewDescribeGroupsResponse(payload []byte) (*DescribeGroupsResponse, error) 
 	for i := range r.Groups {
 		group := &GroupDetail{}
 
-		group.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+		group.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 
-		if group.ErrorCode != 0 {
-			err = AllError[group.ErrorCode]
+		if err == nil && group.ErrorCode != 0 {
+			err = getErrorFromErrorCode(group.ErrorCode)
 		}
 
 		l = int(binary.BigEndian.Uint16(payload[offset:]))

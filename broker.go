@@ -58,6 +58,10 @@ func (broker *Broker) Close() {
 	broker.conn.Close()
 }
 
+func (broker *Broker) Request(r Request) ([]byte, error) {
+	return broker.request(r.Encode())
+}
+
 func (broker *Broker) request(payload []byte) ([]byte, error) {
 	// TODO log?
 	glog.V(10).Info(broker.conn.LocalAddr())

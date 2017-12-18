@@ -8,7 +8,7 @@ import (
 // version 0
 type HeartbeatResponse struct {
 	CorrelationID uint32
-	ErrorCode     uint16
+	ErrorCode     int16
 }
 
 func NewHeartbeatResponse(payload []byte) (*HeartbeatResponse, error) {
@@ -24,10 +24,10 @@ func NewHeartbeatResponse(payload []byte) (*HeartbeatResponse, error) {
 	heartbeatResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	heartbeatResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	heartbeatResponse.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 
 	if heartbeatResponse.ErrorCode != 0 {
-		err = AllError[heartbeatResponse.ErrorCode]
+		err = getErrorFromErrorCode(heartbeatResponse.ErrorCode)
 	}
 
 	return heartbeatResponse, err

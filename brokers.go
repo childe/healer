@@ -245,3 +245,20 @@ func (brokers *Brokers) RequestDescribeGroups(clientID string, groups []string) 
 
 	return nil, fmt.Errorf("could not describe groups from all brokers")
 }
+
+func (brokers *Brokers) Request(req Request) ([]byte, error) {
+	for _, brokerInfo := range brokers.brokersInfo {
+		broker, err := brokers.GetBroker(brokerInfo.NodeId)
+		if err != nil {
+			continue
+		}
+		response, err := broker.Request(req)
+		if err != nil {
+			glog.Infof("post request[%d] from %s error:%s", req.API(), broker.address, err)
+		} else {
+			return response, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not request %d from all brokers", req.API())
+}

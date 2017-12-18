@@ -12,6 +12,13 @@ func (healerError *Error) Error() string {
 
 var AllError []*Error = make([]*Error, 56)
 
+func getErrorFromErrorCode(errorcode int16) error {
+	if errorcode == -1 {
+		return AllError[0]
+	}
+	return AllError[errorcode]
+}
+
 func init() {
 	for i, _ := range AllError {
 		AllError[i] = &Error{
@@ -22,7 +29,7 @@ func init() {
 	}
 	AllError[0] = &Error{
 		Errorcode: -1,
-		ErrorMsg:  "Unknown",
+		ErrorMsg:  "UNKNOWN",
 		ErrorDesc: "The server experienced an unexpected error when processing the request",
 	}
 	AllError[1] = &Error{

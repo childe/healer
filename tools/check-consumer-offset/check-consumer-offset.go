@@ -49,26 +49,13 @@ func main() {
 		}
 	}
 
-	var response []byte = nil
-	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeId)
-		if err != nil {
-			continue
-		}
-		response, err = broker.request(r.Encode())
-		if err != nil {
-			glog.Infof("request offset fetch from %s error:%s", broker.address, err)
-		} else {
-			break
-		}
-	}
+	response, err := brokers.Request(r)
 
-	if response == nil {
+	if err != nil {
 		glog.Fatal("could not get offset fetch response from %s", *brokers)
 	}
 
-	var res *healer.OffsetFetchResponse
-	res, err = healer.NewOffsetFetchResponse(response)
+	res, err := healer.NewOffsetFetchResponse(response)
 	if err != nil {
 		glog.Fatal("decode offset fetch response error:%s", err)
 	}

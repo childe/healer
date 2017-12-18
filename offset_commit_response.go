@@ -14,7 +14,7 @@ OffsetCommitResponse => [TopicName [Partition ErrorCode]]]
 
 type OffsetCommitResponsePartition struct {
 	PartitionID uint32
-	ErrorCode   uint16
+	ErrorCode   int16
 }
 
 type OffsetCommitResponseTopic struct {
@@ -64,11 +64,11 @@ func NewOffsetCommitResponse(payload []byte) (*OffsetCommitResponse, error) {
 
 			p.PartitionID = binary.BigEndian.Uint32(payload[offset:])
 			offset += 4
-			p.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+			p.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
 
 			if err == nil && p.ErrorCode != 0 {
-				err = AllError[p.ErrorCode]
+				err = getErrorFromErrorCode(p.ErrorCode)
 			}
 		}
 	}

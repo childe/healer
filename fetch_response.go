@@ -86,7 +86,7 @@ func (fetchResponse *FetchResponse) Decode(payload []byte) error {
 			fetchResponse.Responses[i].PartitionResponses[j].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			if fetchResponse.Responses[i].PartitionResponses[j].ErrorCode != 0 {
 				glog.V(10).Infof("errorcode is %d", fetchResponse.Responses[i].PartitionResponses[j].ErrorCode)
-				return AllError[fetchResponse.Responses[i].PartitionResponses[j].ErrorCode]
+				return getErrorFromErrorCode(fetchResponse.Responses[i].PartitionResponses[j].ErrorCode)
 			}
 			offset += 2
 			fetchResponse.Responses[i].PartitionResponses[j].HighwaterMarkOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
