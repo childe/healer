@@ -13,6 +13,8 @@ type SimpleConsumer struct {
 	MaxBytes    int32
 	MaxWaitTime int32
 	MinBytes    int32
+
+	GroupID string // commit offset if groupID is not ""
 }
 
 func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
@@ -112,6 +114,23 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 					}
 					glog.V(10).Info("NO more message")
 					break
+				}
+			}
+
+			if simpleConsumer.GroupID != "" {
+				offsetComimtReq := NewOffsetCommitRequest(0, simpleConsumer.ClientID, simpleConsumer.GroupID)
+				offsetComimtReq.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition, offset-1, "")
+
+				payload, err := leaderBroker.Request(offsetComimtReq)
+				if err == nil {
+					_, err := NewOffsetCommitResponse(payload)
+					if err == nil {
+						glog.V(5).Infof("commit offset [%s][%d]:%d", simpleConsumer.TopicName, simpleConsumer.Partition, offset-1)
+					} else {
+						glog.Infof("commit offset [%s][%d]:%d error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, offset-1, err)
+					}
+				} else {
+					glog.Infof("commit offset [%s][%d]:%d error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, offset-1, err)
 				}
 			}
 		}
