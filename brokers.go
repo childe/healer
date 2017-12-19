@@ -58,8 +58,6 @@ func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout i
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
-			defer broker.conn.Close()
-
 			brokers, err := newBrokersFromOne(broker, clientID, connecTimeout, timeout)
 			if err != nil {
 				glog.Infof("could not get broker list from %s:%s", broker.address, err)
