@@ -59,6 +59,8 @@ func (broker *Broker) Close() {
 }
 
 func (broker *Broker) Request(r Request) ([]byte, error) {
+	broker.correlationID++
+	r.SetCorrelationID(broker.correlationID)
 	return broker.request(r.Encode())
 }
 
