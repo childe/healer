@@ -3,8 +3,6 @@ package healer
 import (
 	"encoding/binary"
 	"fmt"
-
-	"github.com/golang/glog"
 )
 
 /*
@@ -59,24 +57,20 @@ type MetadataResponse struct {
 
 func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 	var err error = nil
-	glog.V(20).Infof("%d %v", len(payload), payload)
 	metadataResponse := &MetadataResponse{}
 	//TODO: actually we have judged if the lenght matches while reading data from connection
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
-	glog.Info(responseLength)
 	if responseLength+4 != len(payload) {
 		return nil, fmt.Errorf("MetadataResponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
 	metadataResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
-	glog.Info(metadataResponse.CorrelationID)
 	offset += 4
 
 	// encode Brokers
 	brokersCount := uint32(binary.BigEndian.Uint32(payload[offset:]))
-	glog.Info(brokersCount)
 	offset += 4
 	metadataResponse.Brokers = make([]*BrokerInfo, brokersCount)
 	for i := uint32(0); i < brokersCount; i++ {
