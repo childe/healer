@@ -297,7 +297,7 @@ func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, 
 
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
 	broker.correlationID++
-	fetchRequest.RequestHeader.CorrelationID = broker.correlationID
+	fetchRequest.SetCorrelationID(broker.correlationID)
 	payload := fetchRequest.Encode()
 
 	// TODO 10?
