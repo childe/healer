@@ -38,7 +38,7 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 		correlationID: 0,
 	}
 
-	conn, err := net.DialTimeout("tcp", address, time.Duration(connecTimeout)*time.Second)
+	conn, err := net.DialTimeout("tcp4", address, time.Duration(connecTimeout)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
