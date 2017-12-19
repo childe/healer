@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -20,6 +21,8 @@ type Broker struct {
 	connecTimeout time.Duration // Second
 
 	correlationID uint32
+
+	mux sync.Mutex
 }
 
 var defaultClientID = "healer"
@@ -65,6 +68,8 @@ func (broker *Broker) Request(r Request) ([]byte, error) {
 }
 
 func (broker *Broker) request(payload []byte) ([]byte, error) {
+	broker.mux.Lock()
+	defer broker.mux.Unlock()
 	// TODO log?
 	glog.V(10).Info(broker.conn.LocalAddr())
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
@@ -121,7 +126,9 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 }
 
 func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
-	// TODO log?
+	broker.mux.Lock()
+	defer broker.mux.Unlock()
+
 	defer close(buffers)
 	broker.conn.Write(payload)
 
