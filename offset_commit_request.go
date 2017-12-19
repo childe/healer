@@ -25,7 +25,7 @@ import (
 
 type OffsetCommitRequestPartition struct {
 	PartitionID int32
-	Offset      uint64
+	Offset      int64
 	Metadata    string
 }
 type OffsetCommitRequestTopic struct {
@@ -58,7 +58,7 @@ func NewOffsetCommitRequest(correlationID uint32, clientID, groupID string) *Off
 	return r
 }
 
-func (r *OffsetCommitRequest) AddPartiton(topic string, partitionID int32, offset uint64, metadata string) {
+func (r *OffsetCommitRequest) AddPartiton(topic string, partitionID int32, offset int64, metadata string) {
 	if r.Topics == nil {
 		r.Topics = make([]*OffsetCommitRequestTopic, 0)
 	}
@@ -140,7 +140,7 @@ func (r *OffsetCommitRequest) Encode() []byte {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(p.PartitionID))
 			offset += 4
 
-			binary.BigEndian.PutUint64(payload[offset:], p.Offset)
+			binary.BigEndian.PutUint64(payload[offset:], uint64(p.Offset))
 			offset += 8
 			binary.BigEndian.PutUint16(payload[offset:], uint16(len(p.Metadata)))
 			offset += 2

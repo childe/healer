@@ -7,7 +7,7 @@ func TestOffsetCommitRequest(t *testing.T) {
 		correlationID uint32 = uint32(API_OffsetCommitRequest)
 		partitionID   int32  = 0
 		clientID      string = "healer"
-		offset        uint64 = 10
+		offset        int64  = 0
 		topic         string = "test"
 		groupID       string = "hangout"
 	)
@@ -46,7 +46,7 @@ func TestOffsetCommitRequest(t *testing.T) {
 
 	_, err = NewOffsetCommitResponse(responseBuf)
 	if err != nil {
-		t.Errorf("parse offsetcommit response error:%s", err)
+		t.Errorf("decode offsetcommit response error:%s", err)
 	}
 	t.Log("get offsetcommit response")
 
