@@ -63,7 +63,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		glog.Fatalf("could not init leader broker:%s", err)
 	}
 
-	glog.Info(offset)
+	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, offset)
 
 	if offset == -1 {
 		offset, err = simpleConsumer.getOffset(false)
