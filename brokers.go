@@ -79,6 +79,7 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 		for nodeID, brokerInfo := range brokers.brokersInfo {
 			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.connecTimeout, brokers.timeout)
 			if err == nil {
+				brokers.brokers[nodeID] = broker
 				return broker, nil
 			}
 		}
@@ -90,7 +91,13 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		return NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.connecTimeout, brokers.timeout)
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.connecTimeout, brokers.timeout)
+		if err == nil {
+			brokers.brokers[nodeID] = broker
+			return broker, nil
+		} else {
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d)", nodeID, brokerInfo.Host, brokerInfo.Port)
+		}
 	} else {
 		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
 	}
