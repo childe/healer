@@ -174,6 +174,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 		simpleConsumer.MaxWaitTime = c.maxWaitTime
 		simpleConsumer.MaxBytes = c.maxBytes
 		simpleConsumer.MinBytes = c.minBytes
+		simpleConsumer.GroupID = c.groupID
 
 		c.simpleConsumers[i] = simpleConsumer
 	}
