@@ -23,7 +23,14 @@ func main() {
 
 	if *topic == "" {
 		flag.PrintDefaults()
-		glog.Fatal("topic needed")
+		fmt.Println("topic needed")
+		return
+	}
+
+	if *groupID == "" {
+		flag.PrintDefaults()
+		fmt.Println("groupID needed")
+		return
 	}
 
 	brokers, err := healer.NewBrokers(*brokers, *clientID, *connectTimeout, *timeout)
@@ -56,13 +63,17 @@ func main() {
 	}
 
 	res, err := healer.NewOffsetFetchResponse(response)
-	if err != nil {
-		glog.Fatal("decode offset fetch response error:%s", err)
+	if res == nil {
+		glog.Fatalf("decode offset fetch response error:%s", err)
 	}
 
 	for _, t := range res.Topics {
 		for _, p := range t.Partitions {
-			fmt.Printf("%s:%d:%d\n", t.Topic, p.PartitionID, p.Offset)
+			if p.ErrorCode == 0 {
+				fmt.Printf("%s:%d:%d\n", t.Topic, p.PartitionID, p.Offset)
+			} else {
+				fmt.Printf("%s:%d:%d\n", t.Topic, p.PartitionID, p.Offset)
+			}
 		}
 	}
 }
