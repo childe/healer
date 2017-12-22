@@ -8,8 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
-	"github.com/golang/snappy"
 	"github.com/klauspost/crc32"
 )
 
@@ -89,7 +89,7 @@ func (message *Message) decompress() ([]byte, error) {
 			return rst, nil
 		}
 	case COMPRESSION_SNAPPY:
-		return snappy.Decode(nil, message.Value)
+		return snappy.Decode(message.Value)
 	}
 	return nil, fmt.Errorf("Unknown Compression Code %d", compression)
 }
@@ -213,7 +213,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 			glog.V(15).Infof(string(message.Value))
 			offset += valueLength
 		}
-		compression := message.Attributes & 7
+		compression := message.Attributes & 0x07
 		glog.V(10).Infof("compression %d", compression)
 		if compression != COMPRESSION_NONE {
 			value, err := message.decompress()
