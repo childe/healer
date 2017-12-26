@@ -363,7 +363,6 @@ func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID in
 	broker.correlationID++
 	syncGroupRequest := NewSyncGroupRequest(broker.correlationID, clientID, groupID, generationID, memberID, groupAssignment)
 	payload := syncGroupRequest.Encode()
-	glog.Info(payload)
 
 	responseBytes, err := broker.request(payload)
 	if err != nil {
