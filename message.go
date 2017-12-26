@@ -11,6 +11,7 @@ import (
 	"github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
 	"github.com/klauspost/crc32"
+	"github.com/pierrec/lz4"
 )
 
 /*
@@ -70,6 +71,7 @@ const (
 	COMPRESSION_NONE   int8 = 0
 	COMPRESSION_GZIP   int8 = 1
 	COMPRESSION_SNAPPY int8 = 2
+	COMPRESSION_LZ4    int8 = 3
 )
 
 func (message *Message) decompress() ([]byte, error) {
@@ -90,6 +92,17 @@ func (message *Message) decompress() ([]byte, error) {
 		}
 	case COMPRESSION_SNAPPY:
 		return snappy.Decode(message.Value)
+	case COMPRESSION_LZ4:
+		var buf bytes.Buffer
+		var err error
+		writer := lz4.NewWriter(&buf)
+		if _, err = writer.Write(message.Value); err != nil {
+			return nil, err
+		}
+		if err = writer.Close(); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
 	}
 	return nil, fmt.Errorf("Unknown Compression Code %d", compression)
 }
