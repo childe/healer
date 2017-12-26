@@ -213,7 +213,7 @@ func (c *GroupConsumer) heartbeat() {
 	}
 }
 
-func (c *GroupConsumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
+func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	err := c.getCoordinator()
 	if err != nil {
 		glog.Fatalf("could not find coordinator:%s", err)
@@ -231,9 +231,10 @@ func (c *GroupConsumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	}()
 
 	// consume
-	var messages chan *FullMessage = make(chan *FullMessage, 10)
+	if messages == nil {
+		messages = make(chan *FullMessage, 10)
+	}
 	for _, simpleConsumer := range c.simpleConsumers {
-		glog.Info(simpleConsumer)
 		var offset int64
 		if fromBeginning {
 			offset = -2
