@@ -132,15 +132,7 @@ func (streamDecoder *FetchResponseStreamDecoder) read() {
 
 func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
 	glog.V(10).Infof("encodeMessageSet %d %d %d %d", streamDecoder.length, streamDecoder.offset, partitionID, messageSetSizeBytes)
-	//Offset      int64
-	//MessageSize int32
 
-	////Message
-	//Crc        uint32
-	//MagicByte  int8
-	//Attributes int8
-	//Key        []byte
-	//Value      []byte
 	var messageOffset int64
 	var messageSize int32
 	var originOffset int = streamDecoder.offset
