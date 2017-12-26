@@ -168,8 +168,13 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 		//}
 
 		if err != nil {
-			glog.Errorf("read response error:%s", err)
-			return err
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				glog.V(5).Infof("read timeout:%s", err)
+				continue
+			} else {
+				glog.Errorf("read response error:%s", err)
+				return err
+			}
 		}
 		readLength += length
 		glog.V(10).Infof("totally send %d bytes to fetch response payload", readLength+4)
