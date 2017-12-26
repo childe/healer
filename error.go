@@ -23,5 +23,5 @@ var (
 	maxBytesTooSmall                       HealerError = 2
 	notEnoughDataInFetchResponse           HealerError = 3
 	noPartitionResponse                    HealerError = 4
-	fetchResponseTruncatedBeforeMessageSet HealerError = 1
+	fetchResponseTruncatedBeforeMessageSet HealerError = 5
 )
