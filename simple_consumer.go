@@ -149,7 +149,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 
 			if simpleConsumer.GroupID != "" {
 				offsetComimtReq := NewOffsetCommitRequest(0, simpleConsumer.ClientID, simpleConsumer.GroupID)
-				offsetComimtReq.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition, offset-1, "")
+				offsetComimtReq.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition, offset, "")
 
 				payload, err := leaderBroker.Request(offsetComimtReq)
 				if err == nil {
