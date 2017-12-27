@@ -37,6 +37,7 @@ func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	return int64(offsetsResponses[0].Info[sc.TopicName][0].Offset[0]), nil
 }
 
+// if offset is -1 or -2, first check if has previous offset committed. it will continue if it exists
 func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
 	var (
 		err          error
@@ -66,6 +67,35 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	}
 
 	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, offset)
+
+	if offset == -1 || offset == -2 {
+		r := NewOffsetFetchRequest(0, simpleConsumer.ClientID, simpleConsumer.GroupID)
+		r.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition)
+
+		response, err := simpleConsumer.Brokers.Request(r)
+		if err != nil {
+			glog.Fatal("request fetch offset for [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+		}
+
+		res, err := NewOffsetFetchResponse(response)
+		if res == nil {
+			glog.Fatalf("decode offset fetch response error:%s", err)
+		}
+
+		for _, t := range res.Topics {
+			if t.Topic != simpleConsumer.TopicName {
+				continue
+			}
+			for _, p := range t.Partitions {
+				if int32(p.PartitionID) == simpleConsumer.Partition {
+					offset = p.Offset
+					break
+				}
+			}
+		}
+
+		glog.Infof("consume [%s][%d] from %d", simpleConsumer.TopicName, simpleConsumer.Partition, offset)
+	}
 
 	if offset == -1 {
 		offset, err = simpleConsumer.getOffset(false)
