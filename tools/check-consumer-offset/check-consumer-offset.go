@@ -72,6 +72,7 @@ func main() {
 			if p.ErrorCode == 0 {
 				fmt.Printf("%s:%d:%d\n", t.Topic, p.PartitionID, p.Offset)
 			} else {
+				// TODO: print error message
 				fmt.Printf("%s:%d:%d\n", t.Topic, p.PartitionID, p.Offset)
 			}
 		}
