@@ -14,6 +14,8 @@ type SimpleConsumer struct {
 	MaxWaitTime int32
 	MinBytes    int32
 
+	stop bool
+
 	GroupID string // commit offset if groupID is not ""
 }
 
@@ -44,6 +46,9 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		leaderBroker *Broker
 		leaderID     int32
 	)
+
+	simpleConsumer.stop = false
+
 	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
 		//TODO NO fatal but return error
@@ -113,7 +118,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		messages = messageChan
 	}
 	go func(messages chan *FullMessage) {
-		for {
+		for simpleConsumer.stop == false {
 			// TODO set CorrelationID to 0 firstly and then set by broker
 			fetchRequest := NewFetchRequest(0, simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
 			fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, offset, simpleConsumer.MaxBytes)
@@ -130,7 +135,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				more:        true,
 			}
 			go fetchResponseStreamDecoder.consumeFetchResponse()
-			for {
+			for simpleConsumer.stop == false {
 				message, more := <-innerMessages
 				if more {
 					//glog.V(10).Infof("more message: %d %s", message.Offset, string(message.Value))
