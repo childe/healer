@@ -34,8 +34,8 @@ MemberAssignment => Version PartitionAssignment
 --- --- --- --- --- --- --- ---*/
 
 type PartitionAssignment struct {
-	Topic     string
-	Partition int32
+	Topic      string
+	Partitions []int32
 }
 
 type MemberAssignment struct {
@@ -47,7 +47,8 @@ type MemberAssignment struct {
 func (memberAssignment *MemberAssignment) Length() int {
 	length := 2 + 4
 	for _, p := range memberAssignment.PartitionAssignments {
-		length += 2 + len(p.Topic) + 4
+		length += 2 + len(p.Topic)
+		length += 4 + len(p.Partitions)*4
 	}
 	length += 4 + len(memberAssignment.UserData)
 	return length
@@ -69,8 +70,13 @@ func (memberAssignment *MemberAssignment) Encode() []byte {
 		copy(payload[offset:], p.Topic)
 		offset += len(p.Topic)
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(p.Partition))
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(p.Partitions)))
 		offset += 4
+
+		for _, partitionID := range p.Partitions {
+			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionID))
+			offset += 4
+		}
 	}
 	copy(payload[offset:], memberAssignment.UserData)
 
@@ -90,16 +96,19 @@ func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 	r.PartitionAssignments = make([]*PartitionAssignment, count)
 
 	for i := 0; i < count; i++ {
+		r.PartitionAssignments[i] = &PartitionAssignment{}
 		topicLength := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
-		topic := string(payload[offset : offset+topicLength])
+		r.PartitionAssignments[i].Topic = string(payload[offset : offset+topicLength])
 		offset += topicLength
-		partition := int32(binary.BigEndian.Uint32(payload[offset:]))
-		offset += 4
 
-		r.PartitionAssignments[i] = &PartitionAssignment{
-			Topic:     topic,
-			Partition: partition,
+		count := int(binary.BigEndian.Uint32(payload[offset:]))
+		offset += 4
+		r.PartitionAssignments[i].Partitions = make([]int32, count)
+		for j := 0; j < count; j++ {
+			p := int32(binary.BigEndian.Uint32(payload[offset:]))
+			offset += 4
+			r.PartitionAssignments[i].Partitions[j] = p
 		}
 	}
 

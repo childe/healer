@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/json"
+	"io"
 	"sync"
 	"time"
 
@@ -92,7 +93,7 @@ func (c *GroupConsumer) getCoordinator() error {
 
 // join && set generationID&memberID
 func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
-	// join
+	glog.Info("try to join group")
 	var (
 		protocolType string = "consumer"
 		memberID     string = ""
@@ -108,11 +109,10 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	joinGroupResponse, err := c.coordinator.requestJoinGroup(
 		c.clientID, c.groupID, int32(c.sessionTimeout), memberID, protocolType,
 		gps)
+
 	if err != nil {
-		glog.Fatalf("could not join group:%s", err)
+		return nil, err
 	}
-	b, _ := json.Marshal(joinGroupResponse)
-	glog.V(5).Infof("joingroup response:%s", b)
 
 	c.generationID = joinGroupResponse.GenerationID
 	c.memberID = joinGroupResponse.MemberID
@@ -133,6 +133,7 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 
 //TODO need SyncGroupResponse returned?
 func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
+	glog.Info("try to sync group")
 	var groupAssignment GroupAssignment
 	if c.ifLeader {
 		groupAssignment = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
@@ -148,10 +149,6 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 		return nil, err
 	}
 
-	b, _ := json.Marshal(syncGroupResponse)
-	glog.V(5).Infof("syncgroup response:%s", b)
-	glog.V(5).Infof("%v", syncGroupResponse)
-
 	c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
 
 	return syncGroupResponse, nil
@@ -163,31 +160,51 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 		return err
 	}
 	c.partitionAssignments = memberAssignment.PartitionAssignments
-	c.simpleConsumers = make([]*SimpleConsumer, len(c.partitionAssignments))
+	c.simpleConsumers = make([]*SimpleConsumer, 0)
 
-	for i, partitionAssignment := range c.partitionAssignments {
-		simpleConsumer := &SimpleConsumer{}
-		simpleConsumer.ClientID = c.clientID
-		simpleConsumer.Brokers = c.brokers
-		simpleConsumer.TopicName = partitionAssignment.Topic
-		simpleConsumer.Partition = partitionAssignment.Partition
-		simpleConsumer.MaxWaitTime = c.maxWaitTime
-		simpleConsumer.MaxBytes = c.maxBytes
-		simpleConsumer.MinBytes = c.minBytes
-		simpleConsumer.GroupID = c.groupID
+	for _, partitionAssignment := range c.partitionAssignments {
+		for _, partitionID := range partitionAssignment.Partitions {
+			simpleConsumer := &SimpleConsumer{}
+			simpleConsumer.ClientID = c.clientID
+			simpleConsumer.Brokers = c.brokers
+			simpleConsumer.TopicName = partitionAssignment.Topic
+			simpleConsumer.Partition = partitionID
+			simpleConsumer.MaxWaitTime = c.maxWaitTime
+			simpleConsumer.MaxBytes = c.maxBytes
+			simpleConsumer.MinBytes = c.minBytes
+			simpleConsumer.GroupID = c.groupID
 
-		c.simpleConsumers[i] = simpleConsumer
+			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
+		}
 	}
 
 	return nil
 }
 
 func (c *GroupConsumer) joinAndSync() {
-	c.mutex.Lock()
-	// TODO: handle error
-	c.join()
-	c.sync()
-	c.mutex.Unlock()
+	for {
+		joinRes, err := c.join()
+		if err != nil {
+			glog.Infof("join error:%s", err)
+			time.Sleep(time.Second * 1)
+			continue
+		} else {
+			b, _ := json.Marshal(joinRes)
+			glog.V(5).Infof("join response:%s", b)
+		}
+
+		syncRes, err := c.sync()
+		if err != nil {
+			glog.Infof("sync error:%s", err)
+			time.Sleep(time.Second * 1)
+			continue
+		} else {
+			b, _ := json.Marshal(syncRes)
+			glog.V(5).Infof("sync response:%s", b)
+		}
+
+		return
+	}
 }
 
 // connection is reset
@@ -199,12 +216,20 @@ func (c *GroupConsumer) restart() {
 }
 
 func (c *GroupConsumer) heartbeat() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	glog.V(10).Infof("generationID:%d memberID:%s", c.generationID, c.memberID)
 	r, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
 	if err != nil {
 		glog.Errorf("failed to send heartbeat:%s", err)
 
 		//The group is rebalancing, so a rejoin is needed
 		if err == AllError[27] {
+			glog.Info("rejoin because of rebalancing")
+			c.joinAndSync()
+		} else if err == io.EOF {
+			glog.Info("rejoin because of EOF")
 			c.joinAndSync()
 		}
 	}
