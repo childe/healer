@@ -109,7 +109,7 @@ func (r *SyncGroupRequest) Encode() []byte {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(x.MemberAssignment)))
 		offset += 4
 		copy(payload[offset:], x.MemberAssignment)
-		offset += len(x.MemberID)
+		offset += len(x.MemberAssignment)
 	}
 
 	return payload
