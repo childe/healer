@@ -39,6 +39,10 @@ func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	return int64(offsetsResponses[0].Info[sc.TopicName][0].Offset[0]), nil
 }
 
+func (simpleConsumer *SimpleConsumer) Stop() {
+	simpleConsumer.stop = true
+}
+
 // if offset is -1 or -2, first check if has previous offset committed. it will continue if it exists
 func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
 	var (

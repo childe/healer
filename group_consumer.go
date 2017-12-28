@@ -2,7 +2,6 @@ package healer
 
 import (
 	"encoding/json"
-	"io"
 	"sync"
 	"time"
 
@@ -30,6 +29,8 @@ type GroupConsumer struct {
 	partitionAssignments []*PartitionAssignment
 	topicMetadatas       []*TopicMetadata
 	simpleConsumers      []*SimpleConsumer
+
+	messages chan *FullMessage
 
 	mutex              sync.Locker
 	assignmentStrategy AssignmentStrategy
@@ -149,6 +150,8 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 		return nil, err
 	}
 
+	glog.Info(syncGroupResponse)
+
 	c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
 
 	return syncGroupResponse, nil
@@ -220,25 +223,32 @@ func (c *GroupConsumer) heartbeat() {
 	defer c.mutex.Unlock()
 
 	glog.V(10).Infof("generationID:%d memberID:%s", c.generationID, c.memberID)
-	r, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
+	_, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
 	if err != nil {
 		glog.Errorf("failed to send heartbeat:%s", err)
 
 		//The group is rebalancing, so a rejoin is needed
 		if err == AllError[27] {
-			glog.Info("rejoin because of rebalancing")
-			c.joinAndSync()
-		} else if err == io.EOF {
-			glog.Info("rejoin because of EOF")
-			c.joinAndSync()
+			glog.Info("restart because of rebalancing")
+			c.stop()
+			c.Consume(c.fromBeginning, c.messages)
+		} else {
+			//TODO fatal?
+			glog.Fatalf("heart exception:%s", err)
 		}
 	}
-	if r != nil {
-		glog.V(8).Infof("heartbeat errorcode:%d", r.ErrorCode)
+}
+
+func (c *GroupConsumer) stop() {
+	if c.simpleConsumers != nil {
+		for _, simpleConsumer := range c.simpleConsumers {
+			simpleConsumer.Stop()
+		}
 	}
 }
 
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
+	c.fromBeginning = fromBeginning
 	err := c.getCoordinator()
 	if err != nil {
 		glog.Fatalf("could not find coordinator:%s", err)
@@ -259,6 +269,8 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 	if messages == nil {
 		messages = make(chan *FullMessage, 10)
 	}
+	c.messages = messages
+
 	for _, simpleConsumer := range c.simpleConsumers {
 		var offset int64
 		if fromBeginning {
