@@ -23,6 +23,8 @@ type Broker struct {
 	correlationID uint32
 
 	mux sync.Mutex
+
+	dead bool
 }
 
 var defaultClientID = "healer"
@@ -39,6 +41,7 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 		timeout: time.Duration(timeout),
 
 		correlationID: 0,
+		dead:          true,
 	}
 
 	conn, err := net.DialTimeout("tcp4", address, time.Duration(connecTimeout)*time.Second)
@@ -46,6 +49,7 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
 	broker.conn = conn
+	broker.dead = false
 
 	// TODO since ??
 	//apiVersionsResponse, err := broker.requestApiVersions()
@@ -59,6 +63,10 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 
 func (broker *Broker) Close() {
 	broker.conn.Close()
+}
+
+func (broker *Broker) IsDead() bool {
+	return broker.dead
 }
 
 func (broker *Broker) Request(r Request) ([]byte, error) {
@@ -82,8 +90,17 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
-		if err != nil {
+		if err == io.EOF {
+			broker.dead = true
 			return nil, err
+		}
+		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				glog.V(5).Infof("read timeout:%s", err)
+				continue
+			} else {
+				return nil, err
+			}
 		}
 		if length+l == 4 {
 			break
@@ -102,12 +119,16 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			glog.Errorf("read response error:%s", err)
+			broker.dead = true
 			return nil, err
+		}
+		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				glog.V(5).Infof("read timeout:%s", err)
+				continue
+			} else {
+				return nil, err
+			}
 		}
 
 		readLength += length
@@ -139,13 +160,22 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
+		if err == io.EOF {
+			broker.dead = true
+			return err
+		}
+		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				glog.V(5).Infof("read timeout:%s", err)
+				continue
+			} else {
+				return  err
+			}
+		}
 
 		glog.V(20).Infof("%v", responseLengthBuf[l:length])
 		buffers <- responseLengthBuf[l:length]
 
-		if err != nil {
-			return err
-		}
 		if length+l == 4 {
 			break
 		}
@@ -159,23 +189,23 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	for {
 		buf := make([]byte, 65535)
 		length, err := broker.conn.Read(buf)
-		glog.V(20).Infof("%v", buf[:length])
-		glog.V(15).Infof("read %d bytes response", length)
-		buffers <- buf[:length]
-		//if err == io.EOF {
-		//glog.V(10).Info("read EOF")
-		//return errors.New("encounter EOF while read fetch response")
-		//}
-
+		if err == io.EOF {
+			broker.dead = true
+			return err
+		}
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				glog.V(5).Infof("read timeout:%s", err)
 				continue
 			} else {
-				glog.Errorf("read response error:%s", err)
 				return err
 			}
 		}
+
+		glog.V(20).Infof("%v", buf[:length])
+		glog.V(15).Infof("read %d bytes response", length)
+		buffers <- buf[:length]
+
 		readLength += length
 		glog.V(10).Infof("totally send %d bytes to fetch response payload", readLength+4)
 		if readLength > responseLength {
