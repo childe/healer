@@ -169,7 +169,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 				glog.V(5).Infof("read timeout:%s", err)
 				continue
 			} else {
-				return  err
+				return err
 			}
 		}
 
