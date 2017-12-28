@@ -1,6 +1,10 @@
 package healer
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/golang/glog"
+)
 
 type AssignmentStrategy interface {
 	// generally topicMetadatas is returned by metaDataRequest sent by GroupConsumer
@@ -71,6 +75,8 @@ func (r *RangeAssignmentStrategy) Assign(
 		partitionsAssignments[topicMetadata.TopicName] = r.assignPartitions(len(members), len(topicMetadata.PartitionMetadatas))
 	}
 
+	glog.V(10).Infof("topic partitions assignments:%v", partitionsAssignments)
+
 	groupAssignment := make([]struct {
 		MemberID         string
 		MemberAssignment []byte
@@ -96,7 +102,7 @@ func (r *RangeAssignmentStrategy) Assign(
 
 			for j := 0; j < partitions[1]; j++ {
 				idx := j + partitions[0]
-				partitionAssignment.Partitions = append(partitionAssignment.Partitions, int32(topicMetadata.PartitionMetadatas[idx].PartitionId))
+				partitionAssignment.Partitions[j] = int32(topicMetadata.PartitionMetadatas[idx].PartitionId)
 			}
 			memberAssignments[i].PartitionAssignments = append(memberAssignments[i].PartitionAssignments, partitionAssignment)
 		}
