@@ -92,6 +92,33 @@ func (c *GroupConsumer) getCoordinator() error {
 	return nil
 }
 
+func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) error {
+	memberAssignment, err := NewMemberAssignment(memberAssignmentPayload)
+	if err != nil {
+		return err
+	}
+	c.partitionAssignments = memberAssignment.PartitionAssignments
+	c.simpleConsumers = make([]*SimpleConsumer, 0)
+
+	for _, partitionAssignment := range c.partitionAssignments {
+		for _, partitionID := range partitionAssignment.Partitions {
+			simpleConsumer := &SimpleConsumer{}
+			simpleConsumer.ClientID = c.clientID
+			simpleConsumer.Brokers = c.brokers
+			simpleConsumer.TopicName = partitionAssignment.Topic
+			simpleConsumer.Partition = partitionID
+			simpleConsumer.MaxWaitTime = c.maxWaitTime
+			simpleConsumer.MaxBytes = c.maxBytes
+			simpleConsumer.MinBytes = c.minBytes
+			simpleConsumer.GroupID = c.groupID
+
+			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
+		}
+	}
+
+	return nil
+}
+
 // join && set generationID&memberID
 func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	glog.Info("try to join group")
@@ -157,33 +184,6 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	return syncGroupResponse, nil
 }
 
-func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) error {
-	memberAssignment, err := NewMemberAssignment(memberAssignmentPayload)
-	if err != nil {
-		return err
-	}
-	c.partitionAssignments = memberAssignment.PartitionAssignments
-	c.simpleConsumers = make([]*SimpleConsumer, 0)
-
-	for _, partitionAssignment := range c.partitionAssignments {
-		for _, partitionID := range partitionAssignment.Partitions {
-			simpleConsumer := &SimpleConsumer{}
-			simpleConsumer.ClientID = c.clientID
-			simpleConsumer.Brokers = c.brokers
-			simpleConsumer.TopicName = partitionAssignment.Topic
-			simpleConsumer.Partition = partitionID
-			simpleConsumer.MaxWaitTime = c.maxWaitTime
-			simpleConsumer.MaxBytes = c.maxBytes
-			simpleConsumer.MinBytes = c.minBytes
-			simpleConsumer.GroupID = c.groupID
-
-			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
-		}
-	}
-
-	return nil
-}
-
 func (c *GroupConsumer) joinAndSync() {
 	for {
 		joinRes, err := c.join()
@@ -208,14 +208,6 @@ func (c *GroupConsumer) joinAndSync() {
 
 		return
 	}
-}
-
-// connection is reset
-func (c *GroupConsumer) resetConn() {
-}
-
-// TODO when need?
-func (c *GroupConsumer) restart() {
 }
 
 func (c *GroupConsumer) heartbeat() {
@@ -245,6 +237,11 @@ func (c *GroupConsumer) stop() {
 			simpleConsumer.Stop()
 		}
 	}
+}
+
+func (c *GroupConsumer) Close() {
+	c.stop()
+	c.leave()
 }
 
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
