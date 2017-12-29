@@ -146,15 +146,18 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			for simpleConsumer.stop == false {
 				message, more := <-innerMessages
 				if more {
-					if message.Error == AllError[1] {
+					if message.Error != nil {
 						glog.Info("consumer %s[%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
-						offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
-						if err != nil {
-							glog.Info("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+						if message.Error == AllError[1] {
+							offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
+							if err != nil {
+								glog.Info("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+							}
 						}
+					} else {
+						offset = message.Message.Offset + 1
+						messages <- message
 					}
-					offset = message.Message.Offset + 1
-					messages <- message
 				} else {
 					if buffer, ok := <-buffers; ok {
 						//glog.Info(buffer)
