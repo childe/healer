@@ -147,11 +147,11 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				message, more := <-innerMessages
 				if more {
 					if message.Error != nil {
-						glog.Info("consumer %s[%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+						glog.Infof("consumer %s[%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
 						if message.Error == AllError[1] {
 							offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
 							if err != nil {
-								glog.Info("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+								glog.Infof("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
 							}
 						}
 					} else {
