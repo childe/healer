@@ -1,7 +1,6 @@
 package healer
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -27,15 +26,6 @@ func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeo
 	if err != nil {
 		glog.Infof("could not get metadata from %s:%s", broker.address, err)
 		return nil, err
-	}
-
-	if glog.V(10) {
-		s, err := json.MarshalIndent(metadataResponse, "", "  ")
-		if err != nil {
-			glog.Infof("failed to marshal brokers info from metadata: %s", err)
-		} else {
-			glog.Infof("brokers info from metadata: %s", s)
-		}
 	}
 
 	for _, brokerInfo := range metadataResponse.Brokers {
