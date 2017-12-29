@@ -14,7 +14,8 @@ type SimpleConsumer struct {
 	MaxWaitTime int32
 	MinBytes    int32
 
-	stop bool
+	stop          bool
+	fromBeginning bool
 
 	GroupID string // commit offset if groupID is not ""
 }
@@ -106,10 +107,13 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		glog.Infof("consume [%s][%d] from %d", simpleConsumer.TopicName, simpleConsumer.Partition, offset)
 	}
 
+	// offset not fetched from OffsetFetchRequest
 	if offset == -1 {
-		offset, err = simpleConsumer.getOffset(false)
+		simpleConsumer.fromBeginning = false
+		offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
 	} else if offset == -2 {
-		offset, err = simpleConsumer.getOffset(true)
+		simpleConsumer.fromBeginning = true
+		offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
 	}
 	if err != nil {
 		glog.Fatalf("could not get offset %s[%d]:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
@@ -142,7 +146,13 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			for simpleConsumer.stop == false {
 				message, more := <-innerMessages
 				if more {
-					//glog.V(10).Infof("more message: %d %s", message.Offset, string(message.Value))
+					if message.Error == AllError[1] {
+						glog.Info("consumer %s[%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+						offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
+						if err != nil {
+							glog.Info("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+						}
+					}
 					offset = message.Message.Offset + 1
 					messages <- message
 				} else {

@@ -51,6 +51,7 @@ Value			The value is the actual message contents as an opaque byte array. Kafka 
 type FullMessage struct {
 	TopicName   string
 	PartitionID int32
+	Error       error
 	Message     *Message
 }
 
