@@ -46,6 +46,7 @@ func main() {
 	}
 
 	messages, err := c.Consume(*fromBeginning, nil)
+	defer c.Close()
 	if err != nil {
 		glog.Fatalf("could not get messages channel:%s", err)
 	}

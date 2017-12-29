@@ -177,8 +177,6 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 		return nil, err
 	}
 
-	glog.Info(syncGroupResponse)
-
 	c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
 
 	return syncGroupResponse, nil
@@ -236,6 +234,20 @@ func (c *GroupConsumer) stop() {
 		for _, simpleConsumer := range c.simpleConsumers {
 			simpleConsumer.Stop()
 		}
+	}
+}
+
+func (c *GroupConsumer) leave() {
+	leaveReq := NewLeaveGroupRequest(0, c.clientID, c.groupID, c.memberID)
+	payload, err := c.coordinator.Request(leaveReq)
+	if err != nil {
+		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
+		return
+	}
+
+	_, err = NewLeaveGroupResponse(payload)
+	if err != nil {
+		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
 	}
 }
 
