@@ -210,7 +210,9 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 
 	errorCode = int16(binary.BigEndian.Uint16(streamDecoder.payload[streamDecoder.offset:]))
 	glog.V(10).Infof("errorCode: %d", errorCode)
-	err = getErrorFromErrorCode(errorCode)
+	if errorCode != 0 {
+		err = getErrorFromErrorCode(errorCode)
+	}
 	streamDecoder.offset += 2
 
 	highwaterMarkOffset = int64(binary.BigEndian.Uint64(streamDecoder.payload[streamDecoder.offset:]))
@@ -334,14 +336,14 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 	for ; responsesCount > 0; responsesCount-- {
 		err := streamDecoder.encodeResponses()
 		if err != nil && err != &fetchResponseTruncatedInMessageSet {
-			// TODO could not fatal
 			streamDecoder.messages <- &FullMessage{
 				TopicName:   "",
 				PartitionID: -1,
 				Error:       err,
 				Message:     nil,
 			}
-			glog.Fatal(err)
+			// TODO could not fatal
+			glog.Error(err)
 		}
 	}
 }

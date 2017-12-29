@@ -15,6 +15,9 @@ func (healerError *Error) Error() string {
 var AllError []*Error = make([]*Error, 56)
 
 func getErrorFromErrorCode(errorcode int16) error {
+	if errorcode == 0 {
+		return nil
+	}
 	if errorcode == -1 {
 		return AllError[0]
 	}
