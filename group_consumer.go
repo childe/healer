@@ -224,7 +224,7 @@ func (c *GroupConsumer) heartbeat() {
 			c.Consume(c.fromBeginning, c.messages)
 		} else {
 			//TODO fatal?
-			glog.Fatalf("heart exception:%s", err)
+			glog.Fatalf("heartbeat exception:%s", err)
 		}
 	}
 }
