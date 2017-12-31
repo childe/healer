@@ -36,9 +36,9 @@ type GroupConsumer struct {
 	assignmentStrategy AssignmentStrategy
 }
 
-func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32) (*GroupConsumer, error) {
+func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32, connectTimeout, timeout int) (*GroupConsumer, error) {
 
-	brokers, err := NewBrokers(brokerList, clientID, 0, 0)
+	brokers, err := NewBrokers(brokerList, clientID, connectTimeout, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (c *GroupConsumer) getCoordinator() error {
 		return err
 	}
 
-	coordinatorBroker, err := c.brokers.GetBroker(coordinatorResponse.Coordinator.nodeID)
+	coordinatorBroker, err := c.brokers.NewBroker(coordinatorResponse.Coordinator.nodeID)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func (c *GroupConsumer) heartbeat() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	glog.V(10).Infof("generationID:%d memberID:%s", c.generationID, c.memberID)
+	glog.V(10).Infof("heartbeat generationID:%d memberID:%s", c.generationID, c.memberID)
 	_, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
 	if err != nil {
 		glog.Errorf("failed to send heartbeat:%s", err)
