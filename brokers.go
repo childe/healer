@@ -60,6 +60,30 @@ func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout i
 
 }
 
+//TODO merge with GetBroker
+func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
+	if nodeID == -1 {
+		for nodeID, brokerInfo := range brokers.brokersInfo {
+			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.connecTimeout, brokers.timeout)
+			if err == nil {
+				return broker, nil
+			}
+		}
+		return nil, fmt.Errorf("could not get broker from nodeID[%d]", nodeID)
+	}
+
+	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.connecTimeout, brokers.timeout)
+		if err == nil {
+			return broker, nil
+		} else {
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d)", nodeID, brokerInfo.Host, brokerInfo.Port)
+		}
+	} else {
+		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
+	}
+}
+
 // GetBroke returns random one broker if nodeID is -1
 func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	if nodeID == -1 {
