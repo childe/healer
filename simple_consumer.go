@@ -14,6 +14,8 @@ type SimpleConsumer struct {
 	MaxWaitTime int32
 	MinBytes    int32
 
+	leaderBroker *Broker
+
 	stop          bool
 	fromBeginning bool
 
@@ -47,9 +49,8 @@ func (simpleConsumer *SimpleConsumer) Stop() {
 // if offset is -1 or -2, first check if has previous offset committed. it will continue if it exists
 func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
 	var (
-		err          error
-		leaderBroker *Broker
-		leaderID     int32
+		err      error
+		leaderID int32
 	)
 
 	simpleConsumer.stop = false
@@ -63,17 +64,12 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	}
 
 	// TODO
-	leaderBroker, err = simpleConsumer.Brokers.GetBroker(leaderID)
+	simpleConsumer.leaderBroker, err = simpleConsumer.Brokers.NewBroker(leaderID)
 	if err != nil {
 		//TODO NO fatal but return error
 		glog.Fatalf("could not get broker %d. maybe should refresh metadata.", leaderID)
 	} else {
-		glog.V(10).Infof("got leader broker %s with id %d", leaderBroker.address, leaderID)
-	}
-
-	leaderBroker, err = NewBroker(leaderBroker.address, leaderBroker.nodeID, 30, 60)
-	if err != nil {
-		glog.Fatalf("could not init leader broker:%s", err)
+		glog.V(10).Infof("got leader broker %s with id %d", simpleConsumer.leaderBroker.address, leaderID)
 	}
 
 	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, offset)
@@ -133,7 +129,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 
 			buffers := make(chan []byte, 10)
 			innerMessages := make(chan *FullMessage, 10)
-			go leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
+			go simpleConsumer.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
 				totalLength: 0,
 				offset:      0,
@@ -173,7 +169,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				offsetComimtReq := NewOffsetCommitRequest(0, simpleConsumer.ClientID, simpleConsumer.GroupID)
 				offsetComimtReq.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition, offset, "")
 
-				payload, err := leaderBroker.Request(offsetComimtReq)
+				payload, err := simpleConsumer.leaderBroker.Request(offsetComimtReq)
 				if err == nil {
 					_, err := NewOffsetCommitResponse(payload)
 					if err == nil {
@@ -186,6 +182,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				}
 			}
 		}
+		simpleConsumer.leaderBroker.Close()
 	}(messages)
 
 	return messages, nil
