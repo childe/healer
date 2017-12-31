@@ -157,12 +157,11 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 }
 
 func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
-	glog.V(10).Infof("DecodeToMessageSet %d", len(payload))
 	messageSet := MessageSet{}
 	var offset int = 0
 	payloadLength := len(payload)
 	for {
-		glog.V(10).Infof("offset %d payloadLength %d", offset, payloadLength)
+		glog.V(15).Infof("offset %d payloadLength %d", offset, payloadLength)
 
 		if offset == payloadLength {
 			return messageSet, offset, nil
@@ -178,11 +177,11 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 
 		message := &Message{}
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
-		glog.V(10).Infof("message offset: %d", message.Offset)
+		glog.V(15).Infof("message offset: %d", message.Offset)
 		offset += 8
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(10).Infof("message size: %d", message.MessageSize)
+		glog.V(15).Infof("message size: %d", message.MessageSize)
 		offset += 4
 
 		// TODO do NOT need
@@ -204,7 +203,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		offset++
 
 		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(10).Infof("key length: %d", keyLength)
+		glog.V(15).Infof("key length: %d", keyLength)
 		offset += 4
 		if keyLength == -1 {
 			message.Key = nil
@@ -216,7 +215,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 		}
 
 		valueLength := int(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(10).Infof("value length: %d", valueLength)
+		glog.V(15).Infof("value length: %d", valueLength)
 		offset += 4
 		if valueLength == -1 {
 			message.Value = nil
@@ -228,7 +227,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, int, error) {
 			offset += valueLength
 		}
 		compression := message.Attributes & 0x07
-		glog.V(10).Infof("compression %d", compression)
+		glog.V(15).Infof("compression %d", compression)
 		if compression != COMPRESSION_NONE {
 			value, err := message.decompress()
 			if err != nil {
