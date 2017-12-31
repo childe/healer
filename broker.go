@@ -151,6 +151,9 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	defer broker.mux.Unlock()
 
 	defer close(buffers)
+
+	glog.V(10).Info(broker.conn.LocalAddr())
+	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
 	broker.conn.Write(payload)
 
 	l := 0
@@ -183,11 +186,14 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	glog.V(10).Infof("response length: %d", responseLength)
+	glog.V(10).Infof("total response length should be %d", 4+responseLength)
 
 	readLength := 0
 	for {
 		buf := make([]byte, 65535)
+		if broker.timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		}
 		length, err := broker.conn.Read(buf)
 		if err == io.EOF {
 			broker.dead = true
@@ -202,17 +208,17 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 			}
 		}
 
-		glog.V(20).Infof("%v", buf[:length])
+		glog.V(100).Infof("%v", buf[:length])
 		glog.V(15).Infof("read %d bytes response", length)
 		buffers <- buf[:length]
 
 		readLength += length
-		glog.V(10).Infof("totally send %d bytes to fetch response payload", readLength+4)
+		glog.V(12).Infof("totally send %d/%d bytes to fetch response payload", readLength+4, responseLength+4)
 		if readLength > responseLength {
 			return errors.New("fetch more data than needed while read fetch response")
 		}
 		if readLength == responseLength {
-			glog.V(10).Info("read enough data, return")
+			glog.V(15).Info("read enough data, return")
 			return nil
 		}
 	}
