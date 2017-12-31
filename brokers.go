@@ -88,7 +88,9 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	if nodeID == -1 {
 		for _, broker := range brokers.brokers {
-			return broker, nil
+			if broker.dead == false {
+				return broker, nil
+			}
 		}
 		for nodeID, brokerInfo := range brokers.brokersInfo {
 			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.connecTimeout, brokers.timeout)
@@ -101,7 +103,9 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if broker, ok := brokers.brokers[nodeID]; ok {
-		return broker, nil
+		if broker.dead == false {
+			return broker, nil
+		}
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
