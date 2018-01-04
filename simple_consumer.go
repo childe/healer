@@ -132,7 +132,6 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			go simpleConsumer.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
 				totalLength: 0,
-				offset:      0,
 				length:      0,
 				buffers:     buffers,
 				messages:    innerMessages,

@@ -74,7 +74,6 @@ func (simpleConsumer2 *SimpleConsumer2) Consume(messages chan *FullMessage) erro
 			go leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 			streamDecoder := FetchResponseStreamDecoder{
 				totalLength: 0,
-				offset:      0,
 				length:      0,
 				buffers:     buffers,
 				messages:    innerMessages,

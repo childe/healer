@@ -329,20 +329,6 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 	return findCoordinatorResponse, nil
 }
 
-// TODO should assemble MessageSets streamingly
-func (broker *Broker) requestFetch(fetchRequest *FetchRequest) (*FetchResponse, error) {
-	payload := fetchRequest.Encode()
-
-	responseBuf, err := broker.request(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	fetchResponse := &FetchResponse{}
-	fetchResponse.Decode(responseBuf)
-	return fetchResponse, nil
-}
-
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
 	broker.correlationID++
 	fetchRequest.SetCorrelationID(broker.correlationID)
