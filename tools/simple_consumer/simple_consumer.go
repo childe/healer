@@ -55,6 +55,10 @@ func main() {
 
 	for i := 0; i < *maxMessages; i++ {
 		message := <-messages
+		if message.Error != nil {
+			fmt.Printf("messag error:%s\n", message.Error)
+			return
+		}
 		fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
 	}
 }
