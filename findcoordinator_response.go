@@ -6,9 +6,9 @@ import (
 )
 
 type Coordinator struct {
-	nodeID int32
-	host   string
-	port   int32
+	NodeID int32
+	Host   string
+	Port   int32
 }
 
 type FindCoordinatorResponse struct {
@@ -35,15 +35,15 @@ func NewFindCoordinatorResponse(payload []byte) (*FindCoordinatorResponse, error
 	coordinator := &Coordinator{}
 	findCoordinatorResponse.Coordinator = coordinator
 
-	coordinator.nodeID = int32(binary.BigEndian.Uint32(payload[offset:]))
+	coordinator.NodeID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	hostLength := int(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
-	coordinator.host = string(payload[offset : offset+hostLength])
+	coordinator.Host = string(payload[offset : offset+hostLength])
 	offset += hostLength
 
-	coordinator.port = int32(binary.BigEndian.Uint32(payload[offset:]))
+	coordinator.Port = int32(binary.BigEndian.Uint32(payload[offset:]))
 
 	return findCoordinatorResponse, nil
 }
