@@ -20,6 +20,9 @@ type Broker struct {
 	timeout       time.Duration // Second
 	connecTimeout time.Duration // Second
 
+	//since each client should have one broker, so maybe broker should has the same clientID with client?
+	//clientID string
+
 	correlationID uint32
 
 	mux sync.Mutex
