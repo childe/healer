@@ -2,6 +2,9 @@ package healer
 
 import (
 	"encoding/json"
+	"math"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -36,12 +39,70 @@ type GroupConsumer struct {
 	assignmentStrategy AssignmentStrategy
 }
 
-func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32, connectTimeout, timeout int) (*GroupConsumer, error) {
+//func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32, connectTimeout, timeout int) (*GroupConsumer, error) {
+func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
+	var (
+		topic          string
+		groupID        string
+		clientID       string
+		sessionTimeout int
+		maxWaitTime    int32
+		minBytes       int32
+		maxBytes       int32
+		connectTimeout int
+		timeout        int
+	)
 
-	brokers, err := NewBrokers(brokerList, clientID, connectTimeout, timeout)
+	topic = config["topic"].(string)
+	groupID = config["groupID"].(string)
+	if v, ok := config["clientID"]; ok {
+		clientID = v.(string)
+	} else {
+		ts := strconv.Itoa(int(time.Now().Unix()))
+		hostname, err := os.Hostname()
+		if err != nil {
+			glog.Infof("could not get hostname for clientID:%s", err)
+			clientID = ts
+		} else {
+			clientID = ts + "-" + hostname
+		}
+	}
+	if v, ok := config["sessionTimeout"]; ok {
+		sessionTimeout = v.(int)
+	} else {
+		sessionTimeout = 30000
+	}
+	if v, ok := config["maxWaitTime"]; ok {
+		maxWaitTime = v.(int32)
+	} else {
+		maxWaitTime = 10000
+	}
+	if v, ok := config["minBytes"]; ok {
+		minBytes = v.(int32)
+	} else {
+		minBytes = 1
+	}
+	if v, ok := config["maxBytes"]; ok {
+		maxBytes = v.(int32)
+	} else {
+		maxBytes = math.MaxInt32
+	}
+	if v, ok := config["connectTimeout"]; ok {
+		connectTimeout = v.(int)
+	} else {
+		connectTimeout = 30
+	}
+	if v, ok := config["timeout"]; ok {
+		timeout = v.(int)
+	} else {
+		timeout = 10
+	}
+
+	brokers, err := NewBrokers(config["brokers"].(string), clientID, connectTimeout, timeout)
 	if err != nil {
 		return nil, err
 	}
+
 	c := &GroupConsumer{
 		brokers:        brokers,
 		topic:          topic,

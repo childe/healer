@@ -14,6 +14,8 @@ type Brokers struct {
 	timeout       int
 }
 
+// get all brokers meda info from MetaData api
+// it DON'T create connection to each broker
 func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
 	brokers := &Brokers{
 		connecTimeout: connecTimeout,

@@ -13,7 +13,7 @@ import (
 var (
 	brokers        = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic          = flag.String("topic", "", "REQUIRED: The topic to consume from.")
-	clientID       = flag.String("clientID", "healer", "The ID of this client.")
+	clientID       = flag.String("clientID", "", "The ID of this client.")
 	groupID        = flag.String("groupID", "", "REQUIRED: The ID of this client.")
 	minBytes       = flag.Int("min-bytes", 1, "The fetch size of each request.")
 	fromBeginning  = flag.Bool("from-beginning", false, "default false")
@@ -40,7 +40,21 @@ func main() {
 		os.Exit(4)
 	}
 
-	c, err := healer.NewGroupConsumer(*brokers, *topic, *clientID, *groupID, *sessionTimeout, int32(*maxWaitTime), int32(*minBytes), int32(*maxBytes), *connectTimeout, *timeout)
+	config := make(map[string]interface{})
+	config["brokers"] = *brokers
+	config["topic"] = *topic
+	config["groupID"] = *groupID
+	if *clientID != "" {
+		config["clientID"] = *clientID
+	}
+	config["sessionTimeout"] = *sessionTimeout
+	config["maxWaitTime"] = int32(*maxWaitTime)
+	config["minBytes"] = int32(*minBytes)
+	config["maxBytes"] = int32(*maxBytes)
+	config["connectTimeout"] = *connectTimeout
+	config["timeout"] = *timeout
+
+	c, err := healer.NewGroupConsumer(config)
 	if err != nil {
 		glog.Fatalf("could not init GroupConsumer:%s", err)
 	}
