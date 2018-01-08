@@ -67,6 +67,11 @@ func init() {
 		ErrorMsg:  "NOT_LEADER_FOR_PARTITION",
 		ErrorDesc: "This server is not the leader for that topic-partition.",
 	}
+	AllError[16] = &Error{
+		Errorcode: 16,
+		ErrorMsg:  "NOT_COORDINATOR",
+		ErrorDesc: "This is not the correct coordinator.",
+	}
 	AllError[17] = &Error{
 		Errorcode: 17,
 		ErrorMsg:  "INVALID_TOPIC_EXCEPTION",
