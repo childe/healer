@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -63,9 +64,9 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		hostname, err := os.Hostname()
 		if err != nil {
 			glog.Infof("could not get hostname for clientID:%s", err)
-			clientID += ts
+			clientID = fmt.Sprintf("%s-%s", clientID, ts)
 		} else {
-			clientID += ts + "-" + hostname
+			clientID = fmt.Sprintf("%s-%s-%s", clientID, ts, hostname)
 		}
 	}
 	if v, ok := config["sessionTimeout"]; ok {
@@ -144,7 +145,7 @@ func (c *GroupConsumer) getCoordinator() error {
 		return err
 	}
 
-	coordinatorBroker, err := c.brokers.NewBroker(coordinatorResponse.Coordinator.nodeID)
+	coordinatorBroker, err := c.brokers.NewBroker(coordinatorResponse.Coordinator.NodeID)
 	if err != nil {
 		return err
 	}
