@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
@@ -16,14 +15,14 @@ var (
 	clientID       = flag.String("clientID", "healer", "The ID of this client.")
 	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
 	timeout        = flag.Int("timeout", 30, "default 30 Second. read timeout from connection to broker")
-	groups         = flag.String("groups", "", "space splited group list")
+	groupID        = flag.String("groupID", "", "REQUIRED. groupID need to be described")
 )
 
 func main() {
 	flag.Parse()
 
-	if *groups == "" {
-		glog.Error("need groups")
+	if *groupID == "" {
+		glog.Error("need groupID")
 		flag.PrintDefaults()
 		os.Exit(4)
 	}
@@ -34,10 +33,30 @@ func main() {
 		os.Exit(5)
 	}
 
-	response, err := brokers.RequestDescribeGroups(*clientID, strings.Split(*groups, " "))
+	coordinatorResponse, err := brokers.FindCoordinator(*clientID, *groupID)
+	if err != nil {
+		glog.Errorf("failed to request coordinator api for group [%s]", *groupID)
+		os.Exit(5)
+	}
+	coordinatorBroker, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+	if err != nil {
+		glog.Errorf("failed to get coordinator broker[%d]", coordinatorResponse.Coordinator.NodeID)
+		os.Exit(5)
+	}
+	glog.Infof("coordinator for group[%s]:%s", groupID, coordinatorBroker.GetAddress())
+
+	req := healer.NewDescribeGroupsRequest(0, *clientID, []string{*groupID})
+
+	responseBytes, err := coordinatorBroker.Request(req)
+	if err != nil {
+		glog.Errorf("failed to request describe group api:%s", err)
+		os.Exit(5)
+	}
+
+	response, err := healer.NewDescribeGroupsResponse(responseBytes)
 
 	if err != nil {
-		glog.Errorf("failed to get describe groups response:%s", err)
+		glog.Errorf("failed to decode describe groups response from response bytes:%s", err)
 		os.Exit(5)
 	}
 
