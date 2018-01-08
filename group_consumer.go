@@ -58,13 +58,14 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["clientID"]; ok {
 		clientID = v.(string)
 	} else {
+		clientID = groupID
 		ts := strconv.Itoa(int(time.Now().Unix()))
 		hostname, err := os.Hostname()
 		if err != nil {
 			glog.Infof("could not get hostname for clientID:%s", err)
-			clientID = ts
+			clientID += ts
 		} else {
-			clientID = ts + "-" + hostname
+			clientID += ts + "-" + hostname
 		}
 	}
 	if v, ok := config["sessionTimeout"]; ok {
