@@ -30,8 +30,6 @@ type Broker struct {
 	dead bool
 }
 
-var defaultClientID = "healer"
-
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
 func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*Broker, error) {
@@ -62,6 +60,10 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 	//broker.apiVersions = apiVersionsResponse.ApiVersions
 
 	return broker, nil
+}
+
+func (broker *Broker) GetAddress() string {
+	return broker.address
 }
 
 func (broker *Broker) Close() {
