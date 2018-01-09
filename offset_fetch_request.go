@@ -34,7 +34,7 @@ type OffsetFetchRequest struct {
 func NewOffsetFetchRequest(correlationID uint32, clientID, groupID string) *OffsetFetchRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:        API_OffsetFetchRequest,
-		ApiVersion:    0,
+		ApiVersion:    1,
 		CorrelationID: correlationID,
 		ClientId:      clientID,
 	}
