@@ -31,12 +31,11 @@ type OffsetFetchRequest struct {
 }
 
 // request only ONE topic
-func NewOffsetFetchRequest(correlationID uint32, clientID, groupID string) *OffsetFetchRequest {
+func NewOffsetFetchRequest(apiVersion uint16, clientID, groupID string) *OffsetFetchRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_OffsetFetchRequest,
-		ApiVersion:    1,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_OffsetFetchRequest,
+		ApiVersion: apiVersion,
+		ClientId:   clientID,
 	}
 
 	r := &OffsetFetchRequest{
