@@ -19,7 +19,9 @@ type SimpleConsumer struct {
 	stop          bool
 	fromBeginning bool
 
-	GroupID string // commit offset if groupID is not ""
+	GroupID      string // commit offset if groupID is not ""
+	MemberID     string
+	GenerationID int32
 }
 
 func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
@@ -165,7 +167,10 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			}
 
 			if simpleConsumer.GroupID != "" {
-				offsetComimtReq := NewOffsetCommitRequest(0, simpleConsumer.ClientID, simpleConsumer.GroupID)
+				offsetComimtReq := NewOffsetCommitRequest(2, simpleConsumer.ClientID, simpleConsumer.GroupID)
+				offsetComimtReq.SetMemberID(simpleConsumer.MemberID)
+				offsetComimtReq.SetGenerationID(simpleConsumer.GenerationID)
+				offsetComimtReq.SetRetentionTime(-1)
 				offsetComimtReq.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition, offset, "")
 
 				payload, err := simpleConsumer.leaderBroker.Request(offsetComimtReq)

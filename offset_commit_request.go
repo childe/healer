@@ -1,5 +1,6 @@
 package healer
 
+//TODO v1
 /*
 OffsetCommit Request (Version: 0) => group_id [topics]
   group_id => STRING
@@ -10,14 +11,40 @@ OffsetCommit Request (Version: 0) => group_id [topics]
       offset => INT64
       metadata => NULLABLE_STRING
 
+OffsetCommit Request (Version: 1) => group_id generation_id member_id [topics]
+  group_id => STRING
+  generation_id => INT32
+  member_id => STRING
+  topics => topic [partitions]
+    topic => STRING
+    partitions => partition offset timestamp metadata
+      partition => INT32
+      offset => INT64
+      timestamp => INT64
+      metadata => NULLABLE_STRING
+
+OffsetCommit Request (Version: 2) => group_id generation_id member_id retention_time [topics]
+  group_id => STRING
+  generation_id => INT32
+  member_id => STRING
+  retention_time => INT64
+  topics => topic [partitions]
+    topic => STRING
+    partitions => partition offset metadata
+      partition => INT32
+      offset => INT64
+      metadata => NULLABLE_STRING
+
 group_id	The unique group identifier
+generation_id	The generation of the group.
+member_id	The member id assigned by the group coordinator or null if joining for the first time.
+retention_time	Time period in ms to retain the offset.
 topics	Topics to commit offsets.
 topic	Name of topic
 partitions	Partitions to commit offsets.
 partition	Topic partition id
 offset	Message offset to be committed.
-metadata	Any associated metadata the client wants to keep.
-*/
+metadata	Any associated metadata the client wants to keep.*/
 
 import (
 	"encoding/binary"
@@ -36,16 +63,18 @@ type OffsetCommitRequestTopic struct {
 type OffsetCommitRequest struct {
 	RequestHeader *RequestHeader
 	GroupID       string
+	GenerationID  int32
+	MemberID      string
+	RetentionTime int64
 	Topics        []*OffsetCommitRequestTopic
 }
 
 // request only ONE topic
-func NewOffsetCommitRequest(correlationID uint32, clientID, groupID string) *OffsetCommitRequest {
+func NewOffsetCommitRequest(apiVersion uint16, clientID, groupID string) *OffsetCommitRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_OffsetCommitRequest,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_OffsetCommitRequest,
+		ApiVersion: apiVersion,
+		ClientId:   clientID,
 	}
 
 	r := &OffsetCommitRequest{
@@ -56,6 +85,18 @@ func NewOffsetCommitRequest(correlationID uint32, clientID, groupID string) *Off
 	r.Topics = make([]*OffsetCommitRequestTopic, 0)
 
 	return r
+}
+
+func (r *OffsetCommitRequest) SetGenerationID(generationID int32) {
+	r.GenerationID = generationID
+}
+
+func (r *OffsetCommitRequest) SetMemberID(memberID string) {
+	r.MemberID = memberID
+}
+
+func (r *OffsetCommitRequest) SetRetentionTime(retentionTime int64) {
+	r.RetentionTime = retentionTime
 }
 
 func (r *OffsetCommitRequest) AddPartiton(topic string, partitionID int32, offset int64, metadata string) {
@@ -99,6 +140,10 @@ func (r *OffsetCommitRequest) Length() int {
 	l := r.RequestHeader.length()
 	l += 2 + len(r.GroupID)
 
+	if r.APIVersion() == 2 {
+		l += 4 + 2 + len(r.MemberID) + 8
+	}
+
 	l += 4
 	for _, t := range r.Topics {
 		l += 2 + len(t.Topic)
@@ -123,6 +168,19 @@ func (r *OffsetCommitRequest) Encode() []byte {
 	offset += 2
 	copy(payload[offset:], r.GroupID)
 	offset += len(r.GroupID)
+
+	if r.APIVersion() == 2 {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(r.GenerationID))
+		offset += 4
+
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.MemberID)))
+		offset += 2
+		copy(payload[offset:], r.MemberID)
+		offset += len(r.MemberID)
+
+		binary.BigEndian.PutUint64(payload[offset:], uint64(r.RetentionTime))
+		offset += 8
+	}
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Topics)))
 	offset += 4
@@ -150,6 +208,10 @@ func (r *OffsetCommitRequest) Encode() []byte {
 	}
 
 	return payload
+}
+
+func (req *OffsetCommitRequest) APIVersion() uint16 {
+	return req.RequestHeader.ApiVersion
 }
 
 func (req *OffsetCommitRequest) API() uint16 {
