@@ -14,14 +14,13 @@ type SimpleConsumer struct {
 	MaxWaitTime int32
 	MinBytes    int32
 
+	GroupID      string
 	leaderBroker *Broker
 
 	stop          bool
 	fromBeginning bool
 
-	GroupID      string // commit offset if groupID is not ""
-	MemberID     string
-	GenerationID int32
+	BelongTO *GroupConsumer
 }
 
 func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
@@ -77,7 +76,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, offset)
 
 	if offset == -1 || offset == -2 {
-		r := NewOffsetFetchRequest(0, simpleConsumer.ClientID, simpleConsumer.GroupID)
+		r := NewOffsetFetchRequest(1, simpleConsumer.ClientID, simpleConsumer.GroupID)
 		r.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition)
 
 		response, err := simpleConsumer.Brokers.Request(r)
@@ -166,24 +165,8 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				}
 			}
 
-			if simpleConsumer.GroupID != "" {
-				offsetComimtReq := NewOffsetCommitRequest(2, simpleConsumer.ClientID, simpleConsumer.GroupID)
-				offsetComimtReq.SetMemberID(simpleConsumer.MemberID)
-				offsetComimtReq.SetGenerationID(simpleConsumer.GenerationID)
-				offsetComimtReq.SetRetentionTime(-1)
-				offsetComimtReq.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition, offset, "")
-
-				payload, err := simpleConsumer.leaderBroker.Request(offsetComimtReq)
-				if err == nil {
-					_, err := NewOffsetCommitResponse(payload)
-					if err == nil {
-						glog.V(5).Infof("commit offset [%s][%d]:%d", simpleConsumer.TopicName, simpleConsumer.Partition, offset-1)
-					} else {
-						glog.Infof("commit offset [%s][%d]:%d error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, offset-1, err)
-					}
-				} else {
-					glog.Infof("commit offset [%s][%d]:%d error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, offset-1, err)
-				}
+			if simpleConsumer.BelongTO != nil {
+				simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, offset)
 			}
 		}
 		simpleConsumer.leaderBroker.Close()

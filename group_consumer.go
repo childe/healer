@@ -175,8 +175,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 			simpleConsumer.MinBytes = c.minBytes
 
 			simpleConsumer.GroupID = c.groupID
-			simpleConsumer.MemberID = c.memberID
-			simpleConsumer.GenerationID = c.generationID
+			simpleConsumer.BelongTO = c
 
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 		}
@@ -292,6 +291,26 @@ func (c *GroupConsumer) heartbeat() {
 			//TODO fatal?
 			glog.Fatalf("heartbeat exception:%s", err)
 		}
+	}
+}
+
+func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
+	offsetComimtReq := NewOffsetCommitRequest(2, c.clientID, c.groupID)
+	offsetComimtReq.SetMemberID(c.memberID)
+	offsetComimtReq.SetGenerationID(c.generationID)
+	offsetComimtReq.SetRetentionTime(-1)
+	offsetComimtReq.AddPartiton(topic, partitionID, offset, "")
+
+	payload, err := c.coordinator.Request(offsetComimtReq)
+	if err == nil {
+		_, err := NewOffsetCommitResponse(payload)
+		if err == nil {
+			glog.V(5).Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
+		} else {
+			glog.Infof("commit offset [%s][%d]:%d error:%s", topic, partitionID, offset, err)
+		}
+	} else {
+		glog.Infof("commit offset [%s][%d]:%d error:%s", topic, partitionID, offset, err)
 	}
 }
 
