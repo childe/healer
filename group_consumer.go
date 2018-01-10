@@ -60,7 +60,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		clientID = v.(string)
 	} else {
 		clientID = groupID
-		ts := strconv.Itoa(int(time.Now().Unix()))
+		ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
 		hostname, err := os.Hostname()
 		if err != nil {
 			glog.Infof("could not get hostname for clientID:%s", err)
@@ -343,7 +343,17 @@ func (c *GroupConsumer) Close() {
 
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	c.fromBeginning = fromBeginning
-	err := c.getCoordinator()
+
+	// TODO put retry to brokers?
+	var err error
+	for i := 0; i < 3; i++ {
+		err = c.getCoordinator()
+		if err != nil {
+			glog.Errorf("could not find coordinator:%s", err)
+		} else {
+			break
+		}
+	}
 	if err != nil {
 		glog.Fatalf("could not find coordinator:%s", err)
 	}
