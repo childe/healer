@@ -174,7 +174,6 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 			simpleConsumer.MaxBytes = c.maxBytes
 			simpleConsumer.MinBytes = c.minBytes
 
-			simpleConsumer.GroupID = c.groupID
 			simpleConsumer.BelongTO = c
 
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
