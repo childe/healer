@@ -12,29 +12,11 @@ type Consumer struct {
 	MaxWaitTime int32
 	MinBytes    int32
 
-	SimpleConsumer2s map[int32]*SimpleConsumer2 // leaderID:*SimpleConsumer2
+	SimpleConsumers []*SimpleConsumer
 }
 
 func NewConsumer(brokers *Brokers) *Consumer {
 	return nil
-}
-
-func findOffset(topicName string, partitionID int32, offsetsResponses []*OffsetsResponse) int64 {
-	for _, offsetsResponse := range offsetsResponses {
-		for _topicName, partitionOffsets := range offsetsResponse.Info {
-			if topicName != _topicName {
-				continue
-			}
-			for _, partitionOffset := range partitionOffsets {
-				if int32(partitionOffset.Partition) == partitionID {
-					if len(partitionOffset.Offset) > 0 {
-						return int64(partitionOffset.Offset[0])
-					}
-				}
-			}
-		}
-	}
-	return -1
 }
 
 func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
@@ -57,37 +39,35 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	}
 	glog.V(10).Info(offsetsResponses)
 
-	consumer.SimpleConsumer2s = make(map[int32]*SimpleConsumer2)
+	consumer.SimpleConsumers = make([]*SimpleConsumer, 0)
 
 	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
 		topicName := topicMetadatas.TopicName
 		for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 			partitionID := int32(partitionMetadataInfo.PartitionId)
-			leaderID := partitionMetadataInfo.Leader
-			offset := findOffset(topicName, partitionID, offsetsResponses)
-			if _, ok := consumer.SimpleConsumer2s[leaderID]; ok {
-				consumer.SimpleConsumer2s[leaderID].addPartition(partitionID, offset)
-			} else {
-				simpleConsumer2 := &SimpleConsumer2{
-					Partitions:  make(map[int32]int64),
-					Brokers:     consumer.Brokers,
-					TopicName:   topicName,
-					ClientID:    consumer.ClientID,
-					MaxBytes:    consumer.MaxBytes,
-					MaxWaitTime: consumer.MaxWaitTime,
-					MinBytes:    consumer.MinBytes,
-				}
-				simpleConsumer2.addPartition(partitionID, offset)
-
-				consumer.SimpleConsumer2s[leaderID] = simpleConsumer2
+			simpleConsumer := &SimpleConsumer{
+				Partition:   partitionID,
+				Brokers:     consumer.Brokers,
+				TopicName:   topicName,
+				ClientID:    consumer.ClientID,
+				MaxBytes:    consumer.MaxBytes,
+				MaxWaitTime: consumer.MaxWaitTime,
+				MinBytes:    consumer.MinBytes,
 			}
+			consumer.SimpleConsumers = append(consumer.SimpleConsumers, simpleConsumer)
 		}
 	}
 
+	var offset int64
+	if fromBeginning {
+		offset = -2
+	} else {
+		offset = -1
+	}
+
 	messages := make(chan *FullMessage, 10)
-	for i, simpleConsumer2 := range consumer.SimpleConsumer2s {
-		glog.V(10).Infof("SimpleConsumer2 %d", i)
-		simpleConsumer2.Consume(messages)
+	for _, simpleConsumer := range consumer.SimpleConsumers {
+		simpleConsumer.Consume(offset, messages)
 	}
 
 	return messages, nil
