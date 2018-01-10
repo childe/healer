@@ -79,7 +79,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			r := NewOffsetFetchRequest(1, simpleConsumer.ClientID, simpleConsumer.BelongTO.groupID)
 			r.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition)
 
-			response, err := simpleConsumer.Brokers.Request(r)
+			response, err := simpleConsumer.BelongTO.coordinator.Request(r)
 			if err != nil {
 				glog.Fatal("request fetch offset for [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
 			}
