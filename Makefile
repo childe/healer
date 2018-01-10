@@ -1,6 +1,6 @@
 all:
-	go build -o tools/bin/getmetadata tools/getmetadata/getmetadata2.go
-	go build -o tools/bin/getoffsets tools/getoffset/getoffset2.go
+	go build -o tools/bin/getmetadata tools/getmetadata/getmetadata.go
+	go build -o tools/bin/getoffsets tools/getoffset/getoffset.go
 	go build -o tools/bin/simple-consumer tools/simple-consumer/simple-consumer.go
 	go build -o tools/bin/console-consumer tools/console-consumer/console-consumer.go
 	go build -o tools/bin/group-consumer tools/group-consumer/group-consumer.go
