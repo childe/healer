@@ -18,12 +18,11 @@ type DescribeGroupsRequest struct {
 	Groups        []string
 }
 
-func NewDescribeGroupsRequest(correlationID uint32, clientID string, groups []string) *DescribeGroupsRequest {
+func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_DescribeGroups,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_DescribeGroups,
+		ApiVersion: 0,
+		ClientId:   clientID,
 	}
 	return &DescribeGroupsRequest{requestHeader, groups}
 }

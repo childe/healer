@@ -48,12 +48,11 @@ type FetchRequest struct {
 }
 
 // TODO all partitions should have the SAME maxbytes?
-func NewFetchRequest(correlationID uint32, clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
+func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_FetchRequest,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_FetchRequest,
+		ApiVersion: 0,
+		ClientId:   clientID,
 	}
 
 	topics := make(map[string][]*PartitionBlock)

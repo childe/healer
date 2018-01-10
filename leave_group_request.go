@@ -19,13 +19,11 @@ type LeaveGroupRequest struct {
 	MemberID      string
 }
 
-func NewLeaveGroupRequest(
-	correlationID uint32, clientID, groupID, memberID string) *LeaveGroupRequest {
+func NewLeaveGroupRequest(clientID, groupID, memberID string) *LeaveGroupRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_LeaveGroup,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_LeaveGroup,
+		ApiVersion: 0,
+		ClientId:   clientID,
 	}
 
 	return &LeaveGroupRequest{

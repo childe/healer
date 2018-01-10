@@ -24,12 +24,11 @@ type HeartbeatRequest struct {
 	MemberID      string
 }
 
-func NewHeartbeatRequest(correlationID uint32, clientID, groupID string, generationID int32, memberID string) *HeartbeatRequest {
+func NewHeartbeatRequest(clientID, groupID string, generationID int32, memberID string) *HeartbeatRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_Heartbeat,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_Heartbeat,
+		ApiVersion: 0,
+		ClientId:   clientID,
 	}
 	return &HeartbeatRequest{
 		RequestHeader: requestHeader,

@@ -322,7 +322,7 @@ func (c *GroupConsumer) stop() {
 }
 
 func (c *GroupConsumer) leave() {
-	leaveReq := NewLeaveGroupRequest(0, c.clientID, c.groupID, c.memberID)
+	leaveReq := NewLeaveGroupRequest(c.clientID, c.groupID, c.memberID)
 	payload, err := c.coordinator.Request(leaveReq)
 	if err != nil {
 		glog.Errorf("member %s could not leave group:%s", c.memberID, err)

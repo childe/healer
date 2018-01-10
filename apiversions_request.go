@@ -6,35 +6,11 @@ type ApiVersionsRequest struct {
 	RequestHeader *RequestHeader
 }
 
-var funcs []func(uint32, string) *ApiVersionsRequest
-
-func init() {
-	funcs = []func(uint32, string) *ApiVersionsRequest{newApiVersionsRequestV0, newApiVersionsRequestV1}
-}
-
-func NewApiVersionsRequest(apiVersion int, correlationID uint32, clientID string) Request {
-	return funcs[apiVersion](correlationID, clientID)
-}
-
-func newApiVersionsRequestV0(correlationID uint32, clientID string) *ApiVersionsRequest {
+func NewApiVersionsRequest(apiVersion uint16, clientID string) Request {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_ApiVersions,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
-	}
-
-	return &ApiVersionsRequest{
-		RequestHeader: requestHeader,
-	}
-}
-
-func newApiVersionsRequestV1(correlationID uint32, clientID string) *ApiVersionsRequest {
-	requestHeader := &RequestHeader{
-		ApiKey:        API_ApiVersions,
-		ApiVersion:    1,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_ApiVersions,
+		ApiVersion: apiVersion,
+		ClientId:   clientID,
 	}
 
 	return &ApiVersionsRequest{

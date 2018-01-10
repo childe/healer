@@ -39,14 +39,11 @@ type JoinGroupRequest struct {
 	GroupProtocols []*GroupProtocol
 }
 
-func NewJoinGroupRequest(
-	correlationID uint32, clientID, groupID string, sessionTimeout int32,
-	memberID, protocolType string) *JoinGroupRequest {
+func NewJoinGroupRequest(clientID, groupID string, sessionTimeout int32, memberID, protocolType string) *JoinGroupRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:        API_JoinGroup,
-		ApiVersion:    0,
-		CorrelationID: correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_JoinGroup,
+		ApiVersion: 0,
+		ClientId:   clientID,
 	}
 
 	return &JoinGroupRequest{

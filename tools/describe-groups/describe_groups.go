@@ -45,7 +45,7 @@ func main() {
 	}
 	glog.Infof("coordinator for group[%s]:%s", groupID, coordinatorBroker.GetAddress())
 
-	req := healer.NewDescribeGroupsRequest(0, *clientID, []string{*groupID})
+	req := healer.NewDescribeGroupsRequest(*clientID, []string{*groupID})
 
 	responseBytes, err := coordinatorBroker.Request(req)
 	if err != nil {

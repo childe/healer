@@ -232,9 +232,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 
 func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse, error) {
 	// TODO should always use v0?
-	broker.correlationID++
-	apiVersionRequest := NewApiVersionsRequest(0, broker.correlationID, clientID)
-	response, err := broker.request(apiVersionRequest.Encode())
+	apiVersionRequest := NewApiVersionsRequest(0, clientID)
+	response, err := broker.Request(apiVersionRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -246,12 +245,9 @@ func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse,
 }
 
 func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, error) {
-	broker.correlationID++
-	request := NewListGroupsRequest(broker.correlationID, clientID)
+	request := NewListGroupsRequest(clientID)
 
-	payload := request.Encode()
-
-	responseBuf, err := broker.request(payload)
+	responseBuf, err := broker.Request(request)
 	if err != nil {
 		return nil, err
 	}
@@ -266,13 +262,11 @@ func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, e
 }
 
 func (broker *Broker) requestMetaData(clientID string, topic *string) (*MetadataResponse, error) {
-	broker.correlationID++
-	metadataRequest := MetadataRequest{}
+	metadataRequest := &MetadataRequest{}
 	metadataRequest.RequestHeader = &RequestHeader{
-		ApiKey:        API_MetadataRequest,
-		ApiVersion:    0,
-		CorrelationID: broker.correlationID,
-		ClientId:      clientID,
+		ApiKey:     API_MetadataRequest,
+		ApiVersion: 0,
+		ClientId:   clientID,
 	}
 
 	if topic != nil {
@@ -281,9 +275,7 @@ func (broker *Broker) requestMetaData(clientID string, topic *string) (*Metadata
 		metadataRequest.Topic = []string{}
 	}
 
-	payload := metadataRequest.Encode()
-
-	responseBuf, err := broker.request(payload)
+	responseBuf, err := broker.Request(metadataRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -299,11 +291,9 @@ func (broker *Broker) requestMetaData(clientID string, topic *string) (*Metadata
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
 func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []uint32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
-	broker.correlationID++
-	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, broker.correlationID, clientID)
-	payload := offsetsRequest.Encode()
+	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, clientID)
 
-	responseBuf, err := broker.request(payload)
+	responseBuf, err := broker.Request(offsetsRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -317,11 +307,9 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []uint
 }
 
 func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
-	broker.correlationID++
-	findCoordinatorRequest := NewFindCoordinatorRequest(broker.correlationID, clientID, groupID)
-	payload := findCoordinatorRequest.Encode()
+	findCoordinatorRequest := NewFindCoordinatorRequest(clientID, groupID)
 
-	responseBuf, err := broker.request(payload)
+	responseBuf, err := broker.Request(findCoordinatorRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -347,12 +335,9 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 }
 
 func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
-	broker.correlationID++
-	request := NewFindCoordinatorRequest(broker.correlationID, clientID, groupID)
+	request := NewFindCoordinatorRequest(clientID, groupID)
 
-	payload := request.Encode()
-
-	responseBytes, err := broker.request(payload)
+	responseBytes, err := broker.Request(request)
 	if err != nil {
 		return nil, err
 	}
@@ -360,16 +345,12 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinato
 }
 
 func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
-	broker.correlationID++
-	joinGroupRequest := NewJoinGroupRequest(
-		broker.correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
+	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeout, memberID, protocolType)
 	for _, gp := range gps {
 		joinGroupRequest.AddGroupProtocal(gp)
 	}
 
-	payload := joinGroupRequest.Encode()
-
-	responseBytes, err := broker.request(payload)
+	responseBytes, err := broker.Request(joinGroupRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -378,12 +359,9 @@ func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout 
 }
 
 func (broker *Broker) requestDescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
-	broker.correlationID++
-	req := NewDescribeGroupsRequest(broker.correlationID, clientID, groups)
+	req := NewDescribeGroupsRequest(clientID, groups)
 
-	payload := req.Encode()
-
-	responseBytes, err := broker.request(payload)
+	responseBytes, err := broker.Request(req)
 	if err != nil {
 		return nil, err
 	}
@@ -392,11 +370,9 @@ func (broker *Broker) requestDescribeGroups(clientID string, groups []string) (*
 }
 
 func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string, groupAssignment GroupAssignment) (*SyncGroupResponse, error) {
-	broker.correlationID++
-	syncGroupRequest := NewSyncGroupRequest(broker.correlationID, clientID, groupID, generationID, memberID, groupAssignment)
-	payload := syncGroupRequest.Encode()
+	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, groupAssignment)
 
-	responseBytes, err := broker.request(payload)
+	responseBytes, err := broker.Request(syncGroupRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -405,10 +381,9 @@ func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID in
 }
 
 func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID int32, memberID string) (*HeartbeatResponse, error) {
-	broker.correlationID++
-	r := NewHeartbeatRequest(broker.correlationID, clientID, groupID, generationID, memberID)
+	r := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
-	responseBytes, err := broker.request(r.Encode())
+	responseBytes, err := broker.Request(r)
 	if err != nil {
 		return nil, err
 	}

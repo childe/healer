@@ -7,7 +7,6 @@ import (
 
 func TestGroup(t *testing.T) {
 	var (
-		correlationID  uint32
 		clientID       string   = "healer"
 		groupID        string   = "hangout.test"
 		groups         []string = []string{"hangout", "hangout.test"}
@@ -18,8 +17,7 @@ func TestGroup(t *testing.T) {
 	)
 
 	// join group
-	correlationID = uint32(API_JoinGroup)
-	joinGroupRequest := NewJoinGroupRequest(correlationID, clientID, groupID, sessionTimeout, memberID, protocolType)
+	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeout, memberID, protocolType)
 	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 
 	payload := joinGroupRequest.Encode()
@@ -47,10 +45,9 @@ func TestGroup(t *testing.T) {
 	}
 
 	// sync group
-	correlationID = uint32(API_SyncGroup)
 	generationID = joinGroupResponse.GenerationID
 	memberID = joinGroupResponse.MemberID
-	syncGroupRequest := NewSyncGroupRequest(correlationID, clientID, groupID, generationID, memberID, nil)
+	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, nil)
 	payload = syncGroupRequest.Encode()
 
 	responseBytes, err = broker.request(payload)
@@ -69,8 +66,7 @@ func TestGroup(t *testing.T) {
 	}
 
 	// leave group
-	correlationID = uint32(API_LeaveGroup)
-	leaveGroupRequest := NewLeaveGroupRequest(correlationID, clientID, groupID, memberID)
+	leaveGroupRequest := NewLeaveGroupRequest(clientID, groupID, memberID)
 	payload = leaveGroupRequest.Encode()
 
 	responseBytes, err = broker.request(payload)
@@ -84,8 +80,7 @@ func TestGroup(t *testing.T) {
 	}
 
 	// describe group
-	correlationID = uint32(API_DescribeGroups)
-	describeGroupRequest := NewDescribeGroupsRequest(correlationID, clientID, groups)
+	describeGroupRequest := NewDescribeGroupsRequest(clientID, groups)
 	payload = describeGroupRequest.Encode()
 
 	responseBytes, err = broker.request(payload)
@@ -99,8 +94,7 @@ func TestGroup(t *testing.T) {
 	}
 
 	// heartbeat
-	correlationID = uint32(API_Heartbeat)
-	heartbeatRequest := NewHeartbeatRequest(correlationID, clientID, groupID, generationID, memberID)
+	heartbeatRequest := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
 	responseBytes, err = broker.request(heartbeatRequest.Encode())
 	if err != nil {

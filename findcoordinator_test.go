@@ -4,12 +4,11 @@ import "testing"
 
 func TestFindCoordinator(t *testing.T) {
 	var (
-		correlationID uint32 = 10
-		clientID      string = "healer"
-		groupID       string = "healer.topicname"
+		clientID string = "healer"
+		groupID  string = "healer.topicname"
 	)
 
-	request := NewFindCoordinatorRequest(correlationID, clientID, groupID)
+	request := NewFindCoordinatorRequest(clientID, groupID)
 
 	payload := request.Encode()
 	if len(payload) != 38 {
