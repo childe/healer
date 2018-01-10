@@ -35,6 +35,6 @@ func TestFindCoordinator(t *testing.T) {
 		t.Errorf("decode findcoordinator response error:%s", err)
 	} else {
 		t.Logf("findcoordinator response errorcode:%d", response.ErrorCode)
-		t.Logf("findcoordinator response Coordinator:%s:%d (%d)", response.Coordinator.host, response.Coordinator.port, response.Coordinator.nodeID)
+		t.Logf("findcoordinator response Coordinator:%s:%d (%d)", response.Coordinator.Host, response.Coordinator.Port, response.Coordinator.NodeID)
 	}
 }
