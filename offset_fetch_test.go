@@ -8,18 +8,17 @@ import (
 
 func TestOffsetFetchRequest(t *testing.T) {
 	var (
-		correlationID uint32 = uint32(API_OffsetFetchRequest)
-		partitionID   int32  = 0
-		clientID      string = "healer"
-		topic         string = "test"
-		groupID       string = "hangout"
+		partitionID int32  = 0
+		clientID    string = "healer"
+		topic       string = "test"
+		groupID     string = "hangout"
 	)
 	broker, err := NewBroker(*brokerAddress, -1, 60, 60)
 	if err != nil {
 		t.Errorf("create broker error:%s", err)
 	}
 
-	r := NewOffsetFetchRequest(correlationID, clientID, groupID)
+	r := NewOffsetFetchRequest(0, clientID, groupID)
 
 	glog.Info(r.Length())
 	if r.Length() != 29 {

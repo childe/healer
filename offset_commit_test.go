@@ -4,16 +4,15 @@ import "testing"
 
 func TestOffsetCommitRequest(t *testing.T) {
 	var (
-		correlationID uint32 = uint32(API_OffsetCommitRequest)
-		partitionID   int32  = 0
-		clientID      string = "healer"
-		offset        int64  = 0
-		topic         string = "test"
-		groupID       string = "hangout"
+		partitionID int32  = 0
+		clientID    string = "healer"
+		offset      int64  = 0
+		topic       string = "test"
+		groupID     string = "hangout"
 	)
 	broker, err := NewBroker(*brokerAddress, -1, 60, 60)
 
-	r := NewOffsetCommitRequest(correlationID, clientID, groupID)
+	r := NewOffsetCommitRequest(0, clientID, groupID)
 
 	if r.Length() != 29 {
 		t.Error("offsetcommit request payload length should be 29")
