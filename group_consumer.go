@@ -13,16 +13,18 @@ import (
 
 type GroupConsumer struct {
 	// TODO do not nedd one connection to each broker
-	brokers        *Brokers
-	topic          string
-	correlationID  uint32
-	clientID       string
-	groupID        string
-	sessionTimeout int
-	maxWaitTime    int32
-	maxBytes       int32
-	minBytes       int32
-	fromBeginning  bool
+	brokers              *Brokers
+	topic                string
+	correlationID        uint32
+	clientID             string
+	groupID              string
+	sessionTimeout       int
+	maxWaitTime          int32
+	maxBytes             int32
+	minBytes             int32
+	fromBeginning        bool
+	autoCommit           bool
+	autoCommitIntervalMs int
 
 	coordinator          *Broker
 	generationID         int32
@@ -42,20 +44,22 @@ type GroupConsumer struct {
 //func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32, connectTimeout, timeout int) (*GroupConsumer, error) {
 func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	var (
-		topic          string
-		groupID        string
-		clientID       string
-		sessionTimeout int
-		maxWaitTime    int32
-		minBytes       int32
-		maxBytes       int32
-		connectTimeout int
-		timeout        int
+		topic                string
+		groupID              string
+		clientID             string
+		sessionTimeout       int
+		maxWaitTime          int32
+		minBytes             int32
+		maxBytes             int32
+		connectTimeout       int
+		timeout              int
+		autoCommitIntervalMs int
+		autoCommit           bool
 	)
 
 	topic = config["topic"].(string)
-	groupID = config["groupID"].(string)
-	if v, ok := config["clientID"]; ok {
+	groupID = config["group.id"].(string)
+	if v, ok := config["client.id"]; ok {
 		clientID = v.(string)
 	} else {
 		clientID = groupID
@@ -68,22 +72,22 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 			clientID = fmt.Sprintf("%s-%s-%s", clientID, ts, hostname)
 		}
 	}
-	if v, ok := config["sessionTimeout"]; ok {
+	if v, ok := config["session.timeout.ms"]; ok {
 		sessionTimeout = v.(int)
 	} else {
 		sessionTimeout = 30000
 	}
-	if v, ok := config["maxWaitTime"]; ok {
+	if v, ok := config["fetch.max.wait.ms"]; ok {
 		maxWaitTime = v.(int32)
 	} else {
 		maxWaitTime = 10000
 	}
-	if v, ok := config["minBytes"]; ok {
+	if v, ok := config["fetch.min.bytes"]; ok {
 		minBytes = v.(int32)
 	} else {
 		minBytes = 1
 	}
-	if v, ok := config["maxBytes"]; ok {
+	if v, ok := config["max.partition.fetch.bytes"]; ok {
 		maxBytes = v.(int32)
 	} else {
 		maxBytes = 10 * 1024 * 1024
@@ -98,22 +102,34 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	} else {
 		timeout = 10
 	}
+	if v, ok := config["auto.commit.interval.ms"]; ok {
+		autoCommitIntervalMs = v.(int)
+	} else {
+		autoCommitIntervalMs = 60000
+	}
+	if v, ok := config["auto.commit.enable"]; ok {
+		autoCommit = v.(bool)
+	} else {
+		autoCommit = false
+	}
 
-	brokers, err := NewBrokers(config["brokers"].(string), clientID, connectTimeout, timeout)
+	brokers, err := NewBrokers(config["bootstrap.servers"].(string), clientID, connectTimeout, timeout)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &GroupConsumer{
-		brokers:        brokers,
-		topic:          topic,
-		correlationID:  0,
-		clientID:       clientID,
-		groupID:        groupID,
-		sessionTimeout: sessionTimeout,
-		maxWaitTime:    maxWaitTime,
-		minBytes:       minBytes,
-		maxBytes:       maxBytes,
+		brokers:              brokers,
+		topic:                topic,
+		correlationID:        0,
+		clientID:             clientID,
+		groupID:              groupID,
+		sessionTimeout:       sessionTimeout,
+		maxWaitTime:          maxWaitTime,
+		minBytes:             minBytes,
+		maxBytes:             maxBytes,
+		autoCommit:           autoCommit,
+		autoCommitIntervalMs: autoCommitIntervalMs,
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
@@ -172,6 +188,8 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 			simpleConsumer.MaxWaitTime = c.maxWaitTime
 			simpleConsumer.MaxBytes = c.maxBytes
 			simpleConsumer.MinBytes = c.minBytes
+			simpleConsumer.AutoCommit = c.autoCommit
+			simpleConsumer.AutoCommitIntervalMs = c.autoCommitIntervalMs
 
 			simpleConsumer.BelongTO = c
 
