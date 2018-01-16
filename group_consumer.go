@@ -3,7 +3,6 @@ package healer
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"sync"
@@ -87,7 +86,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["maxBytes"]; ok {
 		maxBytes = v.(int32)
 	} else {
-		maxBytes = math.MaxInt32
+		maxBytes = 10 * 1024 * 1024
 	}
 	if v, ok := config["connectTimeout"]; ok {
 		connectTimeout = v.(int)
