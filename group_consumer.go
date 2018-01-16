@@ -110,7 +110,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["auto.commit.enable"]; ok {
 		autoCommit = v.(bool)
 	} else {
-		autoCommit = false
+		autoCommit = true
 	}
 
 	brokers, err := NewBrokers(config["bootstrap.servers"].(string), clientID, connectTimeout, timeout)
