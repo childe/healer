@@ -78,17 +78,17 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		sessionTimeout = 30000
 	}
 	if v, ok := config["fetch.max.wait.ms"]; ok {
-		maxWaitTime = v.(int32)
+		maxWaitTime = int32(v.(int))
 	} else {
 		maxWaitTime = 10000
 	}
 	if v, ok := config["fetch.min.bytes"]; ok {
-		minBytes = v.(int32)
+		minBytes = int32(v.(int))
 	} else {
 		minBytes = 1
 	}
 	if v, ok := config["max.partition.fetch.bytes"]; ok {
-		maxBytes = v.(int32)
+		maxBytes = int32(v.(int))
 	} else {
 		maxBytes = 10 * 1024 * 1024
 	}
