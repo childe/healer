@@ -244,7 +244,7 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 	}
 	for ; responsesCount > 0; responsesCount-- {
 		err := streamDecoder.encodeResponses()
-		if err != nil && err != &fetchResponseTruncatedInMessageSet {
+		if err != nil {
 			streamDecoder.messages <- &FullMessage{
 				TopicName:   "",
 				PartitionID: -1,
