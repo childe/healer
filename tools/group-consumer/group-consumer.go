@@ -41,16 +41,16 @@ func main() {
 	}
 
 	config := make(map[string]interface{})
-	config["brokers"] = *brokers
+	config["bootstrap.servers"] = *brokers
 	config["topic"] = *topic
-	config["groupID"] = *groupID
+	config["group.id"] = *groupID
 	if *clientID != "" {
-		config["clientID"] = *clientID
+		config["client.id"] = *clientID
 	}
-	config["sessionTimeout"] = *sessionTimeout
-	config["maxWaitTime"] = int32(*maxWaitTime)
-	config["minBytes"] = int32(*minBytes)
-	config["maxBytes"] = int32(*maxBytes)
+	config["session.timeout.ms"] = *sessionTimeout
+	config["fetch.max.wait.ms"] = *maxWaitTime
+	config["fetch.min.bytes"] = *minBytes
+	config["max.partition.fetch.bytes"] = *maxBytes
 	config["connectTimeout"] = *connectTimeout
 	config["timeout"] = *timeout
 
