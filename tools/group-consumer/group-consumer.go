@@ -19,10 +19,10 @@ var (
 	fromBeginning  = flag.Bool("from-beginning", false, "default false")
 	maxWaitTime    = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
 	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
-	maxBytes       = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
+	maxBytes       = flag.Int("max-bytes", 10*1024*1024, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
 	timeout        = flag.Int("timeout", 10, "default 10 Second. read timeout from connection to broker")
-	sessionTimeout = flag.Int("sessionTimeout", 30000, "The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.")
+	sessionTimeout = flag.Int("sessionTimeout", 30000, "default 30000ms. The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.")
 )
 
 func main() {
