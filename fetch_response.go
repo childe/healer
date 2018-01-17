@@ -91,6 +91,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		offset int32 = 0
 	)
 
+	hasAtLeastOneMessage := false
 	for {
 		if offset == messageSetSizeBytes {
 			return nil
@@ -114,7 +115,10 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		value = append(value, buffer...)
 
 		if n < int(messageSize) {
-			return &fetchResponseTruncatedBeforeMessageSet
+			if !hasAtLeastOneMessage {
+				return &maxBytesTooSmall
+			}
+			return nil
 		}
 		offset += messageSize
 
@@ -133,6 +137,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 				}
 			}
 		}
+		hasAtLeastOneMessage = true
 	}
 
 	return nil
@@ -153,7 +158,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 	buffer, n = streamDecoder.read(18)
 
 	if n < 18 {
-		return &fetchResponseTruncatedBeforeMessageSet
+		return &maxBytesTooSmall
 	}
 
 	partition = int32(binary.BigEndian.Uint32(buffer))
@@ -251,7 +256,6 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 				Error:       err,
 				Message:     nil,
 			}
-			// TODO could not fatal
 			glog.Error(err)
 		}
 	}
