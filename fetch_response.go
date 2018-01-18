@@ -111,8 +111,6 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		offset += 4
 
 		buffer, n = streamDecoder.read(int(messageSize))
-		// TODO remove memory copy
-		value = append(value, buffer...)
 
 		if n < int(messageSize) {
 			if !hasAtLeastOneMessage {
@@ -120,6 +118,9 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 			}
 			return nil
 		}
+		// TODO remove memory copy
+		value = append(value, buffer...)
+
 		offset += messageSize
 
 		messageSet, err := DecodeToMessageSet(value)
