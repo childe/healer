@@ -97,17 +97,32 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 			return nil
 		}
 		value := make([]byte, 12)
-		buffer, _ = streamDecoder.read(8)
+		buffer, n = streamDecoder.read(8)
+		if n < 8 {
+			if !hasAtLeastOneMessage {
+				return &maxBytesTooSmall
+			}
+			return nil
+		}
 		copy(value, buffer)
 
 		messageOffset = int64(binary.BigEndian.Uint64(buffer))
 		offset += 8
 		glog.V(18).Infof("message offset: %d", messageOffset)
 
-		buffer, _ = streamDecoder.read(4)
+		buffer, n = streamDecoder.read(4)
+		if n < 4 {
+			if !hasAtLeastOneMessage {
+				return &maxBytesTooSmall
+			}
+			return nil
+		}
 		copy(value[8:], buffer)
 		messageSize = int32(binary.BigEndian.Uint32(buffer))
 		glog.V(18).Infof("message size: %d", messageSize)
+		if messageSize <= 0 {
+			return nil
+		}
 		offset += 4
 
 		buffer, n = streamDecoder.read(int(messageSize))
