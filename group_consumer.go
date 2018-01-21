@@ -297,16 +297,8 @@ func (c *GroupConsumer) heartbeat() {
 	_, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
 	if err != nil {
 		glog.Errorf("failed to send heartbeat:%s", err)
-
-		//The group is rebalancing, so a rejoin is needed
-		if err == AllError[27] {
-			glog.Info("restart because of rebalancing")
 			c.stop()
 			c.Consume(c.fromBeginning, c.messages)
-		} else {
-			//TODO fatal?
-			glog.Fatalf("heartbeat exception:%s", err)
-		}
 	}
 }
 
