@@ -78,12 +78,9 @@ func (simpleConsumer *SimpleConsumer) Stop() {
 	simpleConsumer.stop = true
 }
 
-// if offset is -1 or -2, first check if has previous offset committed. it will continue if it exists
+// if offset is -1 or -2, first check if has previous offset committed if its BelongTO is not nil
 func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
-	var (
-		err      error
-		leaderID int32
-	)
+	var err error
 
 	simpleConsumer.stop = false
 	simpleConsumer.offset = offset
@@ -91,6 +88,10 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
 
 	err = simpleConsumer.getLeaderBroker()
+	// TODO pass error to caller?
+	if err != nil {
+		glog.Fatalf("could get leader broker:%s", err)
+	}
 
 	if simpleConsumer.BelongTO != nil {
 		if simpleConsumer.offset == -1 || simpleConsumer.offset == -2 {
@@ -179,7 +180,13 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 						if message.Error == AllError[1] {
 							simpleConsumer.offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
 							if err != nil {
-								glog.Infof("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+								glog.Errorf("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+							}
+						} else if message.Error == AllError[6] {
+							err = simpleConsumer.getLeaderBroker()
+							if err != nil {
+								// TODO pass errro to caller?
+								glog.Fatal("could get leader broker:%s", err)
 							}
 						}
 					} else {
