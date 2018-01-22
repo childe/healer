@@ -34,6 +34,31 @@ func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
 	return nil
 }
 
+func (simpleConsumer *SimpleConsumer) getLeaderBroker() error {
+	var (
+		err      error
+		leaderID int32
+	)
+
+	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
+	if err != nil {
+		//glog.Fatal("could not get leader of topic %s:%s", simpleConsumer.TopicName, err)
+		return err
+	} else {
+		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
+	}
+
+	// TODO
+	simpleConsumer.leaderBroker, err = simpleConsumer.Brokers.NewBroker(leaderID)
+	if err != nil {
+		return err
+		//glog.Fatalf("could not get broker %d. maybe should refresh metadata.", leaderID)
+	} else {
+		glog.V(5).Infof("got leader broker %s with id %d", simpleConsumer.leaderBroker.address, leaderID)
+	}
+	return nil
+}
+
 func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	var time int64
 	if fromBeginning {
@@ -63,24 +88,9 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	simpleConsumer.stop = false
 	simpleConsumer.offset = offset
 
-	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
-	if err != nil {
-		//TODO NO fatal but return error
-		glog.Fatal("could not get leader of topic %s:%s", simpleConsumer.TopicName, err)
-	} else {
-		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
-	}
-
-	// TODO
-	simpleConsumer.leaderBroker, err = simpleConsumer.Brokers.NewBroker(leaderID)
-	if err != nil {
-		//TODO NO fatal but return error
-		glog.Fatalf("could not get broker %d. maybe should refresh metadata.", leaderID)
-	} else {
-		glog.V(10).Infof("got leader broker %s with id %d", simpleConsumer.leaderBroker.address, leaderID)
-	}
-
 	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
+
+	err = simpleConsumer.getLeaderBroker()
 
 	if simpleConsumer.BelongTO != nil {
 		if simpleConsumer.offset == -1 || simpleConsumer.offset == -2 {
