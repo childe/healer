@@ -297,8 +297,8 @@ func (c *GroupConsumer) heartbeat() {
 	_, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
 	if err != nil {
 		glog.Errorf("failed to send heartbeat:%s", err)
-			c.stop()
-			c.Consume(c.fromBeginning, c.messages)
+		c.stop()
+		c.Consume(c.fromBeginning, c.messages)
 	}
 }
 
