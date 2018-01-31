@@ -56,7 +56,7 @@ func main() {
 	response, err := healer.NewDescribeGroupsResponse(responseBytes)
 
 	if err != nil {
-		glog.Errorf("failed to decode describe groups response from response bytes:%s", err)
+		glog.Errorf("describe groups response error:%s", err)
 		os.Exit(5)
 	}
 
