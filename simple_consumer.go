@@ -19,6 +19,7 @@ type SimpleConsumer struct {
 	MinBytes             int32
 	AutoCommitIntervalMs int
 	AutoCommit           bool
+	OffsetsStorage       int // 0 zk, 1 kafka
 
 	leaderBroker *Broker
 
@@ -94,30 +95,36 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		glog.Fatalf("could get leader broker:%s", err)
 	}
 
-	if simpleConsumer.BelongTO != nil {
-		if simpleConsumer.offset == -1 || simpleConsumer.offset == -2 {
-			r := NewOffsetFetchRequest(1, simpleConsumer.ClientID, simpleConsumer.BelongTO.groupID)
-			r.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition)
+	if simpleConsumer.BelongTO != nil && (simpleConsumer.offset == -1 || simpleConsumer.offset == -2) {
+		var apiVersion uint16
+		if simpleConsumer.OffsetsStorage == 0 {
+			apiVersion = 0
+		} else if simpleConsumer.OffsetsStorage == 1 {
+			apiVersion = 1
+		} else {
+			glog.Fatalf("offsets.storage (%d) illegal", simpleConsumer.OffsetsStorage)
+		}
+		r := NewOffsetFetchRequest(apiVersion, simpleConsumer.ClientID, simpleConsumer.BelongTO.groupID)
+		r.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition)
 
-			response, err := simpleConsumer.BelongTO.coordinator.Request(r)
-			if err != nil {
-				glog.Fatal("request fetch offset for [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+		response, err := simpleConsumer.BelongTO.coordinator.Request(r)
+		if err != nil {
+			glog.Fatal("request fetch offset for [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+		}
+
+		res, err := NewOffsetFetchResponse(response)
+		if res == nil {
+			glog.Fatalf("decode offset fetch response error:%s", err)
+		}
+
+		for _, t := range res.Topics {
+			if t.Topic != simpleConsumer.TopicName {
+				continue
 			}
-
-			res, err := NewOffsetFetchResponse(response)
-			if res == nil {
-				glog.Fatalf("decode offset fetch response error:%s", err)
-			}
-
-			for _, t := range res.Topics {
-				if t.Topic != simpleConsumer.TopicName {
-					continue
-				}
-				for _, p := range t.Partitions {
-					if int32(p.PartitionID) == simpleConsumer.Partition {
-						simpleConsumer.offset = p.Offset
-						break
-					}
+			for _, p := range t.Partitions {
+				if int32(p.PartitionID) == simpleConsumer.Partition {
+					simpleConsumer.offset = p.Offset
+					break
 				}
 			}
 		}

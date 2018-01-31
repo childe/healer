@@ -21,6 +21,7 @@ var (
 	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 	maxBytes       = flag.Int("max-bytes", 10*1024*1024, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
+	offsetsStorage = flag.String("offsets.storage", "kafka", "default kafka. Select where offsets should be stored (zookeeper or kafka).")
 	timeout        = flag.Int("timeout", 10, "default 10 Second. read timeout from connection to broker")
 	sessionTimeout = flag.Int("sessionTimeout", 30000, "default 30000ms. The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.")
 )
@@ -51,6 +52,7 @@ func main() {
 	config["fetch.max.wait.ms"] = *maxWaitTime
 	config["fetch.min.bytes"] = *minBytes
 	config["max.partition.fetch.bytes"] = *maxBytes
+	config["offsets.storage"] = *offsetsStorage
 	config["connectTimeout"] = *connectTimeout
 	config["timeout"] = *timeout
 

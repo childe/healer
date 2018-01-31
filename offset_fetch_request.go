@@ -1,6 +1,8 @@
 package healer
 
 /*
+v0 and v1 are identical on the wire, but v0 (supported in 0.8.1 or later) reads offsets from zookeeper, while v1 (supported in 0.8.2 or later) reads offsets from kafka.
+
 OffsetFetch Request (Version: 0) => group_id [topics]
   group_id => STRING
   topics => topic [partitions]

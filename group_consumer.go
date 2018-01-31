@@ -25,6 +25,7 @@ type GroupConsumer struct {
 	fromBeginning        bool
 	autoCommit           bool
 	autoCommitIntervalMs int
+	offsetsStorage       int // 0 zk, 1 kafka
 
 	coordinator          *Broker
 	generationID         int32
@@ -55,6 +56,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		timeout              int
 		autoCommitIntervalMs int
 		autoCommit           bool
+		offsetsStorage       int
 	)
 
 	topic = config["topic"].(string)
@@ -113,6 +115,19 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		autoCommit = true
 	}
 
+	if v, ok := config["offsets.storage"]; ok {
+		s := v.(string)
+		if s == "kafka" {
+			offsetsStorage = 1
+		} else if s == "zookeeper" {
+			offsetsStorage = 0
+		} else {
+			glog.Fatalf("offsets.storage must be kafka|zookeeper. `%s` is unknown", s)
+		}
+	} else {
+		offsetsStorage = 1
+	}
+
 	brokers, err := NewBrokers(config["bootstrap.servers"].(string), clientID, connectTimeout, timeout)
 	if err != nil {
 		return nil, err
@@ -130,6 +145,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		maxBytes:             maxBytes,
 		autoCommit:           autoCommit,
 		autoCommitIntervalMs: autoCommitIntervalMs,
+		offsetsStorage:       offsetsStorage,
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
@@ -190,6 +206,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 			simpleConsumer.MinBytes = c.minBytes
 			simpleConsumer.AutoCommit = c.autoCommit
 			simpleConsumer.AutoCommitIntervalMs = c.autoCommitIntervalMs
+			simpleConsumer.OffsetsStorage = c.offsetsStorage
 
 			simpleConsumer.BelongTO = c
 
@@ -309,7 +326,13 @@ func (c *GroupConsumer) heartbeat() error {
 }
 
 func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
-	offsetComimtReq := NewOffsetCommitRequest(2, c.clientID, c.groupID)
+	var apiVersion uint16
+	if c.offsetsStorage == 1 {
+		apiVersion = 2
+	} else {
+		apiVersion = 0
+	}
+	offsetComimtReq := NewOffsetCommitRequest(apiVersion, c.clientID, c.groupID)
 	offsetComimtReq.SetMemberID(c.memberID)
 	offsetComimtReq.SetGenerationID(c.generationID)
 	offsetComimtReq.SetRetentionTime(-1)
