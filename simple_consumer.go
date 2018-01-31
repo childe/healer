@@ -22,9 +22,10 @@ type SimpleConsumer struct {
 
 	leaderBroker *Broker
 
-	stop          bool
-	fromBeginning bool
-	offset        int64
+	stop           bool
+	fromBeginning  bool
+	offset         int64
+	offsetCommited int64
 
 	BelongTO *GroupConsumer
 }
@@ -143,7 +144,6 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		messages = messageChan
 	}
 
-	//TODO if commit changed?
 	if simpleConsumer.AutoCommit {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(simpleConsumer.AutoCommitIntervalMs))
 		go func() {
@@ -151,7 +151,10 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				if simpleConsumer.stop {
 					return
 				}
-				simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
+				if simpleConsumer.offset != simpleConsumer.offsetCommited {
+					simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
+					simpleConsumer.offsetCommited = simpleConsumer.offset
+				}
 			}
 		}()
 	}
@@ -205,8 +208,9 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				}
 			}
 
-			if simpleConsumer.BelongTO != nil {
+			if simpleConsumer.BelongTO != nil && simpleConsumer.offset != simpleConsumer.offsetCommited {
 				simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
+				simpleConsumer.offsetCommited = simpleConsumer.offset
 			}
 		}
 		simpleConsumer.leaderBroker.Close()
