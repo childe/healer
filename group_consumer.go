@@ -225,7 +225,7 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 
 	c.generationID = joinGroupResponse.GenerationID
 	c.memberID = joinGroupResponse.MemberID
-	glog.V(2).Infof("memberID now is %s", c.memberID)
+	glog.Infof("memberID now is %s", c.memberID)
 
 	if joinGroupResponse.LeaderID == c.memberID {
 		c.ifLeader = true
@@ -271,35 +271,41 @@ func (c *GroupConsumer) joinAndSync() {
 			time.Sleep(time.Second * 1)
 			continue
 		} else {
-			b, _ := json.Marshal(joinRes)
-			glog.V(5).Infof("join response:%s", b)
+			if glog.V(5) {
+				b, _ := json.Marshal(joinRes)
+				glog.Infof("join response:%s", b)
+			}
 		}
 
-		syncRes, err := c.sync()
-		if err != nil {
-			glog.Infof("sync error:%s", err)
-			time.Sleep(time.Second * 1)
-			continue
-		} else {
-			b, _ := json.Marshal(syncRes)
-			glog.V(5).Infof("sync response:%s", b)
+		for i := 0; i < 3; i++ {
+			syncRes, err := c.sync()
+			if glog.V(5) {
+				b, _ := json.Marshal(syncRes)
+				glog.Infof("sync response:%s", b)
+			}
+			if err != nil {
+				glog.Infof("sync error:%s", err)
+				if err == AllError[27] {
+					break // rejoin group
+				} else {
+					continue
+				}
+			} else {
+				return
+			}
 		}
 
-		return
+		c.leave()
 	}
 }
 
-func (c *GroupConsumer) heartbeat() {
+func (c *GroupConsumer) heartbeat() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	glog.V(10).Infof("heartbeat generationID:%d memberID:%s", c.generationID, c.memberID)
 	_, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
-	if err != nil {
-		glog.Errorf("failed to send heartbeat:%s", err)
-		c.stop()
-		c.Consume(c.fromBeginning, c.messages)
-	}
+	return err
 }
 
 func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
@@ -313,12 +319,12 @@ func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int
 	if err == nil {
 		_, err := NewOffsetCommitResponse(payload)
 		if err == nil {
-			glog.V(5).Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
+			glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
 		} else {
-			glog.Infof("commit offset [%s][%d]:%d error:%s", topic, partitionID, offset, err)
+			glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 		}
 	} else {
-		glog.Infof("commit offset [%s][%d]:%d error:%s", topic, partitionID, offset, err)
+		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 	}
 }
 
@@ -331,6 +337,7 @@ func (c *GroupConsumer) stop() {
 }
 
 func (c *GroupConsumer) leave() {
+	glog.Infof("try to leave %s", c.memberID)
 	leaveReq := NewLeaveGroupRequest(c.clientID, c.groupID, c.memberID)
 	payload, err := c.coordinator.Request(leaveReq)
 	if err != nil {
@@ -342,6 +349,8 @@ func (c *GroupConsumer) leave() {
 	if err != nil {
 		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
 	}
+
+	c.memberID = ""
 }
 
 func (c *GroupConsumer) Close() {
@@ -373,7 +382,14 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 	ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 10)
 	go func() {
 		for range ticker.C {
-			c.heartbeat()
+			err := c.heartbeat()
+			if err != nil {
+				glog.Errorf("failed to send heartbeat:%s", err)
+				c.stop()
+				c.leave()
+				c.Consume(c.fromBeginning, c.messages)
+				return
+			}
 		}
 	}()
 
