@@ -280,13 +280,7 @@ func (broker *Broker) requestMetaData(clientID string, topic *string) (*Metadata
 		return nil, err
 	}
 
-	metadataResponse, err := NewMetadataResponse(responseBuf)
-	if err != nil {
-		return nil, err
-	}
-
-	//TODO error info in the response
-	return metadataResponse, nil
+	return NewMetadataResponse(responseBuf)
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker

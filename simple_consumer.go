@@ -143,6 +143,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		messages = messageChan
 	}
 
+	//TODO if commit changed?
 	if simpleConsumer.AutoCommit {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(simpleConsumer.AutoCommitIntervalMs))
 		go func() {

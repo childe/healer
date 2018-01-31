@@ -26,7 +26,10 @@ func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeo
 
 	metadataResponse, err := broker.requestMetaData(clientID, nil)
 	if err != nil {
-		glog.Infof("could not get metadata from %s:%s", broker.address, err)
+		glog.Infof("get metadata(to get nodes info) from %s error:%s", broker.address, err)
+	}
+
+	if metadataResponse == nil || metadataResponse.Brokers == nil {
 		return nil, err
 	}
 
