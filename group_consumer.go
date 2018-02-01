@@ -172,7 +172,6 @@ func (c *GroupConsumer) getTopicPartitionInfo() error {
 }
 
 func (c *GroupConsumer) getCoordinator() error {
-	// find coordinator
 	coordinatorResponse, err := c.brokers.FindCoordinator(c.clientID, c.groupID)
 	if err != nil {
 		return err
