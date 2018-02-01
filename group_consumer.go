@@ -390,9 +390,6 @@ func (c *GroupConsumer) Close() {
 }
 
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
-	defer func() {
-		glog.V(10).Info("group consumer stop consuming. maybe Heartbeat failed and need restart")
-	}()
 	c.fromBeginning = fromBeginning
 
 	// TODO put retry to brokers?
@@ -415,7 +412,7 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 	// go heartbeat
 	if !c.heartbeating {
 		c.heartbeating = true
-		ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 5)
+		ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 10)
 		go func() {
 			for range ticker.C {
 				err := c.heartbeat()
