@@ -3,6 +3,7 @@ package healer
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"sync"
@@ -402,8 +403,10 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 			err := c.heartbeat()
 			if err != nil {
 				glog.Errorf("failed to send heartbeat:%s", err)
-				c.stop()
-				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+				if err == AllError[27] || err == io.EOF {
+					c.stop()
+					c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+				}
 			}
 		}
 	}()
