@@ -157,9 +157,14 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 
 	defer close(buffers)
 
-	glog.V(10).Info(broker.conn.LocalAddr())
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
-	broker.conn.Write(payload)
+	n, err := broker.conn.Write(payload)
+	if err != nil {
+		glog.Error(err)
+	}
+	if n != len(payload) {
+		glog.Error("write only partial data")
+	}
 
 	l := 0
 	responseLengthBuf := make([]byte, 4)
@@ -321,10 +326,7 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 	fetchRequest.SetCorrelationID(broker.correlationID)
 	payload := fetchRequest.Encode()
 
-	// TODO 10?
-	//go consumeFetchResponse(buffers, messages)
 	err := broker.requestStreamingly(payload, buffers)
-	glog.V(10).Info("requestFetchStreamingly return")
 	return err
 }
 
