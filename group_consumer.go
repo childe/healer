@@ -280,11 +280,14 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	return syncGroupResponse, nil
 }
 
-func (c *GroupConsumer) joinAndSync() {
+func (c *GroupConsumer) joinAndSync() error {
 	for {
 		joinRes, err := c.join()
 		if err != nil {
 			glog.Infof("join error:%s", err)
+			if err == AllError[16] {
+				return err
+			}
 			time.Sleep(time.Second * 1)
 			continue
 		} else {
@@ -308,10 +311,9 @@ func (c *GroupConsumer) joinAndSync() {
 					continue
 				}
 			} else {
-				return
+				return nil
 			}
 		}
-
 		c.leave()
 	}
 }
@@ -386,23 +388,23 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 
 	// TODO put retry to brokers?
 	var err error
-	for i := 0; i < 3; i++ {
+	for {
 		err = c.getCoordinator()
 		if err != nil {
 			glog.Errorf("could not find coordinator:%s", err)
-		} else {
+			continue
+		}
+
+		c.getTopicPartitionInfo()
+
+		err = c.joinAndSync()
+		if err == nil {
 			break
 		}
 	}
-	if err != nil {
-		glog.Fatalf("could not find coordinator:%s", err)
-	}
-
-	c.getTopicPartitionInfo()
-	c.joinAndSync()
 
 	// go heartbeat
-	ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 10)
+	ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 3)
 	go func() {
 		for range ticker.C {
 			err := c.heartbeat()
