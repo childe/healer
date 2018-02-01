@@ -252,11 +252,6 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	return joinGroupResponse, nil
 }
 
-//The sync group request is used by the group leader to assign state (e.g. partition assignments)
-//to all members of the current generation. All members send SyncGroup immediately after
-//joining the group, but only the leader provides the group's assignment.
-
-//TODO need SyncGroupResponse returned?
 func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	glog.Info("try to sync group")
 	var groupAssignment GroupAssignment
