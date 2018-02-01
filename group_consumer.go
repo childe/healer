@@ -390,6 +390,28 @@ func (c *GroupConsumer) Close() {
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	c.fromBeginning = fromBeginning
 
+	if messages == nil {
+		messages = make(chan *FullMessage, 10)
+	}
+	c.messages = messages
+
+	// go heartbeat
+	ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 10)
+	go func() {
+		for range ticker.C {
+			err := c.heartbeat()
+			if err != nil {
+				glog.Errorf("failed to send heartbeat:%s", err)
+				c.stop()
+				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+			}
+		}
+	}()
+
+	return c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+}
+
+func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	// TODO put retry to brokers?
 	var err error
 	for {
@@ -407,28 +429,7 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 		}
 	}
 
-	// go heartbeat
-	if !c.heartbeating {
-		c.heartbeating = true
-		ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 10)
-		go func() {
-			for range ticker.C {
-				err := c.heartbeat()
-				if err != nil {
-					glog.Errorf("failed to send heartbeat:%s", err)
-					c.stop()
-					c.Consume(c.fromBeginning, c.messages)
-				}
-			}
-		}()
-	}
-
 	// consume
-	if messages == nil {
-		messages = make(chan *FullMessage, 10)
-	}
-	c.messages = messages
-
 	for _, simpleConsumer := range c.simpleConsumers {
 		var offset int64
 		if fromBeginning {
