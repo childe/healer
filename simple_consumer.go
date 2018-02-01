@@ -167,6 +167,9 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	}
 
 	go func(messages chan *FullMessage) {
+		defer func() {
+			glog.V(10).Infof("simple consumer (%s) stop consuming", simpleConsumer.ClientID)
+		}()
 		for simpleConsumer.stop == false {
 			// TODO set CorrelationID to 0 firstly and then set by broker
 			fetchRequest := NewFetchRequest(simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
