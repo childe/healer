@@ -128,8 +128,6 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				}
 			}
 		}
-
-		glog.Infof("consume [%s][%d] from %d", simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
 	}
 
 	// offset not fetched from OffsetFetchRequest
@@ -143,6 +141,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	if err != nil {
 		glog.Fatalf("could not get offset %s[%d]:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
 	}
+	glog.Infof("consume [%s][%d] from %d", simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
 
 	var messages chan *FullMessage
 	if messageChan == nil {
