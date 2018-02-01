@@ -293,7 +293,7 @@ func (c *GroupConsumer) joinAndSync() error {
 			time.Sleep(time.Second * 1)
 			continue
 		} else {
-			if glog.V(5) {
+			if glog.V(2) {
 				b, _ := json.Marshal(joinRes)
 				glog.Infof("join response:%s", b)
 			}
@@ -301,7 +301,7 @@ func (c *GroupConsumer) joinAndSync() error {
 
 		for i := 0; i < 3; i++ {
 			syncRes, err := c.sync()
-			if glog.V(5) {
+			if glog.V(2) {
 				b, _ := json.Marshal(syncRes)
 				glog.Infof("sync response:%s", b)
 			}
@@ -316,7 +316,6 @@ func (c *GroupConsumer) joinAndSync() error {
 				return nil
 			}
 		}
-		c.leave()
 	}
 }
 
@@ -419,7 +418,6 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 				if err != nil {
 					glog.Errorf("failed to send heartbeat:%s", err)
 					c.stop()
-					c.leave()
 					c.Consume(c.fromBeginning, c.messages)
 				}
 			}
