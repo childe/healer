@@ -155,8 +155,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	return c, nil
 }
 
-// request metadata and set partition metadat to group-consumer
-// TODO maybe only leader should request this???
+// request metadata and set partition metadat to group-consumer. only leader should request this
 func (c *GroupConsumer) getTopicPartitionInfo() error {
 	metaDataResponse, err := c.brokers.RequestMetaData(c.clientID, &c.topic)
 	if err != nil {
@@ -262,6 +261,7 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	glog.Info("try to sync group")
 	var groupAssignment GroupAssignment
 	if c.ifLeader {
+		c.getTopicPartitionInfo()
 		groupAssignment = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
 	} else {
 		groupAssignment = nil
@@ -421,8 +421,6 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 			glog.Errorf("could not find coordinator:%s", err)
 			continue
 		}
-
-		c.getTopicPartitionInfo()
 
 		err = c.joinAndSync()
 		if err == nil {
