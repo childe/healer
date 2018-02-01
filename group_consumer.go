@@ -29,7 +29,6 @@ type GroupConsumer struct {
 	offsetsStorage       int // 0 zk, 1 kafka
 
 	coordinator          *Broker
-	heartbeating         bool
 	generationID         int32
 	memberID             string
 	members              []*Member
@@ -151,7 +150,6 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
-		heartbeating:       false,
 	}
 
 	return c, nil
