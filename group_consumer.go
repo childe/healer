@@ -28,6 +28,7 @@ type GroupConsumer struct {
 	offsetsStorage       int // 0 zk, 1 kafka
 
 	coordinator          *Broker
+	heartbeating         bool
 	generationID         int32
 	memberID             string
 	members              []*Member
@@ -149,6 +150,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
+		heartbeating:       false,
 	}
 
 	return c, nil
@@ -319,6 +321,10 @@ func (c *GroupConsumer) joinAndSync() error {
 }
 
 func (c *GroupConsumer) heartbeat() error {
+	if c.memberID == "" {
+		return nil
+	}
+
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -384,6 +390,9 @@ func (c *GroupConsumer) Close() {
 }
 
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
+	defer func() {
+		glog.V(10).Info("group consumer stop consuming. maybe Heartbeat failed and need restart")
+	}()
 	c.fromBeginning = fromBeginning
 
 	// TODO put retry to brokers?
@@ -404,19 +413,21 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 	}
 
 	// go heartbeat
-	ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 3)
-	go func() {
-		for range ticker.C {
-			err := c.heartbeat()
-			if err != nil {
-				glog.Errorf("failed to send heartbeat:%s", err)
-				c.stop()
-				c.leave()
-				c.Consume(c.fromBeginning, c.messages)
-				return
+	if !c.heartbeating {
+		c.heartbeating = true
+		ticker := time.NewTicker(time.Millisecond * time.Duration(c.sessionTimeout) / 5)
+		go func() {
+			for range ticker.C {
+				err := c.heartbeat()
+				if err != nil {
+					glog.Errorf("failed to send heartbeat:%s", err)
+					c.stop()
+					c.leave()
+					c.Consume(c.fromBeginning, c.messages)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// consume
 	if messages == nil {
