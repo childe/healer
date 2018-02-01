@@ -200,7 +200,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 							err = simpleConsumer.getLeaderBroker()
 							if err != nil {
 								// TODO pass errro to caller?
-								glog.Fatal("could get leader broker:%s", err)
+								glog.Fatalf("could get leader broker:%s", err)
 							}
 						}
 					} else {
