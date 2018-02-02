@@ -33,6 +33,7 @@ type GroupConsumer struct {
 	memberID             string
 	members              []*Member
 	ifLeader             bool
+	joined               bool
 	partitionAssignments []*PartitionAssignment
 	topicMetadatas       []*TopicMetadata
 	simpleConsumers      []*SimpleConsumer
@@ -150,6 +151,8 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
+
+		joined: false,
 	}
 
 	return c, nil
@@ -314,12 +317,12 @@ func (c *GroupConsumer) joinAndSync() error {
 }
 
 func (c *GroupConsumer) heartbeat() error {
-	if c.memberID == "" {
-		return nil
-	}
-
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	if c.joined == false {
+		return nil
+	}
 
 	glog.V(10).Infof("heartbeat generationID:%d memberID:%s", c.generationID, c.memberID)
 	_, err := c.coordinator.requestHeartbeat(c.clientID, c.groupID, c.generationID, c.memberID)
@@ -409,7 +412,8 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 }
 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
-	// TODO put retry to brokers?
+	c.joined = false
+
 	var err error
 	for {
 		err = c.getCoordinator()
@@ -423,6 +427,8 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 			break
 		}
 	}
+
+	c.joined = true
 
 	// consume
 	for _, simpleConsumer := range c.simpleConsumers {
