@@ -219,6 +219,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 // join && set generationID&memberID
 func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	glog.Info("try to join group")
+	c.memberID = ""
 	var (
 		protocolType string = "consumer"
 		memberID     string = ""
