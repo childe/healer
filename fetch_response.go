@@ -238,7 +238,7 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() {
 
 	payloadLengthBuf, n := streamDecoder.read(4)
 	if n != 4 {
-		glog.Fatalf("could read enough bytes(4) to get fetchresponse length")
+		glog.Fatalf("could read enough bytes(4) to get fetchresponse length. read %d bytes", n)
 		return
 	}
 	responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
