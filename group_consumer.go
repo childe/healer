@@ -103,7 +103,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["timeout"]; ok {
 		timeout = v.(int)
 	} else {
-		timeout = 10
+		timeout = 30
 	}
 	if v, ok := config["auto.commit.interval.ms"]; ok {
 		autoCommitIntervalMs = v.(int)
