@@ -103,10 +103,10 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["timeout"]; ok {
 		timeout = v.(int)
 	} else {
-		timeout = 10
+		timeout = 40
 	}
-	if timeout >= sessionTimeout {
-		glog.Fatal("timeout must < sessionTimeout")
+	if timeout*1000 <= sessionTimeout {
+		glog.Fatal("socket timeout must be bigger than sessionTimeout")
 	}
 
 	if v, ok := config["auto.commit.interval.ms"]; ok {
