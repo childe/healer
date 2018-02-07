@@ -105,6 +105,10 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	} else {
 		timeout = 30
 	}
+	if timeout >= sessionTimeout {
+		glog.Fatal("timeout must < sessionTimeout")
+	}
+
 	if v, ok := config["auto.commit.interval.ms"]; ok {
 		autoCommitIntervalMs = v.(int)
 	} else {
