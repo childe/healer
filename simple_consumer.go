@@ -176,7 +176,12 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 
 			buffers := make(chan []byte, 10)
 			innerMessages := make(chan *FullMessage, 10)
-			go simpleConsumer.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
+			go func() {
+				err := simpleConsumer.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
+				if err != nil {
+				}
+			}()
+
 			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
 				totalLength: 0,
 				length:      0,
