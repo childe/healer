@@ -86,7 +86,13 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	// TODO log?
 	glog.V(10).Info(broker.conn.LocalAddr())
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
-	broker.conn.Write(payload)
+	n, err := broker.conn.Write(payload)
+	if err != nil {
+		glog.Error(err)
+	}
+	if n != len(payload) {
+		glog.Errorf("write only partial data. api: %d CorrelationID: %d", binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
+	}
 
 	l := 0
 	responseLengthBuf := make([]byte, 4)
@@ -160,7 +166,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 		glog.Error(err)
 	}
 	if n != len(payload) {
-		glog.Error("write only partial data")
+		glog.Errorf("write only partial data. api: %d CorrelationID: %d", binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
 	}
 
 	l := 0
