@@ -103,7 +103,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["timeout"]; ok {
 		timeout = v.(int)
 	} else {
-		timeout = 30
+		timeout = 10
 	}
 	if timeout >= sessionTimeout {
 		glog.Fatal("timeout must < sessionTimeout")
