@@ -101,18 +101,13 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
-		if err == io.EOF {
-			broker.dead = true
+		if err != nil {
+			if err == io.EOF {
+				broker.dead = true
+			}
 			return nil, err
 		}
-		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				glog.V(5).Infof("read timeout:%s", err)
-				continue
-			} else {
-				return nil, err
-			}
-		}
+
 		if length+l == 4 {
 			break
 		}
@@ -129,17 +124,11 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
-		if err == io.EOF {
-			broker.dead = true
-			return nil, err
-		}
 		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				glog.V(5).Infof("read timeout:%s", err)
-				continue
-			} else {
-				return nil, err
+			if err == io.EOF {
+				broker.dead = true
 			}
+			return nil, err
 		}
 
 		readLength += length
@@ -176,17 +165,11 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
-		if err == io.EOF {
-			broker.dead = true
-			return err
-		}
 		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				glog.V(5).Infof("read timeout:%s", err)
-				continue
-			} else {
-				return err
+			if err == io.EOF {
+				broker.dead = true
 			}
+			return err
 		}
 
 		glog.V(20).Infof("%v", responseLengthBuf[l:length])
@@ -208,17 +191,11 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
 		}
 		length, err := broker.conn.Read(buf)
-		if err == io.EOF {
-			broker.dead = true
-			return err
-		}
 		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				glog.V(5).Infof("read timeout:%s", err)
-				continue
-			} else {
-				return err
+			if err == io.EOF {
+				broker.dead = true
 			}
+			return err
 		}
 
 		glog.V(100).Infof("%v", buf[:length])
