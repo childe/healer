@@ -152,9 +152,6 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 }
 
 func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
-	broker.mux.Lock()
-	defer broker.mux.Unlock()
-
 	defer close(buffers)
 
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
@@ -192,7 +189,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 		if length+l == 4 {
 			break
 		}
-		l = length
+		l += length
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
@@ -322,12 +319,14 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 }
 
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
+	broker.mux.Lock()
+	defer broker.mux.Unlock()
+
 	broker.correlationID++
 	fetchRequest.SetCorrelationID(broker.correlationID)
 	payload := fetchRequest.Encode()
 
-	err := broker.requestStreamingly(payload, buffers)
-	return err
+	return broker.requestStreamingly(payload, buffers)
 }
 
 func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
