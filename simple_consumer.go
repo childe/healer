@@ -179,6 +179,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			go func() {
 				err := simpleConsumer.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 				if err != nil {
+					glog.Errorf("fetch error:%s", err)
 				}
 			}()
 
