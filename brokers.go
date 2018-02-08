@@ -135,7 +135,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topic *string) (*Metada
 		}
 		metadataResponse, err := broker.requestMetaData(clientID, topic)
 		if err != nil {
-			glog.Infof("could not get metadata from %s:%s", broker.address, err)
+			glog.Errorf("could not get metadata from %s:%s", broker.address, err)
 		} else {
 			return metadataResponse, nil
 		}
