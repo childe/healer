@@ -75,6 +75,7 @@ func (broker *Broker) IsDead() bool {
 
 func (broker *Broker) ensureOpen() {
 	if broker.dead {
+		glog.Infof("broker %s dead, reopen it", broker.address)
 		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.connecTimeout)*time.Second)
 		if err != nil {
 			glog.Fatalf("could not conn to %s:%s", broker.address, err)
