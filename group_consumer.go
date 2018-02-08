@@ -127,6 +127,10 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	} else {
 		commitAfterFetch = false
 	}
+	if !autoCommit && !commitAfterFetch {
+		glog.Info("commit.after.fetch is set to true when autoCommit is false")
+		commitAfterFetch = true
+	}
 
 	if v, ok := config["offsets.storage"]; ok {
 		s := v.(string)
