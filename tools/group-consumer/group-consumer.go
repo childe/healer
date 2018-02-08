@@ -16,14 +16,20 @@ var (
 	clientID       = flag.String("clientID", "", "The ID of this client.")
 	groupID        = flag.String("groupID", "", "REQUIRED: The ID of this client.")
 	minBytes       = flag.Int("min-bytes", 1, "The fetch size of each request.")
-	fromBeginning  = flag.Bool("from-beginning", false, "default false")
 	maxWaitTime    = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
 	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 	maxBytes       = flag.Int("max-bytes", 10*1024*1024, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
-	offsetsStorage = flag.String("offsets.storage", "kafka", "default kafka. Select where offsets should be stored (zookeeper or kafka).")
+
 	timeout        = flag.Int("timeout", 40, "default 10 Second. read timeout from connection to broker")
 	sessionTimeout = flag.Int("sessionTimeout", 30000, "default 30000ms. The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.")
+
+	fromBeginning = flag.Bool("from-beginning", false, "default false")
+
+	offsetsStorage       = flag.String("offsets.storage", "kafka", "default kafka. Select where offsets should be stored (zookeeper or kafka).")
+	autoCommit           = flag.Bool("auto.commit.enable", true, "If true, periodically commit the offset of messages already fetched by the consumer. This committed offset will be used when the process fails as the position from which the new consumer will begin.")
+	autoCommitIntervalMs = flag.Int("auto.commit.interval.ms", 60000, "default 60000. The frequency in ms that the consumer offsets are committed.")
+	commitAfterFetch     = flag.Bool("commit.after.fetch", false, "default false. commit offset after every fetch request")
 )
 
 func main() {
@@ -52,9 +58,12 @@ func main() {
 	config["fetch.max.wait.ms"] = *maxWaitTime
 	config["fetch.min.bytes"] = *minBytes
 	config["max.partition.fetch.bytes"] = *maxBytes
-	config["offsets.storage"] = *offsetsStorage
 	config["connectTimeout"] = *connectTimeout
 	config["timeout"] = *timeout
+	config["offsets.storage"] = *offsetsStorage
+	config["auto.commit.enable"] = *autoCommit
+	config["auto.commit.interval.ms"] = *autoCommitIntervalMs
+	config["commit.after.fetch"] = *commitAfterFetch
 
 	c, err := healer.NewGroupConsumer(config)
 	if err != nil {
