@@ -19,6 +19,7 @@ type SimpleConsumer struct {
 	MinBytes             int32
 	AutoCommitIntervalMs int
 	AutoCommit           bool
+	CommitAfterFetch     bool
 	OffsetsStorage       int // 0 zk, 1 kafka
 
 	leaderBroker *Broker
@@ -223,7 +224,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				}
 			}
 
-			if simpleConsumer.BelongTO != nil && simpleConsumer.offset != simpleConsumer.offsetCommited {
+			if simpleConsumer.BelongTO != nil && simpleConsumer.CommitAfterFetch && simpleConsumer.offset != simpleConsumer.offsetCommited {
 				simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
 				simpleConsumer.offsetCommited = simpleConsumer.offset
 			}

@@ -24,6 +24,7 @@ type GroupConsumer struct {
 	minBytes             int32
 	fromBeginning        bool
 	autoCommit           bool
+	commitAfterFetch     bool
 	autoCommitIntervalMs int
 	offsetsStorage       int // 0 zk, 1 kafka
 
@@ -57,6 +58,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		timeout              int
 		autoCommitIntervalMs int
 		autoCommit           bool
+		commitAfterFetch     bool
 		offsetsStorage       int
 	)
 
@@ -120,6 +122,12 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		autoCommit = true
 	}
 
+	if v, ok := config["commit.after.fetch"]; ok {
+		commitAfterFetch = v.(bool)
+	} else {
+		commitAfterFetch = false
+	}
+
 	if v, ok := config["offsets.storage"]; ok {
 		s := v.(string)
 		if s == "kafka" {
@@ -149,6 +157,7 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		minBytes:             minBytes,
 		maxBytes:             maxBytes,
 		autoCommit:           autoCommit,
+		commitAfterFetch:     commitAfterFetch,
 		autoCommitIntervalMs: autoCommitIntervalMs,
 		offsetsStorage:       offsetsStorage,
 
@@ -211,6 +220,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 			simpleConsumer.MinBytes = c.minBytes
 			simpleConsumer.AutoCommit = c.autoCommit
 			simpleConsumer.AutoCommitIntervalMs = c.autoCommitIntervalMs
+			simpleConsumer.CommitAfterFetch = c.commitAfterFetch
 			simpleConsumer.OffsetsStorage = c.offsetsStorage
 
 			simpleConsumer.BelongTO = c
