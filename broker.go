@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"time"
@@ -74,15 +73,29 @@ func (broker *Broker) IsDead() bool {
 	return broker.dead
 }
 
+func (broker *Broker) ensureOpen() {
+	if broker.dead {
+		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.connecTimeout)*time.Second)
+		if err != nil {
+			glog.Fatalf("could not conn to %s:%s", broker.address, err)
+		}
+		broker.conn = conn
+		broker.dead = false
+	}
+}
+
 func (broker *Broker) Request(r Request) ([]byte, error) {
+	broker.mux.Lock()
+	defer broker.mux.Unlock()
+
+	broker.ensureOpen()
+
 	broker.correlationID++
 	r.SetCorrelationID(broker.correlationID)
 	return broker.request(r.Encode())
 }
 
 func (broker *Broker) request(payload []byte) ([]byte, error) {
-	broker.mux.Lock()
-	defer broker.mux.Unlock()
 	// TODO log?
 	glog.V(10).Info(broker.conn.LocalAddr())
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
@@ -102,9 +115,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
-			if err == io.EOF {
-				broker.dead = true
-			}
+			broker.dead = true
+			broker.Close()
 			return nil, err
 		}
 
@@ -125,9 +137,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err != nil {
-			if err == io.EOF {
-				broker.dead = true
-			}
+			broker.dead = true
+			broker.Close()
 			return nil, err
 		}
 
@@ -166,9 +177,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
-			if err == io.EOF {
-				broker.dead = true
-			}
+			broker.dead = true
+			broker.Close()
 			return err
 		}
 
@@ -192,9 +202,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 		}
 		length, err := broker.conn.Read(buf)
 		if err != nil {
-			if err == io.EOF {
-				broker.dead = true
-			}
+			broker.dead = true
+			broker.Close()
 			return err
 		}
 
@@ -304,6 +313,8 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
+
+	broker.ensureOpen()
 
 	broker.correlationID++
 	fetchRequest.SetCorrelationID(broker.correlationID)
