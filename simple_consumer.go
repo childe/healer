@@ -110,7 +110,7 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 
 		response, err := simpleConsumer.BelongTO.coordinator.Request(r)
 		if err != nil {
-			glog.Fatal("request fetch offset for [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+			glog.Fatalf("request fetch offset for [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
 		}
 
 		res, err := NewOffsetFetchResponse(response)
