@@ -12,6 +12,8 @@ OffsetsResponse => [TopicName [PartitionOffsets]]
   Offset => int64
 */
 
+
+// TODO rename
 type PartitionOffset struct {
 	Partition uint32
 	ErrorCode int16
