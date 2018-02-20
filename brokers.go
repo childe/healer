@@ -119,7 +119,7 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 			brokers.brokers[nodeID] = broker
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d)", nodeID, brokerInfo.Host, brokerInfo.Port)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%s", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 		}
 	} else {
 		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
