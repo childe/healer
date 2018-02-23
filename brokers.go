@@ -239,17 +239,18 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordina
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeId)
 		if err != nil {
+			glog.Errorf("get broker[%d] error:%s", brokerInfo.NodeId, err)
 			continue
 		}
 		response, err := broker.findCoordinator(clientID, groupID)
 		if err != nil {
-			glog.Infof("could not find coordinator from %s:%s", broker.address, err)
+			glog.Errorf("could not find coordinator from %s:%s", broker.address, err)
 		} else {
 			return response, nil
 		}
 	}
 
-	return nil, fmt.Errorf("could not list groups from all brokers")
+	return nil, fmt.Errorf("could not find coordinator from all brokers")
 }
 
 func (brokers *Brokers) RequestDescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
