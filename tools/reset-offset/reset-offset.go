@@ -17,7 +17,7 @@ var (
 	clientID       = flag.String("clientID", "healer", "The ID of this client. default healer")
 	groupID        = flag.String("groupID", "", "REQUIRED: The ID of this client.")
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 10, "default 10 Second. read timeout from connection to broker")
+	timeout        = flag.Int("timeout", 60, "default 10 Second. read timeout from connection to broker")
 	timestamp      = flag.Int64("timestamp", -3, "REQUIRED: -2 which means beginning; -1 means end.")
 )
 
