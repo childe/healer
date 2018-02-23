@@ -147,7 +147,22 @@ func main() {
 	memberID = joinGroupResponse.MemberID
 	glog.Infof("generationID:%d memberID:%s", generationID, memberID)
 
-	// commit
+	// 3. sync
+	var groupAssignment healer.GroupAssignment = nil
+	syncGroupRequest := healer.NewSyncGroupRequest(*clientID, *groupID, generationID, memberID, groupAssignment)
+
+	responseBytes, err = coordinator.Request(syncGroupRequest)
+	if err != nil {
+		glog.Fatalf("request sync api error:%s", err)
+	}
+
+	_, err = healer.NewSyncGroupResponse(responseBytes)
+
+	if err != nil {
+		glog.Fatalf("decode sync response error:%s", err)
+	}
+
+	// 4. commit
 	var (
 		apiVersion uint16
 	)
