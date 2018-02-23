@@ -145,8 +145,7 @@ func main() {
 
 	generationID = joinGroupResponse.GenerationID
 	memberID = joinGroupResponse.MemberID
-	glog.Info(generationID)
-	glog.Info(memberID)
+	glog.Infof("generationID:%d memberID:%s", generationID, memberID)
 
 	// commit
 	var (
