@@ -65,7 +65,13 @@ func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout i
 
 }
 
-//TODO merge with GetBroker
+// TODO
+func (brokers *Brokers) refresh() error {
+	return nil
+}
+
+// TODO merge with GetBroker
+// TODO retry to get metadata if `could not get broker info from nodeID`
 func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	if nodeID == -1 {
 		for nodeID, brokerInfo := range brokers.brokersInfo {
