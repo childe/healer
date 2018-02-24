@@ -291,7 +291,11 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 		return nil, err
 	}
 
-	c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
+	err = c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
+	if err != nil {
+		glog.Errorf("parse group assignments error:%s", err)
+		return syncGroupResponse, err
+	}
 
 	return syncGroupResponse, nil
 }
@@ -442,6 +446,8 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 		err = c.joinAndSync()
 		if err == nil {
 			break
+		} else {
+			glog.Error(err)
 		}
 	}
 
