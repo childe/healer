@@ -209,6 +209,10 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 	if err != nil {
 		return err
 	}
+	if glog.V(2) {
+		b, _ := json.Marshal(memberAssignment)
+		glog.Infof("memeber assignment:%s", b)
+	}
 	c.partitionAssignments = memberAssignment.PartitionAssignments
 	c.simpleConsumers = make([]*SimpleConsumer, 0)
 
