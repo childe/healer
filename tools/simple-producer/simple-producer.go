@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 
 	"github.com/childe/healer"
@@ -13,8 +12,6 @@ var (
 	topic     = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition = flag.Int("partition", 0, "The partition to consume from.")
 	value     = flag.String("value", "", "")
-
-	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
 func main() {
@@ -22,9 +19,11 @@ func main() {
 
 	if *topic == "" {
 		flag.PrintDefaults()
+		os.Exit(4)
 	}
 	if *value == "" {
 		flag.PrintDefaults()
+		os.Exit(4)
 	}
 
 	simpleProducer := &healer.SimpleProducer{}

@@ -9,15 +9,20 @@ import (
 
 type SimpleProducer struct {
 	Config struct {
-		ClientId     string
-		Broker       string
-		TopicName    string
-		Partition    int32
-		RequiredAcks int16
-		Timeout      int32
-		MessageCap   int32
+		ClientId         string
+		Broker           string
+		Topic            string
+		Partition        int32
+		Acks             int16
+		Timeout          int32
+		MessageCap       int32
+		compressionType  string
+		retries          int
+		batchSize        int
+		metadataMaxAgeMS int
 	}
-	CorrelationID  uint32
+
+	CorrelationID int32
 	MessageSetSize int32
 	MessageSet     MessageSet
 }
