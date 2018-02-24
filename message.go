@@ -5,12 +5,12 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"io/ioutil"
 
 	"github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
-	"github.com/klauspost/crc32"
 	"github.com/pierrec/lz4"
 )
 
@@ -117,15 +117,17 @@ func (messageSet *MessageSet) Length() int {
 }
 
 func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
+	var i int32 = -1
 	for _, message := range *messageSet {
 		binary.BigEndian.PutUint64(payload[offset:], uint64(message.Offset))
 		offset += 8
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(14+len(message.Key)+len(message.Value)))
+		glog.Info(14 + len(message.Key) + len(message.Value))
 		offset += 4
 
-		offset += 4
 		crcPosition := offset
+		offset += 4
 
 		payload[offset] = byte(message.MagicByte)
 		offset += 1
@@ -134,11 +136,10 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		offset += 1
 
 		if message.Key == nil {
-			var i int32 = -1
 			binary.BigEndian.PutUint32(payload[offset:], uint32(i))
 			offset += 4
 		} else {
-			binary.BigEndian.PutUint16(payload[offset:], uint16(len(message.Key)))
+			binary.BigEndian.PutUint32(payload[offset:], uint32(len(message.Key)))
 			offset += 2
 			copy(payload[offset:], message.Key)
 			offset += len(message.Key)
@@ -149,8 +150,8 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		copy(payload[offset:], message.Value)
 		offset += len(message.Value)
 
-		message.Crc = crc32.ChecksumIEEE(payload[crcPosition:offset])
-		binary.BigEndian.PutUint32(payload[crcPosition-4:], message.Crc)
+		message.Crc = crc32.ChecksumIEEE(payload[crcPosition+4 : offset])
+		binary.BigEndian.PutUint32(payload[crcPosition:], message.Crc)
 	}
 
 	return offset
