@@ -175,17 +175,26 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 }
 
 // request metadata and set partition metadat to group-consumer. only leader should request this
-func (c *GroupConsumer) getTopicPartitionInfo() error {
-	metaDataResponse, err := c.brokers.RequestMetaData(c.clientID, &c.topic)
-	if err != nil {
-		return err
+func (c *GroupConsumer) getTopicPartitionInfo() {
+	// TODO if could not get meta, such as error 5:`There is no leader for this topic-partition as we are in the middle of a leadership election.`
+	var (
+		metaDataResponse *MetadataResponse
+		err              error
+	)
+	for {
+		metaDataResponse, err = c.brokers.RequestMetaData(c.clientID, &c.topic)
+		if err == nil {
+			break
+		} else {
+			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topic, err)
+			time.Sleep(3 * time.Second)
+		}
 	}
 
 	b, _ := json.Marshal(metaDataResponse)
 	glog.V(5).Infof("topic[%s] metadata:%s", c.topic, b)
 	c.topicMetadatas = metaDataResponse.TopicMetadatas
 	glog.Infof("there is %d partitions in topic[%s]", len(c.topicMetadatas[0].PartitionMetadatas), c.topic)
-	return nil
 }
 
 func (c *GroupConsumer) getCoordinator() error {
