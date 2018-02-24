@@ -45,7 +45,6 @@ func (simpleConsumer *SimpleConsumer) getLeaderBroker() error {
 
 	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
 	if err != nil {
-		//glog.Fatal("could not get leader of topic %s:%s", simpleConsumer.TopicName, err)
 		return err
 	} else {
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
