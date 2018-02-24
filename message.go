@@ -132,7 +132,7 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 			offset += 4
 		} else {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(len(message.Key)))
-			offset += 2
+			offset += 4
 			copy(payload[offset:], message.Key)
 			offset += len(message.Key)
 		}
