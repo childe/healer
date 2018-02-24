@@ -8,26 +8,23 @@ import (
 )
 
 type SimpleProducer struct {
-	Config struct {
-		ClientId         string
-		Broker           string
-		Topic            string
-		Partition        int32
-		Acks             int16
-		Timeout          int32
-		MessageCap       int32
-		compressionType  string
-		retries          int
-		batchSize        int
-		metadataMaxAgeMS int
-	}
+	clientId         string
+	broker           string
+	topic            string
+	partition        int32
+	acks             int16
+	timeout          int32
+	messageCap       int32
+	compressionType  string
+	retries          int
+	batchSize        int
+	metadataMaxAgeMS int
 
-	CorrelationID int32
-	MessageSetSize int32
-	MessageSet     MessageSet
+	messageSetSize int32
+	messageSet     MessageSet
 }
 
-func (simpleProducer *SimpleProducer) AddMessage(message *Message) {
+func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) {
 	simpleProducer.MessageSet[simpleProducer.MessageSetSize] = message
 	simpleProducer.MessageSetSize++
 	if simpleProducer.MessageSetSize == simpleProducer.Config.MessageCap {
