@@ -1,59 +1,146 @@
 package healer
 
 import (
-	"encoding/binary"
-	"io"
-	"net"
-	"time"
+	"sync"
+
+	"github.com/golang/glog"
 )
 
 type SimpleProducer struct {
-	clientId         string
-	broker           string
+	clientID         string
+	broker           *Broker
 	topic            string
 	partition        int32
 	acks             int16
-	timeout          int32
-	messageCap       int32
+	requestTimeoutMS int32
 	compressionType  string
+	compressionValue int8
 	retries          int
 	batchSize        int
+	messageMaxCount  int
 	metadataMaxAgeMS int
 
-	messageSetSize int32
+	messageSetSize int
 	messageSet     MessageSet
+
+	mutex sync.Locker
+}
+
+func NewSimpleProducer(topic string, partition int32, config map[string]interface{}) *SimpleProducer {
+	p := &SimpleProducer{
+		clientID:         "healer",
+		topic:            topic,
+		partition:        partition,
+		acks:             1,
+		requestTimeoutMS: 30000,
+		compressionType:  "none",
+		retries:          0,
+		batchSize:        16384,
+		messageMaxCount:  10,
+		metadataMaxAgeMS: 300000,
+
+		mutex: &sync.Mutex{},
+	}
+
+	if v, ok := config["compression.type"]; ok {
+		compressionType := v.(string)
+		if compressionType == "none" {
+			p.compressionType = compressionType
+			p.compressionValue = COMPRESSION_NONE
+		} else if compressionType == "gzip" {
+			p.compressionType = compressionType
+			p.compressionValue = COMPRESSION_GZIP
+		} else if compressionType == "snappy" {
+			p.compressionType = compressionType
+			p.compressionValue = COMPRESSION_SNAPPY
+		} else if compressionType == "lz4" {
+			p.compressionType = compressionType
+			p.compressionValue = COMPRESSION_LZ4
+		} else {
+			glog.Fatalf("unknown compression type:%s", compressionType)
+		}
+	}
+
+	if v, ok := config["message.max.count"]; ok {
+		p.messageMaxCount = v.(int)
+		if p.messageMaxCount <= 0 {
+			glog.Fatal("messageMaxCount must > 0")
+		}
+	}
+	p.messageSet = make([]*Message, p.messageMaxCount)
+
+	// get partition leader
+	var brokerList string
+	if v, ok := config["bootstrap.servers"]; ok {
+		brokerList = v.(string)
+	} else {
+		glog.Error("bootstrap.servers must be set")
+		return nil
+	}
+	brokers, err := NewBrokers(brokerList, p.clientID, 60000, 30000)
+	if err != nil {
+		glog.Errorf("init brokers error:%s", err)
+		return nil
+	}
+
+	leaderID, err := brokers.findLeader(p.clientID, p.topic, p.partition)
+	if err != nil {
+		glog.Errorf("could not get leader of topic %s[%d]:%s", p, topic, p.partition, err)
+		return nil
+	} else {
+		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
+	}
+
+	// TODO
+	p.broker, err = brokers.NewBroker(leaderID)
+	if err != nil {
+		glog.Errorf("create broker error:%s", err)
+		return nil
+	} else {
+		glog.V(5).Infof("leader broker %s", p.broker.GetAddress())
+	}
+	return p
 }
 
 func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) {
-	simpleProducer.MessageSet[simpleProducer.MessageSetSize] = message
-	simpleProducer.MessageSetSize++
-	if simpleProducer.MessageSetSize == simpleProducer.Config.MessageCap {
+	message := &Message{
+		Offset:      0,
+		MessageSize: 0, // compute in message encode
+
+		Crc:        0, // compute in message encode
+		Attributes: 0 | simpleProducer.compressionValue,
+		MagicByte:  0,
+		Key:        key,
+		Value:      value,
+	}
+	simpleProducer.messageSet[simpleProducer.messageSetSize] = message
+	simpleProducer.messageSetSize++
+	// TODO lock
+	if simpleProducer.messageSetSize >= simpleProducer.messageMaxCount {
+		// TODO copy and clean and emit?
 		simpleProducer.Emit()
 	}
 }
 
 func (simpleProducer *SimpleProducer) Emit() {
-	simpleProducer.emit()
-	simpleProducer.CorrelationID++
-	simpleProducer.MessageSetSize = 0
+	simpleProducer.mutex.Lock()
+	defer simpleProducer.mutex.Unlock()
+
+	messageSet := simpleProducer.messageSet[:simpleProducer.messageSetSize]
+	simpleProducer.messageSetSize = 0
+	simpleProducer.messageSet = make([]*Message, simpleProducer.messageMaxCount)
+	simpleProducer.emit(messageSet)
 }
 
-func (simpleProducer *SimpleProducer) emit() {
-	conn, err := net.DialTimeout("tcp", simpleProducer.Config.Broker, time.Second*5)
-	if err != nil {
-		//logger.Fatalln(err)
-	}
-	defer func() { conn.Close() }()
-
-	produceRequest := ProduceRequest{
-		RequiredAcks: simpleProducer.Config.RequiredAcks,
-		Timeout:      simpleProducer.Config.Timeout,
+func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) {
+	produceRequest := &ProduceRequest{
+		RequiredAcks: simpleProducer.acks,
+		Timeout:      simpleProducer.requestTimeoutMS,
 	}
 	produceRequest.RequestHeader = &RequestHeader{
-		ApiKey:        API_ProduceRequest,
-		ApiVersion:    0,
-		CorrelationID: simpleProducer.CorrelationID,
-		ClientId:      simpleProducer.Config.ClientId,
+		ApiKey:     API_ProduceRequest,
+		ApiVersion: 0,
+		ClientId:   simpleProducer.clientID,
 	}
 
 	produceRequest.TopicBlocks = make([]struct {
@@ -64,50 +151,19 @@ func (simpleProducer *SimpleProducer) emit() {
 			MessageSet     MessageSet
 		}
 	}, 1)
-	produceRequest.TopicBlocks[0].TopicName = simpleProducer.Config.TopicName
+	produceRequest.TopicBlocks[0].TopicName = simpleProducer.topic
 	produceRequest.TopicBlocks[0].PartitonBlocks = make([]struct {
 		Partition      int32
 		MessageSetSize int32
 		MessageSet     MessageSet
 	}, 1)
 
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = 0
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = simpleProducer.MessageSetSize
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = simpleProducer.MessageSet[:simpleProducer.MessageSetSize]
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = simpleProducer.partition
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
+	//produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{}
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
-	for {
-		payload := produceRequest.Encode()
-		//logger.Println("request length", len(payload))
-		//logger.Println(payload)
-		conn.Write(payload)
-		buf := make([]byte, 4)
-		_, err = conn.Read(buf)
-		//logger.Println(buf)
-
-		if err != nil {
-			//logger.Fatalln(err)
-		}
-		responseLength := int(binary.BigEndian.Uint32(buf))
-		//logger.Println("responseLength:", responseLength)
-		buf = make([]byte, responseLength)
-
-		readLength := 0
-		for {
-			length, err := conn.Read(buf[readLength:])
-			//logger.Println("length", length)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				//logger.Fatalln(err)
-			}
-			readLength += length
-			if readLength > responseLength {
-				//logger.Fatalln("fetch more data than needed")
-			}
-		}
-		//logger.Println(buf)
-		//correlationID := int32(binary.BigEndian.Uint32(buf))
-		//logger.Println("correlationID", correlationID)
-	}
+	response, err := simpleProducer.broker.Request(produceRequest)
+	glog.Info(response)
+	glog.Info(err)
 }

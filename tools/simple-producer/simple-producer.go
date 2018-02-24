@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/childe/healer"
@@ -12,6 +13,7 @@ var (
 	topic     = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition = flag.Int("partition", 0, "The partition to consume from.")
 	value     = flag.String("value", "", "")
+	key       = flag.String("key", "", "")
 )
 
 func main() {
@@ -26,22 +28,15 @@ func main() {
 		os.Exit(4)
 	}
 
-	simpleProducer := &healer.SimpleProducer{}
-	simpleProducer.Config.ClientId = "console-producer"
-	simpleProducer.Config.Broker = *brokers
-	simpleProducer.Config.TopicName = *topic
-	simpleProducer.Config.Partition = int32(*partition)
-	simpleProducer.Config.RequiredAcks = 0
-	simpleProducer.Config.Timeout = 0
-	simpleProducer.Config.MessageCap = 1
-	simpleProducer.MessageSet = make([]healer.Message, 1)
-	simpleProducer.MessageSetSize = 0
+	config := make(map[string]interface{})
+	config["message.max.count"] = 1
+	config["bootstrap.servers"] = *brokers
+	simpleProducer := healer.NewSimpleProducer(*topic, int32(*partition), config)
 
-	message := healer.Message{
-		MagicByte:  0,
-		Attributes: 0,
-		Key:        nil,
-		Value:      []byte(*value),
+	if simpleProducer == nil {
+		fmt.Println("could not create simpleProducer")
+		os.Exit(5)
 	}
-	simpleProducer.AddMessage(message)
+
+	simpleProducer.AddMessage([]byte(*key), []byte(*value))
 }
