@@ -40,14 +40,6 @@ Key				The key is an optional message key that was used for partition assignment
 Value			The value is the actual message contents as an opaque byte array. Kafka supports recursive messages in which case this may itself contain a message set. The message can be null.
 */
 
-//type Message struct {
-//Crc        int32
-//MagicByte  int8
-//Attributes int8
-//Key        []byte
-//Value      []byte
-//}
-
 type FullMessage struct {
 	TopicName   string
 	PartitionID int32
