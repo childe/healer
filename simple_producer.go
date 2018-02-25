@@ -45,30 +45,31 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 		mutex: &sync.Mutex{},
 	}
 
+	var compressionType string
 	if v, ok := config["compression.type"]; ok {
-		compressionType := v.(string)
-		if compressionType == "none" {
-			p.compressionType = compressionType
-			p.compressionValue = COMPRESSION_NONE
-		} else if compressionType == "gzip" {
-			p.compressionType = compressionType
-			p.compressionValue = COMPRESSION_GZIP
-		} else if compressionType == "snappy" {
-			p.compressionType = compressionType
-			p.compressionValue = COMPRESSION_SNAPPY
-		} else if compressionType == "lz4" {
-			p.compressionType = compressionType
-			p.compressionValue = COMPRESSION_LZ4
-		} else {
-			glog.Errorf("unknown compression type:%s", compressionType)
-			return nil
-		}
-		p.compressor = NewCompressor(compressionType)
+		compressionType = v.(string)
+	} else {
+		compressionType = "none"
+	}
+	p.compressionType = compressionType
+	switch compressionType {
+	case "none":
+		p.compressionValue = COMPRESSION_NONE
+	case "gzip":
+		p.compressionValue = COMPRESSION_GZIP
+	case "snappy":
+		p.compressionValue = COMPRESSION_SNAPPY
+	case "lz4":
+		p.compressionValue = COMPRESSION_LZ4
+	default:
+		glog.Errorf("unknown compression type:%s", compressionType)
+		return nil
+	}
+	p.compressor = NewCompressor(compressionType)
 
-		if p.compressor == nil {
-			glog.Error("could not build compressor for simple_producer")
-			return nil
-		}
+	if p.compressor == nil {
+		glog.Error("could not build compressor for simple_producer")
+		return nil
 	}
 
 	if v, ok := config["message.max.count"]; ok {
