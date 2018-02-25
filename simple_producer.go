@@ -24,6 +24,8 @@ type SimpleProducer struct {
 	messageSet     MessageSet
 
 	mutex sync.Locker
+
+	compressor Compressor
 }
 
 func NewSimpleProducer(topic string, partition int32, config map[string]interface{}) *SimpleProducer {
@@ -57,7 +59,14 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 			p.compressionType = compressionType
 			p.compressionValue = COMPRESSION_LZ4
 		} else {
-			glog.Fatalf("unknown compression type:%s", compressionType)
+			glog.Errorf("unknown compression type:%s", compressionType)
+			return nil
+		}
+		p.compressor = NewCompressor(compressionType)
+
+		if p.compressor == nil {
+			glog.Error("could not build compressor for simple_producer")
+			return nil
 		}
 	}
 
@@ -102,7 +111,11 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 	return p
 }
 
-func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) {
+func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error {
+	compressed_value, err := simpleProducer.compressor.Compress(value)
+	if err != nil {
+		return err
+	}
 	message := &Message{
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
@@ -111,7 +124,7 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) {
 		Attributes: 0 | simpleProducer.compressionValue,
 		MagicByte:  0,
 		Key:        key,
-		Value:      value,
+		Value:      compressed_value,
 	}
 	simpleProducer.messageSet[simpleProducer.messageSetSize] = message
 	simpleProducer.messageSetSize++
@@ -120,6 +133,7 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) {
 		// TODO copy and clean and emit?
 		simpleProducer.Emit()
 	}
+	return nil
 }
 
 func (simpleProducer *SimpleProducer) Emit() {
@@ -158,17 +172,18 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) {
 		MessageSet     MessageSet
 	}, 1)
 
-	//var value []byte
-	//var message *Message = &Message{
-	//Offset:      0,
-	//MessageSize: 0, // compute in message encode
+	value := make([]byte, 0)
+	messageSet.Encode(value, 0)
+	var message *Message = &Message{
+		Offset:      0,
+		MessageSize: 0, // compute in message encode
 
-	//Crc:        0, // compute in message encode
-	//Attributes: 0 | simpleProducer.compressionValue,
-	//MagicByte:  0,
-	//Key:        nil,
-	//Value:      value,
-	//}
+		Crc:        0, // compute in message encode
+		Attributes: 0 | simpleProducer.compressionValue,
+		MagicByte:  0,
+		Key:        nil,
+		Value:      value,
+	}
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = simpleProducer.partition
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
 	//produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{message}
