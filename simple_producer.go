@@ -158,9 +158,20 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) {
 		MessageSet     MessageSet
 	}, 1)
 
+	//var value []byte
+	//var message *Message = &Message{
+	//Offset:      0,
+	//MessageSize: 0, // compute in message encode
+
+	//Crc:        0, // compute in message encode
+	//Attributes: 0 | simpleProducer.compressionValue,
+	//MagicByte:  0,
+	//Key:        nil,
+	//Value:      value,
+	//}
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = simpleProducer.partition
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
-	//produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{}
+	//produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{message}
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
 	response, err := simpleProducer.broker.Request(produceRequest)
