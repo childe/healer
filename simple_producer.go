@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/golang/glog"
@@ -136,17 +137,17 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 	return nil
 }
 
-func (simpleProducer *SimpleProducer) Emit() {
+func (simpleProducer *SimpleProducer) Emit() error {
 	simpleProducer.mutex.Lock()
 	defer simpleProducer.mutex.Unlock()
 
 	messageSet := simpleProducer.messageSet[:simpleProducer.messageSetSize]
 	simpleProducer.messageSetSize = 0
 	simpleProducer.messageSet = make([]*Message, simpleProducer.messageMaxCount)
-	simpleProducer.emit(messageSet)
+	return simpleProducer.emit(messageSet)
 }
 
-func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) {
+func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) error {
 	produceRequest := &ProduceRequest{
 		RequiredAcks: simpleProducer.acks,
 		Timeout:      simpleProducer.requestTimeoutMS,
@@ -172,8 +173,12 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) {
 		MessageSet     MessageSet
 	}, 1)
 
-	value := make([]byte, 0)
+	value := make([]byte, messageSet.Length())
 	messageSet.Encode(value, 0)
+	compressed_value, err := simpleProducer.compressor.Compress(value)
+	if err != nil {
+		return fmt.Errorf("compress messageset error:%s", err)
+	}
 	var message *Message = &Message{
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
@@ -182,14 +187,14 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) {
 		Attributes: 0 | simpleProducer.compressionValue,
 		MagicByte:  0,
 		Key:        nil,
-		Value:      value,
+		Value:      compressed_value,
 	}
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = simpleProducer.partition
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
-	//produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{message}
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{message}
 
 	response, err := simpleProducer.broker.Request(produceRequest)
 	glog.Info(response)
 	glog.Info(err)
+	return err
 }
