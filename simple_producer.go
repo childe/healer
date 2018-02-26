@@ -96,7 +96,7 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 
 	leaderID, err := brokers.findLeader(p.clientID, p.topic, p.partition)
 	if err != nil {
-		glog.Errorf("could not get leader of topic %s[%d]:%s", p, topic, p.partition, err)
+		glog.Errorf("could not get leader of topic %s[%d]:%s", p.topic, p.partition, err)
 		return nil
 	} else {
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
