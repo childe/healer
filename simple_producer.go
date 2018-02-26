@@ -123,8 +123,8 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 		MessageSize: 0, // compute in message encode
 
 		Crc:        0, // compute in message encode
-		Attributes: 0 | simpleProducer.compressionValue,
-		MagicByte:  0,
+		Attributes: 0x00 | simpleProducer.compressionValue,
+		MagicByte:  1,
 		Key:        key,
 		Value:      compressed_value,
 	}
@@ -185,8 +185,8 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) error {
 		MessageSize: 0, // compute in message encode
 
 		Crc:        0, // compute in message encode
-		Attributes: 0 | simpleProducer.compressionValue,
-		MagicByte:  0,
+		Attributes: 0x00 | simpleProducer.compressionValue,
+		MagicByte:  1,
 		Key:        nil,
 		Value:      compressed_value,
 	}
