@@ -77,8 +77,6 @@ func (message *Message) decompress() ([]byte, error) {
 			return nil, err
 		}
 		if rst, err = ioutil.ReadAll(reader); err != nil && err != io.EOF {
-			glog.Info(err)
-			glog.Info(rst)
 			return nil, err
 		} else {
 			return rst, nil
@@ -115,7 +113,6 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		offset += 8
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(14+len(message.Key)+len(message.Value)))
-		glog.Info(14 + len(message.Key) + len(message.Value))
 		offset += 4
 
 		crcPosition := offset
@@ -152,6 +149,7 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 	messageSet := MessageSet{}
 	var offset int = 0
+	var err error
 
 	for {
 		if offset == len(payload) {
@@ -162,11 +160,9 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 		offset += 8
-		glog.V(18).Infof("message offset: %d", message.Offset)
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
-		glog.V(18).Infof("message size: %d", message.MessageSize)
 
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
@@ -178,39 +174,39 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		offset++
 
 		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(18).Infof("key length: %d", keyLength)
 		offset += 4
 		if keyLength == -1 {
 			message.Key = nil
 		} else {
 			message.Key = make([]byte, keyLength)
 			copy(message.Key, payload[offset:offset+int(keyLength)])
-			glog.V(20).Infof("message key: %v", message.Key)
 			offset += int(keyLength)
 		}
 
 		valueLength := int(binary.BigEndian.Uint32(payload[offset:]))
-		glog.V(18).Infof("value length: %d", valueLength)
 		offset += 4
 		if valueLength == -1 {
 			message.Value = nil
 		} else {
 			message.Value = make([]byte, valueLength)
 			copy(message.Value, payload[offset:offset+valueLength])
-			glog.V(20).Infof("message value: %v", message.Value)
 			offset += valueLength
 		}
 		compression := message.Attributes & 0x07
-		glog.V(18).Infof("compression %d", compression)
 		if compression != COMPRESSION_NONE {
-			value, err := message.decompress()
+			message.Value, err = message.decompress()
 			if err != nil {
+				// TODO go on to next message in the messageSet?
 				glog.Errorf("decompress message error:%s", err)
 				return messageSet, err
 			}
+		}
 
-			if _messageSet, err := DecodeToMessageSet(value); err != nil {
-				glog.Error("decode message from decompressed value error:%s", err)
+		// if crc check true, then go on decode to next level
+		if len(message.Value) > 24 && crc32.ChecksumIEEE(message.Value[16:]) == binary.BigEndian.Uint32(message.Value[12:]) {
+			if _messageSet, err := DecodeToMessageSet(message.Value); err != nil {
+				// TODO go on to next message in the messageSet?
+				glog.Error("decode message from value error:%s", err)
 				return messageSet, err
 			} else {
 				messageSet = append(messageSet, _messageSet...)
