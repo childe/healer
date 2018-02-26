@@ -23,7 +23,7 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	// get partitions info
 	metadataResponse, err := consumer.Brokers.RequestMetaData(consumer.ClientID, &consumer.TopicName)
 	if err != nil {
-		glog.Fatal("could not get metadata of topic %s:%s", consumer.TopicName, err)
+		glog.Fatalf("could not get metadata of topic %s:%s", consumer.TopicName, err)
 	}
 	glog.V(10).Info(metadataResponse)
 
