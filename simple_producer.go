@@ -114,19 +114,15 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 }
 
 func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error {
-	compressed_value, err := simpleProducer.compressor.Compress(value)
-	if err != nil {
-		return err
-	}
 	message := &Message{
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
 
 		Crc:        0, // compute in message encode
-		Attributes: 0x00 | simpleProducer.compressionValue,
+		Attributes: 0x00,
 		MagicByte:  1,
 		Key:        key,
-		Value:      compressed_value,
+		Value:      value,
 	}
 	simpleProducer.messageSet[simpleProducer.messageSetSize] = message
 	simpleProducer.messageSetSize++
@@ -175,8 +171,12 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) error {
 	}, 1)
 
 	value := make([]byte, messageSet.Length())
+	glog.Info(len(value))
 	messageSet.Encode(value, 0)
+	glog.Info(value)
 	compressed_value, err := simpleProducer.compressor.Compress(value)
+	glog.Info(len(compressed_value))
+	glog.Info(compressed_value)
 	if err != nil {
 		return fmt.Errorf("compress messageset error:%s", err)
 	}
