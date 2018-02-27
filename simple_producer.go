@@ -170,29 +170,32 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) error {
 		MessageSet     MessageSet
 	}, 1)
 
-	value := make([]byte, messageSet.Length())
-	glog.Info(len(value))
-	messageSet.Encode(value, 0)
-	glog.Info(value)
-	compressed_value, err := simpleProducer.compressor.Compress(value)
-	glog.Info(len(compressed_value))
-	glog.Info(compressed_value)
-	if err != nil {
-		return fmt.Errorf("compress messageset error:%s", err)
-	}
-	var message *Message = &Message{
-		Offset:      0,
-		MessageSize: 0, // compute in message encode
+	if simpleProducer.compressionValue != 0 {
+		value := make([]byte, messageSet.Length())
+		glog.Info(len(value))
+		messageSet.Encode(value, 0)
+		glog.Info(value)
+		compressed_value, err := simpleProducer.compressor.Compress(value)
+		glog.Info(len(compressed_value))
+		glog.Info(compressed_value)
+		if err != nil {
+			return fmt.Errorf("compress messageset error:%s", err)
+		}
+		var message *Message = &Message{
+			Offset:      0,
+			MessageSize: 0, // compute in message encode
 
-		Crc:        0, // compute in message encode
-		Attributes: 0x00 | simpleProducer.compressionValue,
-		MagicByte:  1,
-		Key:        nil,
-		Value:      compressed_value,
+			Crc:        0, // compute in message encode
+			Attributes: 0x00 | simpleProducer.compressionValue,
+			MagicByte:  1,
+			Key:        nil,
+			Value:      compressed_value,
+		}
+		messageSet = []*Message{message}
 	}
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = simpleProducer.partition
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = []*Message{message}
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
 	response, err := simpleProducer.broker.Request(produceRequest)
 	glog.Info(response)
