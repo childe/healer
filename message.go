@@ -9,9 +9,9 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/bkaradzic/go-lz4"
 	"github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
-	"github.com/pierrec/lz4"
 )
 
 /*
@@ -84,16 +84,7 @@ func (message *Message) decompress() ([]byte, error) {
 	case COMPRESSION_SNAPPY:
 		return snappy.Decode(message.Value)
 	case COMPRESSION_LZ4:
-		var buf bytes.Buffer
-		var err error
-		writer := lz4.NewWriter(&buf)
-		if _, err = writer.Write(message.Value); err != nil {
-			return nil, err
-		}
-		if err = writer.Close(); err != nil {
-			return nil, err
-		}
-		return buf.Bytes(), nil
+		return lz4.Decode(nil, message.Value)
 	}
 	return nil, fmt.Errorf("Unknown Compression Code %d", compression)
 }
@@ -159,9 +150,11 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		message := &Message{}
 
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
+		glog.Infof("message offset:%d", message.Offset)
 		offset += 8
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
+		glog.Infof("message size:%d", message.MessageSize)
 		offset += 4
 
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
@@ -192,14 +185,21 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 			copy(message.Value, payload[offset:offset+valueLength])
 			offset += valueLength
 		}
+		glog.Infof("%d %v", len(message.Value), message.Value)
 		compression := message.Attributes & 0x07
+		glog.Infof("compression:%d", compression)
 		if compression != COMPRESSION_NONE {
 			message.Value, err = message.decompress()
 			if err != nil {
 				// TODO go on to next message in the messageSet?
-				glog.Errorf("decompress message error:%s", err)
+				glog.Fatalf("decompress message error:%s", err)
 				return messageSet, err
 			}
+		}
+
+		if len(message.Value) > 24 {
+			glog.Info(crc32.ChecksumIEEE(message.Value[16:]))
+			glog.Info(binary.BigEndian.Uint32(message.Value[12:]))
 		}
 
 		// if crc check true, then go on decode to next level
