@@ -150,11 +150,9 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		message := &Message{}
 
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
-		glog.Infof("message offset:%d", message.Offset)
 		offset += 8
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
-		glog.Infof("message size:%d", message.MessageSize)
 		offset += 4
 
 		message.Crc = binary.BigEndian.Uint32(payload[offset:])
@@ -185,9 +183,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 			copy(message.Value, payload[offset:offset+valueLength])
 			offset += valueLength
 		}
-		glog.Infof("%d %v", len(message.Value), message.Value)
 		compression := message.Attributes & 0x07
-		glog.Infof("compression:%d", compression)
 		if compression != COMPRESSION_NONE {
 			message.Value, err = message.decompress()
 			if err != nil {
