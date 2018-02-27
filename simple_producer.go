@@ -75,7 +75,8 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 	if v, ok := config["message.max.count"]; ok {
 		p.messageMaxCount = v.(int)
 		if p.messageMaxCount <= 0 {
-			glog.Fatal("messageMaxCount must > 0")
+			glog.Error("message.max.count must > 0")
+			return nil
 		}
 	}
 	p.messageSet = make([]*Message, p.messageMaxCount)
@@ -118,8 +119,8 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
 
-		Crc:        0, // compute in message encode
-		Attributes: 0x00,
+		Crc:        0,    // compute in message encode
+		Attributes: 0x00, // compress in upper message set level
 		MagicByte:  1,
 		Key:        key,
 		Value:      value,
@@ -172,12 +173,8 @@ func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) error {
 
 	if simpleProducer.compressionValue != 0 {
 		value := make([]byte, messageSet.Length())
-		glog.Info(len(value))
 		messageSet.Encode(value, 0)
-		glog.Info(value)
 		compressed_value, err := simpleProducer.compressor.Compress(value)
-		glog.Info(len(compressed_value))
-		glog.Info(compressed_value)
 		if err != nil {
 			return fmt.Errorf("compress messageset error:%s", err)
 		}
