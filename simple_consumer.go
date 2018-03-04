@@ -37,28 +37,39 @@ func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
 	return nil
 }
 
+// TOOD put retry in Request
 func (simpleConsumer *SimpleConsumer) getLeaderBroker() error {
 	var (
 		err      error
 		leaderID int32
+		retry    = 3
 	)
 
-	leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
-	if err != nil {
-		return err
-	} else {
-		glog.V(10).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
+	for i := 0; i < retry; i++ {
+		leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
+		if err != nil {
+			glog.Errorf("find leader error:%s", err)
+			continue
+		} else {
+			glog.V(5).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
+			break
+		}
 	}
 
-	// TODO
-	simpleConsumer.leaderBroker, err = simpleConsumer.Brokers.NewBroker(leaderID)
 	if err != nil {
 		return err
-		//glog.Fatalf("could not get broker %d. maybe should refresh metadata.", leaderID)
-	} else {
-		glog.V(5).Infof("got leader broker %s with id %d", simpleConsumer.leaderBroker.address, leaderID)
 	}
-	return nil
+
+	for i := 0; i < retry; i++ {
+		simpleConsumer.leaderBroker, err = simpleConsumer.Brokers.NewBroker(leaderID)
+		if err != nil {
+			glog.Errorf("could not create broker %d. maybe should refresh metadata.", leaderID)
+		} else {
+			glog.V(5).Infof("got leader broker %s with id %d", simpleConsumer.leaderBroker.address, leaderID)
+			return nil
+		}
+	}
+	return err
 }
 
 func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
