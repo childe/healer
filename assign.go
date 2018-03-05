@@ -46,70 +46,124 @@ type GroupAssignment []struct {
 */
 
 // partitions in one topic
-// (3,5)=>[(0,2),(2,2),(4,1)]  (5,10)=>[(0,2), (2,2), (4,2), (6,2), (8,2)]
-func (r *RangeAssignmentStrategy) assignPartitions(memberCount, partitionCount int) [][]int {
-	rst := make([][]int, memberCount)
-	remanent := partitionCount
-	for i := memberCount - 1; i >= 0; i-- {
-		rst[i] = make([]int, 2)
-		rst[i][1] = remanent / (i + 1)
-		remanent -= rst[i][1]
-		rst[i][0] = remanent
+// XXX (3,5)=>[(0,2),(2,2),(4,1)]  (5,10)=>[(0,2), (2,2), (4,2), (6,2), (8,2)]
+func (r *RangeAssignmentStrategy) assignPartitions(members []string, partitions []int32) map[string][]int32 {
+	var (
+		rst       = make(map[string][]int32)
+		watershed = len(partitions) % len(members)
+		ceil      int
+		floor     = len(partitions) / len(members)
+		start     = 0
+		length    int
+	)
+	if watershed > 0 {
+		ceil = floor + 1
+	} else {
+		ceil = floor
 	}
-
+	for i, member := range members {
+		if i < watershed {
+			length = ceil
+		} else {
+			length = floor
+		}
+		rst[member] = partitions[start:length]
+		start += length
+	}
 	return rst
 }
 
-type ByPartitionID []*PartitionMetadataInfo
+type ByPartitionID []int32
 
 func (a ByPartitionID) Len() int           { return len(a) }
 func (a ByPartitionID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByPartitionID) Less(i, j int) bool { return a[i].PartitionId < a[j].PartitionId }
+func (a ByPartitionID) Less(i, j int) bool { return a[i] < a[j] }
 
 func (r *RangeAssignmentStrategy) Assign(
 	members []*Member, topicMetadatas []*TopicMetadata) GroupAssignment {
 
-	partitionsAssignments := make(map[string][][]int)
+	topicPartitionsAssignments := make(map[string]map[string][]int32)
 	for _, topicMetadata := range topicMetadatas {
-		sort.Sort(ByPartitionID(topicMetadata.PartitionMetadatas))
-		partitionsAssignments[topicMetadata.TopicName] = r.assignPartitions(len(members), len(topicMetadata.PartitionMetadatas))
+		partitions := make([]int32, len(topicMetadata.PartitionMetadatas))
+		for i, p := range topicMetadata.PartitionMetadatas {
+			partitions[i] = int32(p.PartitionId)
+		}
+		sort.Sort(ByPartitionID(partitions))
+		membersWithTheTopic := []string{}
+		for _, member := range members {
+			subscription := NewProtocolMetadata(member.MemberMetadata).Subscription
+			for _, topic := range subscription {
+				if topicMetadata.TopicName == topic {
+					membersWithTheTopic = append(membersWithTheTopic, member.MemberID)
+					break
+				}
+			}
+		}
+		topicPartitionsAssignments[topicMetadata.TopicName] = r.assignPartitions(membersWithTheTopic, partitions)
 	}
 
-	glog.V(10).Infof("topic partitions assignments:%v", partitionsAssignments)
+	glog.V(10).Infof("topic partitions assignments:%v", topicPartitionsAssignments)
 
 	groupAssignment := make([]struct {
 		MemberID         string
 		MemberAssignment []byte
 	}, len(members))
 
-	// memberAssignments is temporary, will be encoded into []byte after all partitions assigned
-	memberAssignments := make([]*MemberAssignment, len(members))
-
-	for i, member := range members {
-		groupAssignment[i].MemberID = member.MemberID
-
-		memberAssignments[i] = &MemberAssignment{
+	// memberAssignments is temporary, will transform to groupAssignment
+	memberAssignments := make(map[string]*MemberAssignment)
+	for _, member := range members {
+		memberAssignments[member.MemberID] = &MemberAssignment{
 			Version:              0,
 			PartitionAssignments: make([]*PartitionAssignment, 0),
 			UserData:             nil,
 		}
-		for _, topicMetadata := range topicMetadatas {
-			partitionAssignment := &PartitionAssignment{
-				Topic: topicMetadata.TopicName,
-			}
-			partitions := partitionsAssignments[topicMetadata.TopicName][i]
-			partitionAssignment.Partitions = make([]int32, partitions[1])
+	}
 
-			for j := 0; j < partitions[1]; j++ {
-				idx := j + partitions[0]
-				partitionAssignment.Partitions[j] = int32(topicMetadata.PartitionMetadatas[idx].PartitionId)
-			}
-			memberAssignments[i].PartitionAssignments = append(memberAssignments[i].PartitionAssignments, partitionAssignment)
+	for topic, partitionsAssignments := range topicPartitionsAssignments {
+		for member, partitions := range partitionsAssignments {
+			memberAssignments[member].PartitionAssignments = append(memberAssignments[member].PartitionAssignments, &PartitionAssignment{
+				Topic:      topic,
+				Partitions: partitions,
+			})
 		}
 	}
 
-	for i := range groupAssignment {
-		groupAssignment[i].MemberAssignment = memberAssignments[i].Encode()
+	//for i, member := range members {
+	//groupAssignment[i].MemberID = member.MemberID
+
+	//memberAssignments[i] = &MemberAssignment{
+	//Version:              0,
+	//PartitionAssignments: make([]*PartitionAssignment, 0),
+	//UserData:             nil,
+	//}
+	//for _, topicMetadata := range topicMetadatas {
+	//partitionAssignment := &PartitionAssignment{
+	//Topic: topicMetadata.TopicName,
+	//}
+	//partitions := partitionsAssignments[topicMetadata.TopicName][i]
+	//partitionAssignment.Partitions = make([]int32, partitions[1])
+
+	//for j := 0; j < partitions[1]; j++ {
+	//idx := j + partitions[0]
+	//partitionAssignment.Partitions[j] = int32(topicMetadata.PartitionMetadatas[idx].PartitionId)
+	//}
+	//memberAssignments[i].PartitionAssignments = append(memberAssignments[i].PartitionAssignments, partitionAssignment)
+	//}
+	//}
+
+	//for i := range groupAssignment {
+	//groupAssignment[i].MemberAssignment = memberAssignments[i].Encode()
+	//}
+	i := 0
+	for member, memberAssignment := range memberAssignments {
+		groupAssignment[i] = struct {
+			MemberID         string
+			MemberAssignment []byte
+		}{
+			MemberID:         member,
+			MemberAssignment: memberAssignment.Encode(),
+		}
+		i++
 	}
 	return groupAssignment
 }
