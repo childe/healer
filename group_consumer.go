@@ -31,11 +31,11 @@ type GroupConsumer struct {
 	coordinator          *Broker
 	generationID         int32
 	memberID             string
-	members              []*Member
+	members              []*Member        // maybe some members consume other topics , but they are in the same group
+	topicMetadatas       []*TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
 	partitionAssignments []*PartitionAssignment
-	topicMetadatas       []*TopicMetadata
 	simpleConsumers      []*SimpleConsumer
 
 	messages chan *FullMessage
@@ -196,10 +196,11 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 		}
 	}
 
-	b, _ := json.Marshal(metaDataResponse)
-	glog.V(5).Infof("topic[%s] metadata:%s", c.topic, b)
+	if glog.V(5) {
+		b, _ := json.Marshal(metaDataResponse)
+		glog.Infof("topics[%s] metadata:%s", topics, b)
+	}
 	c.topicMetadatas = metaDataResponse.TopicMetadatas
-	glog.Infof("there is %d partitions in topic[%s]", len(c.topicMetadatas[0].PartitionMetadatas), c.topic)
 }
 
 func (c *GroupConsumer) getCoordinator() error {
