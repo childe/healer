@@ -38,7 +38,7 @@ func main() {
 		glog.Fatalf("could not create brokers from %s:%s", *brokers, err)
 	}
 
-	metadata, err := brokers.RequestMetaData(*clientID, topic)
+	metadata, err := brokers.RequestMetaData(*clientID, []string{*topic})
 	if err != nil {
 		glog.Fatalf("could not get metadata:%s", err)
 	}

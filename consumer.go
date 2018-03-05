@@ -21,7 +21,7 @@ func NewConsumer(brokers *Brokers) *Consumer {
 
 func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	// get partitions info
-	metadataResponse, err := consumer.Brokers.RequestMetaData(consumer.ClientID, &consumer.TopicName)
+	metadataResponse, err := consumer.Brokers.RequestMetaData(consumer.ClientID, []string{consumer.TopicName})
 	if err != nil {
 		glog.Fatalf("could not get metadata of topic %s:%s", consumer.TopicName, err)
 	}

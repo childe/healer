@@ -17,24 +17,24 @@ Since there may be many topics the client can give an optional list of topic nam
 
 The metadata returned is at the partition level, but grouped together by topic for convenience and to avoid redundancy. For each partition the metadata contains the information for the leader as well as for all the replicas and the list of replicas that are currently in-sync.
 
-Topic Metadata Request
+Topics Metadata Request
 
-	TopicMetadataRequest => [TopicName]
-	  TopicName => string
+	TopicsMetadataRequest => [TopicsName]
+	  TopicsName => string
 
 Field			Description
-TopicName		The topics to produce metadata for. If empty the request will yield metadata for all topics.
+TopicsName		The topics to produce metadata for. If empty the request will yield metadata for all topics.
 */
 
 type MetadataRequest struct {
 	RequestHeader *RequestHeader
-	Topic         []string
+	Topics       []string
 }
 
 func (metadataRequest *MetadataRequest) Encode() []byte {
 	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientId)
 	requestLength := requestHeaderLength + 4
-	for _, topic := range metadataRequest.Topic {
+	for _, topic := range metadataRequest.Topics {
 		requestLength += 2 + len(topic)
 	}
 
@@ -46,10 +46,10 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 
 	offset = metadataRequest.RequestHeader.Encode(payload, offset)
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(metadataRequest.Topic)))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(metadataRequest.Topics)))
 	offset += 4
 
-	for _, topicname := range metadataRequest.Topic {
+	for _, topicname := range metadataRequest.Topics {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicname)))
 		offset += 2
 		copy(payload[offset:], topicname)

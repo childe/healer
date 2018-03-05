@@ -256,18 +256,14 @@ func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, e
 	return listGroupsResponse, nil
 }
 
-func (broker *Broker) requestMetaData(clientID string, topic *string) (*MetadataResponse, error) {
-	metadataRequest := &MetadataRequest{}
+func (broker *Broker) requestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
+	metadataRequest := &MetadataRequest{
+		Topics: topics,
+	}
 	metadataRequest.RequestHeader = &RequestHeader{
 		ApiKey:     API_MetadataRequest,
 		ApiVersion: 0,
 		ClientId:   clientID,
-	}
-
-	if topic != nil {
-		metadataRequest.Topic = []string{*topic}
-	} else {
-		metadataRequest.Topic = []string{}
 	}
 
 	responseBuf, err := broker.Request(metadataRequest)

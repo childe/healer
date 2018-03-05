@@ -31,7 +31,7 @@ func main() {
 	if *topic == "" {
 		metadataResponse, err = brokers.RequestMetaData(*clientID, nil)
 	} else {
-		metadataResponse, err = brokers.RequestMetaData(*clientID, topic)
+		metadataResponse, err = brokers.RequestMetaData(*clientID, []string{*topic})
 	}
 
 	if err != nil {

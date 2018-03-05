@@ -182,7 +182,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 		err              error
 	)
 	for {
-		metaDataResponse, err = c.brokers.RequestMetaData(c.clientID, &c.topic)
+		metaDataResponse, err = c.brokers.RequestMetaData(c.clientID, []string{c.topic})
 		if err == nil {
 			break
 		} else {
@@ -272,6 +272,10 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	if glog.V(2) {
+		b, _ := json.Marshal(joinGroupResponse)
+		glog.Infof("join response:%s", b)
+	}
 
 	c.generationID = joinGroupResponse.GenerationID
 	c.memberID = joinGroupResponse.MemberID
@@ -295,13 +299,17 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	} else {
 		groupAssignment = nil
 	}
-	glog.V(5).Infof("group assignment:%v", groupAssignment)
+	glog.V(2).Infof("group assignment:%v", groupAssignment)
 
 	syncGroupResponse, err := c.coordinator.requestSyncGroup(
 		c.clientID, c.groupID, c.generationID, c.memberID, groupAssignment)
 
 	if err != nil {
 		return nil, err
+	}
+	if glog.V(2) {
+		b, _ := json.Marshal(syncGroupResponse)
+		glog.Infof("sync response:%s", b)
 	}
 
 	err = c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
