@@ -38,6 +38,8 @@ type PartitionAssignment struct {
 	Partitions []int32
 }
 
+// encode MemberAssignment to []byte that used as memeber of GroupAssignment in Sync Request
+// returned as []byte in sync response, and encode it to MemberAssignment
 type MemberAssignment struct {
 	Version              int16
 	PartitionAssignments []*PartitionAssignment
