@@ -194,16 +194,13 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		}
 
 		// if crc check true, then go on decode to next level
-		if len(message.Value) > 24 {
-			messageSize := binary.BigEndian.Uint32(message.Value[8:])
-			if binary.BigEndian.Uint32(message.Value[12:]) == crc32.ChecksumIEEE(message.Value[16:messageSize+12]) {
-				if _messageSet, err := DecodeToMessageSet(message.Value); err != nil {
-					// TODO go on to next message in the messageSet?
-					glog.Error("decode message from value error:%s", err)
-					return messageSet, err
-				} else {
-					messageSet = append(messageSet, _messageSet...)
-				}
+		if compression != COMPRESSION_NONE {
+			if _messageSet, err := DecodeToMessageSet(message.Value); err != nil {
+				// TODO go on to next message in the messageSet?
+				glog.Error("decode message from value error:%s", err)
+				return messageSet, err
+			} else {
+				messageSet = append(messageSet, _messageSet...)
 			}
 		} else {
 			messageSet = append(messageSet, message)
