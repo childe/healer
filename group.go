@@ -125,7 +125,7 @@ type GroupAssignment []struct {
 	MemberAssignment []byte
 }
 
-// ProtocolMetadata is used in join request
+// ProtocolMetadata is used in join request/response
 type ProtocolMetadata struct {
 	Version      uint16
 	Subscription []string
