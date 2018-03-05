@@ -169,8 +169,8 @@ func (m *ProtocolMetadata) Encode() []byte {
 
 func NewProtocolMetadata(payload []byte) *ProtocolMetadata {
 	var (
-		p            = &ProtocolMetadata{}
-		offset       = 0
+		p      = &ProtocolMetadata{}
+		offset = 0
 	)
 	p.Version = binary.BigEndian.Uint16(payload[offset:])
 	offset += 2
