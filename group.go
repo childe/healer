@@ -164,3 +164,28 @@ func (m *ProtocolMetadata) Encode() []byte {
 
 	return payload
 }
+
+func NewProtocolMetadata(payload []byte) (*ProtocolMetadata, error) {
+	var (
+		err    error = nil
+		p            = &ProtocolMetadata{}
+		offset       = 0
+	)
+	p.Version = binary.BigEndian.Uint16(payload[offset:])
+	offset += 2
+	SubscriptionCount := binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
+	p.Subscription = make([]string, SubscriptionCount)
+	for i := range p.Subscription {
+		l := int(binary.BigEndian.Uint16(payload[offset:]))
+		offset += 2
+		p.Subscription[i] = string(payload[offset : offset+l])
+		offset += l
+	}
+	l := int(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+	p.UserData = make([]byte, l)
+	copy(p.UserData, payload[offset:offset+l])
+
+	return p, err
+}
