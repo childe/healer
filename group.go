@@ -167,9 +167,8 @@ func (m *ProtocolMetadata) Encode() []byte {
 	return payload
 }
 
-func NewProtocolMetadata(payload []byte) (*ProtocolMetadata, error) {
+func NewProtocolMetadata(payload []byte) *ProtocolMetadata {
 	var (
-		err    error = nil
 		p            = &ProtocolMetadata{}
 		offset       = 0
 	)
@@ -189,5 +188,5 @@ func NewProtocolMetadata(payload []byte) (*ProtocolMetadata, error) {
 	p.UserData = make([]byte, l)
 	copy(p.UserData, payload[offset:offset+l])
 
-	return p, err
+	return p
 }
