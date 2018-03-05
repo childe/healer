@@ -28,7 +28,7 @@ TopicsName		The topics to produce metadata for. If empty the request will yield 
 
 type MetadataRequest struct {
 	RequestHeader *RequestHeader
-	Topics       []string
+	Topics        []string
 }
 
 func (metadataRequest *MetadataRequest) Encode() []byte {
