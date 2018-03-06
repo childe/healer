@@ -9,6 +9,7 @@ all:
 	go build -o tools/bin/list-groups tools/list-groups/list-groups.go
 	go build -o tools/bin/describe-groups tools/describe-groups/describe-groups.go
 	go build -o tools/bin/reset-offset tools/reset-offset/reset-offset.go
+	go build -o tools/bin/get-pending tools/get-pending/get-pending.go
 
 test:
 	go test -v -args -brokers 127.0.0.1:9092 -broker 127.0.0.1:9092 -logtostderr --broker 127.0.0.1:9092
