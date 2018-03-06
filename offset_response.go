@@ -12,12 +12,11 @@ OffsetsResponse => [TopicName [PartitionOffsets]]
   Offset => int64
 */
 
-
 // TODO rename
 type PartitionOffset struct {
 	Partition uint32
 	ErrorCode int16
-	Offset    []uint64
+	Offsets   []uint64
 }
 type OffsetsResponse struct {
 	CorrelationID uint32
@@ -58,10 +57,10 @@ func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
 			offsetsResponse.Info[topicName][j] = &PartitionOffset{
 				Partition: partition,
 				ErrorCode: errorCode,
-				Offset:    make([]uint64, offsetLength),
+				Offsets:   make([]uint64, offsetLength),
 			}
 			for k := uint32(0); k < offsetLength; k++ {
-				offsetsResponse.Info[topicName][j].Offset[k] = binary.BigEndian.Uint64(payload[offset:])
+				offsetsResponse.Info[topicName][j].Offsets[k] = binary.BigEndian.Uint64(payload[offset:])
 				offset += 8
 			}
 		}

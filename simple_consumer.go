@@ -84,7 +84,7 @@ func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 		return -1, err
 	}
 
-	return int64(offsetsResponses[0].Info[sc.TopicName][0].Offset[0]), nil
+	return int64(offsetsResponses[0].Info[sc.TopicName][0].Offsets[0]), nil
 }
 
 func (simpleConsumer *SimpleConsumer) Stop() {

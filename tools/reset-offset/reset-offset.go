@@ -82,7 +82,7 @@ func main() {
 			for topic, partitionOffsets := range offsetsResponse.Info {
 				for _, partitionOffset := range partitionOffsets {
 					partition := partitionOffset.Partition
-					_offsets := partitionOffset.Offset
+					_offsets := partitionOffset.Offsets
 					errorCode := partitionOffset.ErrorCode
 					if errorCode != 0 {
 						glog.Fatalf("get offset[%s:%d] error:%d", topic, partition, errorCode)
