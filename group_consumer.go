@@ -329,7 +329,7 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 
 func (c *GroupConsumer) joinAndSync() error {
 	for {
-		joinRes, err := c.join()
+		_, err := c.join()
 		if err != nil {
 			glog.Infof("join error:%s", err)
 			if err == AllError[16] {
@@ -337,19 +337,10 @@ func (c *GroupConsumer) joinAndSync() error {
 			}
 			time.Sleep(time.Second * 1)
 			continue
-		} else {
-			if glog.V(2) {
-				b, _ := json.Marshal(joinRes)
-				glog.Infof("join response:%s", b)
-			}
 		}
 
 		for i := 0; i < 3; i++ {
-			syncRes, err := c.sync()
-			if glog.V(2) {
-				b, _ := json.Marshal(syncRes)
-				glog.Infof("sync response:%s", b)
-			}
+			_, err := c.sync()
 			if err != nil {
 				glog.Infof("sync error:%s", err)
 				if err == AllError[27] {
