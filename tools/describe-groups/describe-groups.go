@@ -14,7 +14,7 @@ var (
 	brokerList     = flag.String("brokers", "127.0.0.1:9092", "REQUIRED: The list of hostname and port of the server to connect to.")
 	clientID       = flag.String("clientID", "healer", "The ID of this client.")
 	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 30, "default 30 Second. read timeout from connection to broker")
+	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
 	groupID        = flag.String("groupID", "", "REQUIRED. groupID need to be described")
 )
 

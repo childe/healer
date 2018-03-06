@@ -21,7 +21,7 @@ var (
 	maxBytes       = flag.Int("max-bytes", 10*1024*1024, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
 
-	timeout        = flag.Int("timeout", 40, "default 10 Second. read timeout from connection to broker")
+	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
 	sessionTimeout = flag.Int("sessionTimeout", 30000, "default 30000ms. The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms.")
 
 	fromBeginning = flag.Bool("from-beginning", false, "default false")

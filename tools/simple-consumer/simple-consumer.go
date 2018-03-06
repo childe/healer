@@ -23,7 +23,7 @@ var (
 	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 	maxBytes       = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 30, "default 30 Second. read timeout from connection to broker")
+	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
 )
 
 func main() {

@@ -15,7 +15,7 @@ var (
 	clientID       = flag.String("clientID", "healer", "The ID of this client.")
 	topic          = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
 	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 30, "default 30 Second. read timeout from connection to broker")
+	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
 )
 
 func main() {
