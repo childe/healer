@@ -27,7 +27,7 @@ error_code	Response error code
 */
 
 type OffsetFetchResponsePartition struct {
-	PartitionID uint32
+	PartitionID int32
 	Offset      int64
 	Metadata    string
 	ErrorCode   int16
@@ -78,7 +78,7 @@ func NewOffsetFetchResponse(payload []byte) (*OffsetFetchResponse, error) {
 			p := &OffsetFetchResponsePartition{}
 			topic.Partitions[j] = p
 
-			p.PartitionID = binary.BigEndian.Uint32(payload[offset:])
+			p.PartitionID = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 			p.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 			offset += 8
