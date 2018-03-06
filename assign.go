@@ -92,7 +92,7 @@ func (r *RangeAssignmentStrategy) Assign(
 	for _, topicMetadata := range topicMetadatas {
 		partitions := make([]int32, len(topicMetadata.PartitionMetadatas))
 		for i, p := range topicMetadata.PartitionMetadatas {
-			partitions[i] = int32(p.PartitionId)
+			partitions[i] = p.PartitionID
 		}
 		sort.Sort(ByPartitionID(partitions))
 

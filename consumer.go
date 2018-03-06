@@ -44,7 +44,7 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
 		topicName := topicMetadatas.TopicName
 		for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
-			partitionID := int32(partitionMetadataInfo.PartitionId)
+			partitionID := partitionMetadataInfo.PartitionID
 			simpleConsumer := &SimpleConsumer{
 				Partition:   partitionID,
 				Brokers:     consumer.Brokers,

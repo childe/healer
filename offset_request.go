@@ -32,25 +32,25 @@ type PartitionOffsetRequestInfo struct {
 type OffsetsRequest struct {
 	RequestHeader *RequestHeader
 	ReplicaId     int32
-	RequestInfo   map[string]map[uint32]*PartitionOffsetRequestInfo
+	RequestInfo   map[string]map[int32]*PartitionOffsetRequestInfo
 }
 
 // request only ONE topic
-func NewOffsetsRequest(topic string, partitionIDs []uint32, timeValue int64, offsets uint32, clientID string) *OffsetsRequest {
+func NewOffsetsRequest(topic string, partitionIDs []int32, timeValue int64, offsets uint32, clientID string) *OffsetsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:     API_OffsetRequest,
 		ApiVersion: 0,
 		ClientId:   clientID,
 	}
 
-	partitionOffsetRequestInfos := make(map[uint32]*PartitionOffsetRequestInfo)
+	partitionOffsetRequestInfos := make(map[int32]*PartitionOffsetRequestInfo)
 	for _, id := range partitionIDs {
 		partitionOffsetRequestInfos[id] = &PartitionOffsetRequestInfo{
 			Time:               timeValue,
 			MaxNumberOfOffsets: offsets,
 		}
 	}
-	topicOffsetRequestInfos := make(map[string]map[uint32]*PartitionOffsetRequestInfo)
+	topicOffsetRequestInfos := make(map[string]map[int32]*PartitionOffsetRequestInfo)
 	topicOffsetRequestInfos[topic] = partitionOffsetRequestInfos
 
 	offsetsRequest := &OffsetsRequest{
@@ -90,8 +90,8 @@ func (offsetR *OffsetsRequest) Encode() []byte {
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitionOffsetRequestInfos)))
 		offset += 4
-		for partitionId, partitionOffsetRequestInfo := range partitionOffsetRequestInfos {
-			binary.BigEndian.PutUint32(payload[offset:], partitionId)
+		for partitionID, partitionOffsetRequestInfo := range partitionOffsetRequestInfos {
+			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionID))
 			offset += 4
 
 			binary.BigEndian.PutUint64(payload[offset:], uint64(partitionOffsetRequestInfo.Time))

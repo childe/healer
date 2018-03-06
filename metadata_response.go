@@ -15,9 +15,9 @@ The response contains metadata for each partition, with partitions grouped toget
 		Port  int32
 	  TopicMetadata  TopicErrorCode TopicName [PartitionMetadata]
 		TopicErrorCode  int16
-	  PartitionMetadata  PartitionErrorCode PartitionId Leader Replicas Isr
+	  PartitionMetadata  PartitionErrorCode PartitionID Leader Replicas Isr
 		PartitionErrorCode  int16
-		PartitionId  int32
+		PartitionID  int32
 		Leader  int32
 		Replicas  [int32]
 		Isr  [int32]
@@ -37,7 +37,7 @@ type BrokerInfo struct {
 
 type PartitionMetadataInfo struct {
 	PartitionErrorCode int16
-	PartitionId        uint32
+	PartitionID        int32
 	Leader             int32
 	Replicas           []int32
 	Isr                []int32
@@ -113,7 +113,7 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 				err = getErrorFromErrorCode(partitionErrorCode)
 			}
 			offset += 2
-			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionId = binary.BigEndian.Uint32(payload[offset:])
+			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionID = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].Leader = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4

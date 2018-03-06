@@ -163,13 +163,13 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	topicMetadata := metadataResponse.TopicMetadatas[0]
 
 	if partitionID >= 0 {
-		uID := uint32(partitionID)
+		uID := partitionID
 		for _, x := range topicMetadata.PartitionMetadatas {
-			if uID == x.PartitionId {
+			if uID == x.PartitionID {
 				if leader, err := brokers.GetBroker(x.Leader); err != nil {
 					return nil, fmt.Errorf("could not find leader of %s[%d]:%s", topic, partitionID, err)
 				} else {
-					offsetsResponse, err := leader.requestOffsets(clientID, topic, []uint32{uID}, timeValue, offsets)
+					offsetsResponse, err := leader.requestOffsets(clientID, topic, []int32{uID}, timeValue, offsets)
 					if err != nil {
 						return nil, err
 					} else {
@@ -182,12 +182,12 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	}
 
 	// try to get all partition offsets
-	offsetsRequestsMapping := make(map[int32][]uint32, 0) //nodeID: partitionIDs
+	offsetsRequestsMapping := make(map[int32][]int32, 0) //nodeID: partitionIDs
 	for _, x := range topicMetadata.PartitionMetadatas {
 		if _, ok := offsetsRequestsMapping[x.Leader]; ok {
-			offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionId)
+			offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionID)
 		} else {
-			offsetsRequestsMapping[x.Leader] = []uint32{x.PartitionId}
+			offsetsRequestsMapping[x.Leader] = []int32{x.PartitionID}
 		}
 	}
 
@@ -217,7 +217,7 @@ func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (i
 
 	partitionMetadatas := metadataResponse.TopicMetadatas[0].PartitionMetadatas
 	for _, partitionMetadata := range partitionMetadatas {
-		if int32(partitionMetadata.PartitionId) == partitionID {
+		if partitionMetadata.PartitionID == partitionID {
 			return partitionMetadata.Leader, nil
 		}
 	}

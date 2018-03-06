@@ -68,7 +68,7 @@ func main() {
 		offsets     map[int32]int64 = make(map[int32]int64)
 	)
 	for _, partitionMetadata := range topicMetadata.PartitionMetadatas {
-		partitionID = int32(partitionMetadata.PartitionId)
+		partitionID = partitionMetadata.PartitionID
 		if partitionMetadata.PartitionErrorCode != 0 {
 			glog.Fatalf("get partition[%d] metainfo errorcode:%d", partitionID, partitionMetadata.PartitionErrorCode)
 		}

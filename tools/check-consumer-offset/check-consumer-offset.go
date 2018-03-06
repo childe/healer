@@ -52,7 +52,7 @@ func main() {
 	r := healer.NewOffsetFetchRequest(0, *clientID, *groupID)
 	for _, t := range metadata.TopicMetadatas {
 		for _, p := range t.PartitionMetadatas {
-			r.AddPartiton(t.TopicName, int32(p.PartitionId))
+			r.AddPartiton(t.TopicName, p.PartitionID)
 		}
 	}
 
