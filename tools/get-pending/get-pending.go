@@ -9,11 +9,24 @@ import (
 	"github.com/golang/glog"
 )
 
+//type Tasks []struct {
+//topic  string
+//groups []struct {
+//groupID     string
+//coordinator string
+//}
+//}
+
+type Group map[string]*healer.Broker // groupID -> broker
+type Tasks map[string]Group          // topic -> groupID > coordinatorAddress
+
+var groups = map[string]*healer.Broker{}
+
 var (
 	bootstrapServers = flag.String("bootstrap.servers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic            = flag.String("topic", "", "get all topics if not given")
 	clientID         = flag.String("clientID", "", "The ID of this client.")
-	groupID          = flag.String("groupID", "", "")
+	groupID          = flag.String("groupID", "", "get all groupID if not given")
 
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
 	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
@@ -76,7 +89,7 @@ func getCommitedOffset(topic string, partitions []int32) (map[int32]int64, error
 	if err != nil {
 		return nil, err
 	}
-	glog.Infof("coordinator:%s", coordinator.GetAddress())
+	glog.V(5).Infof("coordinator:%s", coordinator.GetAddress())
 
 	r := healer.NewOffsetFetchRequest(1, *clientID, *groupID)
 	for _, p := range partitions {
@@ -118,6 +131,130 @@ func getAllTopics() ([]string, error) {
 	return topics, nil
 }
 
+func getTopicsInGroup(groupID string) (map[string]bool, error) {
+	if _, ok := groups[groupID]; !ok {
+		coordinatorResponse, err := brokers.FindCoordinator(*clientID, groupID)
+		if err != nil {
+			return nil, err
+		}
+		coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+		if err != nil {
+			return nil, err
+		}
+		glog.V(5).Infof("coordinator of %s:%s", groupID, coordinator.GetAddress())
+		groups[groupID] = coordinator
+	}
+
+	req := healer.NewDescribeGroupsRequest(*clientID, []string{groupID})
+
+	responseBytes, err := groups[groupID].Request(req)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := healer.NewDescribeGroupsResponse(responseBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	topics := make(map[string]bool)
+	for _, group := range response.Groups {
+		for _, memberDetail := range group.Members {
+			memberAssignment, err := healer.NewMemberAssignment(memberDetail.MemberAssignment)
+			if err != nil {
+				return nil, err
+			}
+			for _, p := range memberAssignment.PartitionAssignments {
+				topics[p.Topic] = true
+			}
+		}
+	}
+	return topics, nil
+}
+
+func getGroups() ([]string, error) {
+	response, err := brokers.RequestListGroups(*clientID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	groups := []string{}
+	for _, group := range response.Groups {
+		groups = append(groups, group.GroupID)
+	}
+	return groups, nil
+}
+
+func initTasks(topic, groupID string) Tasks {
+	tasks := map[string]Group{}
+	if topic != "" && groupID != "" {
+		tasks[topic] = Group{groupID: nil}
+		return tasks
+	}
+
+	if topic == "" && groupID != "" {
+		topics, err := getTopicsInGroup(groupID)
+		if err != nil {
+			glog.Errorf("fetch topics in group[%s] error:%s", groupID, err)
+			return nil
+		}
+		for topic := range topics {
+			tasks[topic] = Group{groupID: nil}
+		}
+		return tasks
+	}
+
+	// group is ""
+	groupIDs, err := getGroups()
+	if err != nil {
+		glog.Errorf("get groups error:%s", err)
+		return nil
+	}
+	if glog.V(5) {
+		for i, group := range groupIDs {
+			glog.Infof("%d/%d %s", i, len(groupIDs), group)
+		}
+	}
+
+	groupTopics := make(map[string]map[string]bool)
+	for _, groupID := range groupIDs {
+		topics, err := getTopicsInGroup(groupID)
+		if err != nil {
+			glog.Errorf("get topics in [%s] error:%s", groupID, err)
+			return nil
+		}
+		groupTopics[groupID] = topics
+	}
+
+	// topic != "" && group == ""
+	if topic != "" {
+		tasks[topic] = Group{}
+		for groupID, topics := range groupTopics {
+			if _, ok := topics[topic]; ok {
+				tasks[topic][groupID] = groups[groupID]
+			}
+		}
+		return tasks
+	}
+
+	// topic != "" && group != ""
+	topics, err := getAllTopics()
+	if err != nil {
+		glog.Errorf("get all topics error:%s", err)
+		return nil
+	}
+	for _, topic := range topics {
+		tasks[topic] = Group{}
+		for groupID, topics := range groupTopics {
+			if _, ok := topics[topic]; ok {
+				tasks[topic][groupID] = groups[groupID]
+			}
+		}
+	}
+	return tasks
+}
+
 func main() {
 	flag.Parse()
 
@@ -126,6 +263,13 @@ func main() {
 		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)
 	}
+
+	tasks := initTasks(*topic, *groupID)
+	if tasks == nil {
+		os.Exit(5)
+	}
+	glog.Info(tasks)
+	os.Exit(0)
 
 	var topics []string
 	if *topic == "" {
@@ -142,6 +286,15 @@ func main() {
 		flag.PrintDefaults()
 		fmt.Println("need group name")
 		os.Exit(4)
+	}
+
+	if *topic == "" {
+		topics, err := getTopicsInGroup(*groupID)
+		if err != nil {
+			glog.Errorf("fetch topics in group[%s] error:%s", *groupID, err)
+			os.Exit(5)
+		}
+		glog.Infof("topics in %s:%s", *groupID, topics)
 	}
 
 	for _, topicName := range topics {
