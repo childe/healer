@@ -11,12 +11,12 @@ import (
 
 var (
 	bootstrapServers = flag.String("bootstrap.servers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
-	topic            = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	topic            = flag.String("topic", "", "get all topics if not given")
 	clientID         = flag.String("clientID", "", "The ID of this client.")
-	groupID          = flag.String("groupID", "", "REQUIRED: The ID of this client.")
+	groupID          = flag.String("groupID", "", "")
 
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 40, "default 10 Second. read timeout from connection to broker")
+	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
 )
 
 var (
@@ -102,13 +102,40 @@ func getCommitedOffset(topic string, partitions []int32) (map[int32]int64, error
 	return rst, nil
 }
 
+func getAllTopics() ([]string, error) {
+	var metadataResponse *healer.MetadataResponse
+	metadataResponse, err = brokers.RequestMetaData(*clientID, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	topics := make([]string, 0)
+	for _, t := range metadataResponse.TopicMetadatas {
+		topics = append(topics, t.TopicName)
+	}
+
+	return topics, nil
+}
+
 func main() {
 	flag.Parse()
 
+	brokers, err = healer.NewBrokers(*bootstrapServers, *clientID, *connectTimeout, *timeout)
+	if err != nil {
+		glog.Errorf("create brokers error:%s", err)
+		os.Exit(5)
+	}
+
+	var topics []string
 	if *topic == "" {
-		flag.PrintDefaults()
-		fmt.Println("need topic name")
-		os.Exit(4)
+		topics, err = getAllTopics()
+		if err != nil {
+			glog.Errorf("fetch topics error:%s", err)
+			os.Exit(5)
+		}
+	} else {
+		topics = []string{*topic}
 	}
 
 	if *groupID == "" {
@@ -117,43 +144,39 @@ func main() {
 		os.Exit(4)
 	}
 
-	brokers, err = healer.NewBrokers(*bootstrapServers, *clientID, *connectTimeout, *timeout)
-	if err != nil {
-		glog.Errorf("create brokers error:%s", err)
-		os.Exit(5)
-	}
+	for _, topicName := range topics {
+		partitions, err := getPartitions(topicName)
+		if err != nil {
+			glog.Errorf("get partitions error:%s", err)
+			os.Exit(5)
+		}
 
-	partitions, err := getPartitions(*topic)
-	if err != nil {
-		glog.Errorf("get partitions error:%s", err)
-		os.Exit(5)
-	}
+		offsets, err := getOffset(topicName)
+		if err != nil {
+			glog.Errorf("get offsets error:%s", err)
+			os.Exit(5)
+		}
 
-	offsets, err := getOffset(*topic)
-	if err != nil {
-		glog.Errorf("get offsets error:%s", err)
-		os.Exit(5)
-	}
+		commitedOffsets, err := getCommitedOffset(topicName, partitions)
+		if err != nil {
+			glog.Errorf("get commitedOffsets error:%s", err)
+			os.Exit(5)
+		}
 
-	commitedOffsets, err := getCommitedOffset(*topic, partitions)
-	if err != nil {
-		glog.Errorf("get commitedOffsets error:%s", err)
-		os.Exit(5)
-	}
+		fmt.Println("topic\tpid\toffset\tcommited\tlag")
+		var (
+			offsetSum   int64 = 0
+			commitedSum int64 = 0
+			pendingSum  int64 = 0
+		)
 
-	fmt.Println("topic\tpid\toffset\tcommited\tlag")
-	var (
-		offsetSum   int64 = 0
-		commitedSum int64 = 0
-		pendingSum  int64 = 0
-	)
-
-	for _, partitionID := range partitions {
-		pending := offsets[partitionID] - commitedOffsets[partitionID]
-		offsetSum += offsets[partitionID]
-		commitedSum += commitedOffsets[partitionID]
-		pendingSum += pending
-		fmt.Printf("%s\t%d\t%d\t%d\t%d\n", *topic, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
+		for _, partitionID := range partitions {
+			pending := offsets[partitionID] - commitedOffsets[partitionID]
+			offsetSum += offsets[partitionID]
+			commitedSum += commitedOffsets[partitionID]
+			pendingSum += pending
+			fmt.Printf("%s\t%d\t%d\t%d\t%d\n", topicName, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
+		}
+		fmt.Printf("total:\t%d\t%d\t%d\n", offsetSum, commitedSum, pendingSum)
 	}
-	fmt.Printf("%d\t%d\t%d\n", offsetSum, commitedSum, pendingSum)
 }
