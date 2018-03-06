@@ -136,32 +136,8 @@ func (r *RangeAssignmentStrategy) Assign(
 		}
 	}
 
-	//for i, member := range members {
-	//groupAssignment[i].MemberID = member.MemberID
+	glog.V(10).Infof("memberAssignments:%s", memberAssignments)
 
-	//memberAssignments[i] = &MemberAssignment{
-	//Version:              0,
-	//PartitionAssignments: make([]*PartitionAssignment, 0),
-	//UserData:             nil,
-	//}
-	//for _, topicMetadata := range topicMetadatas {
-	//partitionAssignment := &PartitionAssignment{
-	//Topic: topicMetadata.TopicName,
-	//}
-	//partitions := partitionsAssignments[topicMetadata.TopicName][i]
-	//partitionAssignment.Partitions = make([]int32, partitions[1])
-
-	//for j := 0; j < partitions[1]; j++ {
-	//idx := j + partitions[0]
-	//partitionAssignment.Partitions[j] = int32(topicMetadata.PartitionMetadatas[idx].PartitionId)
-	//}
-	//memberAssignments[i].PartitionAssignments = append(memberAssignments[i].PartitionAssignments, partitionAssignment)
-	//}
-	//}
-
-	//for i := range groupAssignment {
-	//groupAssignment[i].MemberAssignment = memberAssignments[i].Encode()
-	//}
 	i := 0
 	for member, memberAssignment := range memberAssignments {
 		groupAssignment[i] = struct {
