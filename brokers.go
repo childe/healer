@@ -42,6 +42,11 @@ func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeo
 	}
 
 	glog.Infof("got %d brokers", len(brokers.brokersInfo))
+	if glog.V(2) {
+		for nodeID, broker := range brokers.brokersInfo {
+			glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
+		}
+	}
 
 	return brokers, nil
 }
