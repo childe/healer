@@ -122,6 +122,7 @@ func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 	return r, nil
 }
 
+// TODO map
 type GroupAssignment []struct {
 	MemberID         string
 	MemberAssignment []byte
