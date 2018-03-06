@@ -79,6 +79,12 @@ func (a ByPartitionID) Len() int           { return len(a) }
 func (a ByPartitionID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByPartitionID) Less(i, j int) bool { return a[i] < a[j] }
 
+type ByMemberID []string
+
+func (a ByMemberID) Len() int           { return len(a) }
+func (a ByMemberID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByMemberID) Less(i, j int) bool { return a[i] < a[j] }
+
 func (r *RangeAssignmentStrategy) Assign(
 	members []*Member, topicMetadatas []*TopicMetadata) GroupAssignment {
 
@@ -89,12 +95,14 @@ func (r *RangeAssignmentStrategy) Assign(
 			partitions[i] = int32(p.PartitionId)
 		}
 		sort.Sort(ByPartitionID(partitions))
+
 		membersWithTheTopic := []string{}
 		for _, member := range members {
 			subscription := NewProtocolMetadata(member.MemberMetadata).Subscription
 			for _, topic := range subscription {
 				if topicMetadata.TopicName == topic {
 					membersWithTheTopic = append(membersWithTheTopic, member.MemberID)
+					sort.Sort(ByMemberID(membersWithTheTopic))
 					break
 				}
 			}
