@@ -163,13 +163,12 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	topicMetadata := metadataResponse.TopicMetadatas[0]
 
 	if partitionID >= 0 {
-		uID := partitionID
 		for _, x := range topicMetadata.PartitionMetadatas {
-			if uID == x.PartitionID {
+			if partitionID == x.PartitionID {
 				if leader, err := brokers.GetBroker(x.Leader); err != nil {
 					return nil, fmt.Errorf("could not find leader of %s[%d]:%s", topic, partitionID, err)
 				} else {
-					offsetsResponse, err := leader.requestOffsets(clientID, topic, []int32{uID}, timeValue, offsets)
+					offsetsResponse, err := leader.requestOffsets(clientID, topic, []int32{partitionID}, timeValue, offsets)
 					if err != nil {
 						return nil, err
 					} else {
