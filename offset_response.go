@@ -19,8 +19,8 @@ type PartitionOffset struct {
 	Offsets   []uint64
 }
 type OffsetsResponse struct {
-	CorrelationID uint32
-	Info          map[string][]*PartitionOffset
+	CorrelationID         uint32
+	TopicPartitionOffsets map[string][]*PartitionOffset
 }
 
 func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
@@ -37,7 +37,7 @@ func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
 
 	topicLenght := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	offsetsResponse.Info = make(map[string][]*PartitionOffset)
+	offsetsResponse.TopicPartitionOffsets = make(map[string][]*PartitionOffset)
 	for i := 0; i < topicLenght; i++ {
 		topicNameLenght := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
@@ -46,7 +46,7 @@ func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
 
 		partitionOffsetLength := binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
-		offsetsResponse.Info[topicName] = make([]*PartitionOffset, partitionOffsetLength)
+		offsetsResponse.TopicPartitionOffsets[topicName] = make([]*PartitionOffset, partitionOffsetLength)
 		for j := uint32(0); j < partitionOffsetLength; j++ {
 			partition := binary.BigEndian.Uint32(payload[offset:])
 			offset += 4
@@ -54,13 +54,13 @@ func NewOffsetsResponse(payload []byte) (*OffsetsResponse, error) {
 			offset += 2
 			offsetLength := binary.BigEndian.Uint32(payload[offset:])
 			offset += 4
-			offsetsResponse.Info[topicName][j] = &PartitionOffset{
+			offsetsResponse.TopicPartitionOffsets[topicName][j] = &PartitionOffset{
 				Partition: partition,
 				ErrorCode: errorCode,
 				Offsets:   make([]uint64, offsetLength),
 			}
 			for k := uint32(0); k < offsetLength; k++ {
-				offsetsResponse.Info[topicName][j].Offsets[k] = binary.BigEndian.Uint64(payload[offset:])
+				offsetsResponse.TopicPartitionOffsets[topicName][j].Offsets[k] = binary.BigEndian.Uint64(payload[offset:])
 				offset += 8
 			}
 		}

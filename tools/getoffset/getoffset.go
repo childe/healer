@@ -53,7 +53,7 @@ func main() {
 		fmt.Println(string(s))
 	} else {
 		for _, x := range offsetsResponse {
-			for topic, partitionOffsetsList := range x.Info {
+			for topic, partitionOffsetsList := range x.TopicPartitionOffsets {
 				for _, partitionOffsets := range partitionOffsetsList {
 					fmt.Printf("%s:%d:", topic, partitionOffsets.Partition)
 					for i, offset := range partitionOffsets.Offsets {

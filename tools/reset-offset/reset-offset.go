@@ -79,7 +79,7 @@ func main() {
 			glog.Fatalf("could not get offsets:%s", err)
 		}
 		for _, offsetsResponse := range offsetsResponses {
-			for topic, partitionOffsets := range offsetsResponse.Info {
+			for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
 				for _, partitionOffset := range partitionOffsets {
 					partition := partitionOffset.Partition
 					_offsets := partitionOffset.Offsets
