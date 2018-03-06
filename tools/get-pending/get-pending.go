@@ -4,18 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
 )
-
-//type Tasks []struct {
-//topic  string
-//groups []struct {
-//groupID     string
-//coordinator string
-//}
-//}
 
 type Group map[string]*healer.Broker // groupID -> broker
 type Tasks map[string]Group          // topic -> groupID > coordinatorAddress
@@ -79,24 +72,27 @@ func getOffset(topic string) (map[int32]int64, error) {
 	return rst, nil
 }
 
-func getCommitedOffset(topic string, partitions []int32) (map[int32]int64, error) {
-	coordinatorResponse, err := brokers.FindCoordinator(*clientID, *groupID)
-	if err != nil {
-		return nil, err
+// TODO remove partitons
+func getCommitedOffset(topic string, partitions []int32, groupID string) (map[int32]int64, error) {
+	if _, ok := groups[groupID]; !ok {
+		coordinatorResponse, err := brokers.FindCoordinator(*clientID, groupID)
+		if err != nil {
+			return nil, err
+		}
+		coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+		if err != nil {
+			return nil, err
+		}
+		glog.V(5).Infof("coordinator of %s:%s", groupID, coordinator.GetAddress())
+		groups[groupID] = coordinator
 	}
 
-	coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
-	if err != nil {
-		return nil, err
-	}
-	glog.V(5).Infof("coordinator:%s", coordinator.GetAddress())
-
-	r := healer.NewOffsetFetchRequest(1, *clientID, *groupID)
+	r := healer.NewOffsetFetchRequest(1, *clientID, groupID)
 	for _, p := range partitions {
 		r.AddPartiton(topic, p)
 	}
 
-	response, err := coordinator.Request(r)
+	response, err := groups[groupID].Request(r)
 	if err != nil {
 		return nil, err
 	}
@@ -268,68 +264,42 @@ func main() {
 	if tasks == nil {
 		os.Exit(5)
 	}
-	glog.Info(tasks)
-	os.Exit(0)
-
-	var topics []string
-	if *topic == "" {
-		topics, err = getAllTopics()
-		if err != nil {
-			glog.Errorf("fetch topics error:%s", err)
-			os.Exit(5)
-		}
-	} else {
-		topics = []string{*topic}
-	}
-
-	if *groupID == "" {
-		flag.PrintDefaults()
-		fmt.Println("need group name")
-		os.Exit(4)
-	}
-
-	if *topic == "" {
-		topics, err := getTopicsInGroup(*groupID)
-		if err != nil {
-			glog.Errorf("fetch topics in group[%s] error:%s", *groupID, err)
-			os.Exit(5)
-		}
-		glog.Infof("topics in %s:%s", *groupID, topics)
-	}
-
-	for _, topicName := range topics {
+	fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag")
+	for topicName, group := range tasks {
 		partitions, err := getPartitions(topicName)
 		if err != nil {
 			glog.Errorf("get partitions error:%s", err)
 			os.Exit(5)
 		}
 
+		timestamp := time.Now().Unix()
 		offsets, err := getOffset(topicName)
 		if err != nil {
 			glog.Errorf("get offsets error:%s", err)
 			os.Exit(5)
 		}
 
-		commitedOffsets, err := getCommitedOffset(topicName, partitions)
-		if err != nil {
-			glog.Errorf("get commitedOffsets error:%s", err)
-			os.Exit(5)
-		}
+		for groupID := range group {
+			commitedOffsets, err := getCommitedOffset(topicName, partitions, groupID)
+			if err != nil {
+				glog.Errorf("get commitedOffsets error:%s", err)
+				os.Exit(5)
+			}
 
-		fmt.Println("topic\tpid\toffset\tcommited\tlag")
-		var (
-			offsetSum   int64 = 0
-			commitedSum int64 = 0
-			pendingSum  int64 = 0
-		)
+			var (
+				offsetSum   int64 = 0
+				commitedSum int64 = 0
+				pendingSum  int64 = 0
+			)
 
-		for _, partitionID := range partitions {
-			pending := offsets[partitionID] - commitedOffsets[partitionID]
-			offsetSum += offsets[partitionID]
-			commitedSum += commitedOffsets[partitionID]
-			pendingSum += pending
-			fmt.Printf("%s\t%d\t%d\t%d\t%d\n", topicName, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
+			for _, partitionID := range partitions {
+				pending := offsets[partitionID] - commitedOffsets[partitionID]
+				offsetSum += offsets[partitionID]
+				commitedSum += commitedOffsets[partitionID]
+				pendingSum += pending
+				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
+			}
+			fmt.Printf("total:\t%d\t%d\t%d\n", offsetSum, commitedSum, pendingSum)
 		}
-		fmt.Printf("total:\t%d\t%d\t%d\n", offsetSum, commitedSum, pendingSum)
 	}
 }
