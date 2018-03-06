@@ -67,7 +67,7 @@ func (r *RangeAssignmentStrategy) assignPartitions(members []string, partitions 
 		} else {
 			length = floor
 		}
-		rst[member] = partitions[start:length]
+		rst[member] = partitions[start : start+length]
 		start += length
 	}
 	return rst
