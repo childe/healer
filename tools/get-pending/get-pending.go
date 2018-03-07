@@ -285,28 +285,39 @@ func main() {
 			os.Exit(5)
 		}
 
-		for groupID := range group {
-			commitedOffsets, err := getCommitedOffset(topicName, partitions, groupID)
-			if err != nil {
-				glog.Errorf("get commitedOffsets error:%s", err)
-				os.Exit(5)
-			}
-
-			var (
-				offsetSum   int64 = 0
-				commitedSum int64 = 0
-				pendingSum  int64 = 0
-			)
-
+		if group == nil || len(group) == 0 {
+			var offsetSum int64 = 0
 			for _, partitionID := range partitions {
-				pending := offsets[partitionID] - commitedOffsets[partitionID]
 				offsetSum += offsets[partitionID]
-				commitedSum += commitedOffsets[partitionID]
-				pendingSum += pending
-				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
+				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, "NA", partitionID, offsets[partitionID], -1, -1)
 			}
 			if *total {
-				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, commitedSum, pendingSum)
+				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, -1, -1)
+			}
+		} else {
+			for groupID := range group {
+				commitedOffsets, err := getCommitedOffset(topicName, partitions, groupID)
+				if err != nil {
+					glog.Errorf("get commitedOffsets error:%s", err)
+					os.Exit(5)
+				}
+
+				var (
+					offsetSum   int64 = 0
+					commitedSum int64 = 0
+					pendingSum  int64 = 0
+				)
+
+				for _, partitionID := range partitions {
+					pending := offsets[partitionID] - commitedOffsets[partitionID]
+					offsetSum += offsets[partitionID]
+					commitedSum += commitedOffsets[partitionID]
+					pendingSum += pending
+					fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
+				}
+				if *total {
+					fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, commitedSum, pendingSum)
+				}
 			}
 		}
 	}
