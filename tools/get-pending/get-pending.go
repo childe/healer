@@ -23,6 +23,9 @@ var (
 
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
 	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
+
+	header = flag.Bool("header", true, "if print header")
+	total  = flag.Bool("total", false, "if print total offset of one topic")
 )
 
 var (
@@ -264,7 +267,10 @@ func main() {
 	if tasks == nil {
 		os.Exit(5)
 	}
-	fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag")
+
+	if *header {
+		fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag")
+	}
 	for topicName, group := range tasks {
 		partitions, err := getPartitions(topicName)
 		if err != nil {
@@ -299,7 +305,9 @@ func main() {
 				pendingSum += pending
 				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
 			}
-			fmt.Printf("total:\t%d\t%d\t%d\n", offsetSum, commitedSum, pendingSum)
+			if *total {
+				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, commitedSum, pendingSum)
+			}
 		}
 	}
 }
