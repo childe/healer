@@ -18,8 +18,8 @@ var groups = map[string]*healer.Broker{}
 var (
 	bootstrapServers = flag.String("bootstrap.servers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic            = flag.String("topic", "", "get all topics if not given")
-	clientID         = flag.String("clientID", "", "The ID of this client.")
 	groupID          = flag.String("groupID", "", "get all groupID if not given")
+	clientID         = flag.String("clientID", "healer-get-pending", "The ID of this client.")
 
 	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
 	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
