@@ -133,6 +133,7 @@ func main() {
 		joinGroupRequest.AddGroupProtocal(gp)
 	}
 
+	glog.Info("join...")
 	responseBytes, err := coordinator.Request(joinGroupRequest)
 	if err != nil {
 		glog.Fatalf("request joingroup error:%s", err)
@@ -177,6 +178,7 @@ func main() {
 	offsetComimtReq.SetRetentionTime(-1)
 	for partitionID, offset = range offsets {
 		offsetComimtReq.AddPartiton(*topic, partitionID, offset, "")
+		glog.Infof("commit offset [%s][%d]:%d", *topic, partitionID, offset)
 	}
 
 	payload, err := coordinator.Request(offsetComimtReq)
@@ -186,9 +188,7 @@ func main() {
 	}
 
 	_, err = healer.NewOffsetCommitResponse(payload)
-	if err == nil {
-		glog.Infof("commit offset [%s][%d]:%d", *topic, partitionID, offset)
-	} else {
-		glog.Infof("commit offset [%s][%d]:%d error:%s", *topic, partitionID, offset, err)
+	if err != nil {
+		glog.Errorf("commit offset [%s][%d]:%d error:%s", *topic, partitionID, offset, err)
 	}
 }
