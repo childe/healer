@@ -228,22 +228,22 @@ func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (i
 	return -1, fmt.Errorf("could not find out leader of topic %s", topic)
 }
 
-func (brokers *Brokers) RequestListGroups(clientID string) (*ListGroupsResponse, error) {
-	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeId)
-		if err != nil {
-			continue
-		}
-		response, err := broker.requestListGroups(clientID)
-		if err != nil {
-			glog.Infof("could not get metadata from %s:%s", broker.address, err)
-		} else {
-			return response, nil
-		}
-	}
+//func (brokers *Brokers) RequestListGroups(clientID string) (*ListGroupsResponse, error) {
+//for _, brokerInfo := range brokers.brokersInfo {
+//broker, err := brokers.GetBroker(brokerInfo.NodeId)
+//if err != nil {
+//continue
+//}
+//response, err := broker.requestListGroups(clientID)
+//if err != nil {
+//glog.Infof("could not get metadata from %s:%s", broker.address, err)
+//} else {
+//return response, nil
+//}
+//}
 
-	return nil, fmt.Errorf("could not list groups from all brokers")
-}
+//return nil, fmt.Errorf("could not list groups from all brokers")
+//}
 
 func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
 	for _, brokerInfo := range brokers.brokersInfo {

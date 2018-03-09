@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -20,24 +19,18 @@ var (
 func main() {
 	flag.Parse()
 
-	brokers, err := healer.NewBrokers(*brokerList, *clientID, *connectTimeout, *timeout)
+	// TODO config
+	config := map[string]interface{}{}
+	helper, err := healer.NewHelper(*brokerList, config)
 	if err != nil {
-		glog.Errorf("create brokers error:%s", err)
+		glog.Error("create helper error:%s", err)
 		os.Exit(5)
 	}
 
-	response, err := brokers.RequestListGroups(*clientID)
-
-	if err != nil {
-		glog.Errorf("failed to get list_groups response:%s", err)
-		os.Exit(5)
+	groups := helper.GetGroups()
+	if groups != nil {
+		for _, group := range groups {
+			fmt.Println(group)
+		}
 	}
-
-	s, err := json.MarshalIndent(response, "", "  ")
-	if err != nil {
-		glog.Errorf("failed to marshal metadata response:%s", err)
-		os.Exit(5)
-	}
-
-	fmt.Println(string(s))
 }

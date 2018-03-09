@@ -31,6 +31,7 @@ var (
 var (
 	brokers *healer.Brokers
 	err     error
+	helper  *healer.Helper
 )
 
 func getPartitions(topic string) ([]int32, error) {
@@ -171,20 +172,6 @@ func getTopicsInGroup(groupID string) (map[string]bool, error) {
 	return topics, nil
 }
 
-func getGroups() ([]string, error) {
-	response, err := brokers.RequestListGroups(*clientID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	groups := []string{}
-	for _, group := range response.Groups {
-		groups = append(groups, group.GroupID)
-	}
-	return groups, nil
-}
-
 func initTasks(topic, groupID string) Tasks {
 	tasks := map[string]Group{}
 	if topic != "" && groupID != "" {
@@ -205,8 +192,8 @@ func initTasks(topic, groupID string) Tasks {
 	}
 
 	// group is ""
-	groupIDs, err := getGroups()
-	if err != nil {
+	groupIDs := helper.GetGroups()
+	if groupIDs == nil {
 		glog.Errorf("get groups error:%s", err)
 		return nil
 	}
@@ -260,6 +247,14 @@ func main() {
 	brokers, err = healer.NewBrokers(*bootstrapServers, *clientID, *connectTimeout, *timeout)
 	if err != nil {
 		glog.Errorf("create brokers error:%s", err)
+		os.Exit(5)
+	}
+
+	// TODO config
+	config := map[string]interface{}{}
+	helper, err = healer.NewHelper(*bootstrapServers, config)
+	if err != nil {
+		glog.Errorf("create helper error:%s", err)
 		os.Exit(5)
 	}
 
