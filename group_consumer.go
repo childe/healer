@@ -180,11 +180,18 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	var (
 		metaDataResponse *MetadataResponse
 		err              error
-		topics           []string = make([]string, 0)
+		_topics          map[string]bool = map[string]bool{}
 	)
 	for _, member := range c.members {
 		protocolMetadata := NewProtocolMetadata(member.MemberMetadata)
-		topics = append(topics, protocolMetadata.Subscription...)
+		for _, topic := range protocolMetadata.Subscription {
+			_topics[topic] = true
+		}
+	}
+
+	topics := []string{}
+	for t, _ := range _topics {
+		topics = append(topics, t)
 	}
 	for {
 		metaDataResponse, err = c.brokers.RequestMetaData(c.clientID, topics)
