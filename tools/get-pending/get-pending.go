@@ -160,6 +160,9 @@ func getTopicsInGroup(groupID string) (map[string]bool, error) {
 	topics := make(map[string]bool)
 	for _, group := range response.Groups {
 		for _, memberDetail := range group.Members {
+			if len(memberDetail.MemberAssignment) == 0 {
+				continue
+			}
 			memberAssignment, err := healer.NewMemberAssignment(memberDetail.MemberAssignment)
 			if err != nil {
 				return nil, err
