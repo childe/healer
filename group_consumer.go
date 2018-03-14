@@ -44,7 +44,6 @@ type GroupConsumer struct {
 	assignmentStrategy AssignmentStrategy
 }
 
-//func NewGroupConsumer(brokerList, topic, clientID, groupID string, sessionTimeout int, maxWaitTime int32, minBytes int32, maxBytes int32, connectTimeout, timeout int) (*GroupConsumer, error) {
 func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	var (
 		topic                string
@@ -448,6 +447,7 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 				glog.Errorf("failed to send heartbeat:%s", err)
 				if err != nil {
 					c.stop()
+					c.joined = false
 					c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
 				}
 			}
@@ -458,8 +458,6 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 }
 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
-	c.joined = false
-
 	var err error
 	for {
 		err = c.getCoordinator()
