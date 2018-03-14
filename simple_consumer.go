@@ -176,12 +176,12 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		ticker := time.NewTicker(time.Millisecond * time.Duration(simpleConsumer.AutoCommitIntervalMs))
 		go func() {
 			for range ticker.C {
-				if simpleConsumer.stop {
-					return
-				}
 				if simpleConsumer.offset != simpleConsumer.offsetCommited {
 					simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
 					simpleConsumer.offsetCommited = simpleConsumer.offset
+				}
+				if simpleConsumer.stop {
+					return
 				}
 			}
 		}()
