@@ -264,7 +264,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 
 // join && set generationID&memberID
 func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
-	glog.Info("try to join group")
+	glog.Infof("try to join group %s", c.groupID)
 	c.memberID = ""
 	var (
 		protocolType string = "consumer"
@@ -304,7 +304,7 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 }
 
 func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
-	glog.Info("try to sync group")
+	glog.Infof("try to sync group %s", c.groupID)
 	var groupAssignment GroupAssignment
 	if c.ifLeader {
 		c.getTopicPartitionInfo()
@@ -410,7 +410,7 @@ func (c *GroupConsumer) stop() {
 }
 
 func (c *GroupConsumer) leave() {
-	glog.Infof("try to leave %s", c.memberID)
+	glog.Infof("%s try to leave %s", c.memberID, c.groupID)
 	leaveReq := NewLeaveGroupRequest(c.clientID, c.groupID, c.memberID)
 	payload, err := c.coordinator.Request(leaveReq)
 	if err != nil {
