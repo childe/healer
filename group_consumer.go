@@ -198,7 +198,6 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 			break
 		} else {
 			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topic, err)
-			time.Sleep(3 * time.Second)
 		}
 	}
 
@@ -337,7 +336,7 @@ func (c *GroupConsumer) joinAndSync() error {
 	for {
 		_, err := c.join()
 		if err != nil {
-			glog.Infof("join error:%s", err)
+			glog.Infof("join %s error:%s", c.groupID, err)
 			if err == AllError[16] {
 				return err
 			}
@@ -348,7 +347,7 @@ func (c *GroupConsumer) joinAndSync() error {
 		for i := 0; i < 3; i++ {
 			_, err := c.sync()
 			if err != nil {
-				glog.Infof("sync error:%s", err)
+				glog.Infof("sync %s error:%s", c.groupID, err)
 				if err == AllError[27] {
 					break // rejoin group
 				} else {
