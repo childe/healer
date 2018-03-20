@@ -3,6 +3,7 @@ package healer
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -111,6 +112,25 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 	} else {
 		glog.V(5).Infof("leader broker %s", p.broker.GetAddress())
 	}
+
+	// TODO wait to the next ticker to see if messageSet changes
+	go func() {
+		for range time.NewTicker(1 * time.Second).C {
+			p.mutex.Lock()
+			if p.messageSetSize == 0 {
+				p.mutex.Unlock()
+				continue
+			}
+
+			messageSet := p.messageSet[:p.messageSetSize]
+			p.messageSetSize = 0
+			p.messageSet = make([]*Message, p.messageMaxCount)
+			p.mutex.Unlock()
+
+			p.emit(messageSet)
+		}
+	}()
+
 	return p
 }
 
@@ -137,11 +157,16 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 
 func (simpleProducer *SimpleProducer) Emit() error {
 	simpleProducer.mutex.Lock()
-	defer simpleProducer.mutex.Unlock()
+
+	if simpleProducer.messageSetSize == 0 {
+		return nil
+	}
 
 	messageSet := simpleProducer.messageSet[:simpleProducer.messageSetSize]
 	simpleProducer.messageSetSize = 0
 	simpleProducer.messageSet = make([]*Message, simpleProducer.messageMaxCount)
+	simpleProducer.mutex.Unlock()
+
 	return simpleProducer.emit(messageSet)
 }
 
