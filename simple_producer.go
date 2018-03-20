@@ -21,6 +21,7 @@ type SimpleProducer struct {
 	batchSize        int
 	messageMaxCount  int
 	metadataMaxAgeMS int
+	flushIntervalMS  int
 
 	messageSetSize int
 	messageSet     MessageSet
@@ -42,6 +43,7 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 		batchSize:        16384,
 		messageMaxCount:  10,
 		metadataMaxAgeMS: 300000,
+		flushIntervalMS:  200,
 
 		mutex: &sync.Mutex{},
 	}
@@ -80,6 +82,14 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 			return nil
 		}
 	}
+
+	if v, ok := config["flush.interval.ms"]; ok {
+		p.flushIntervalMS = v.(int)
+		if p.messageMaxCount <= 0 {
+			glog.Error("flush.interval.ms must > 0")
+			return nil
+		}
+	}
 	p.messageSet = make([]*Message, p.messageMaxCount)
 
 	// get partition leader
@@ -115,7 +125,7 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
-		for range time.NewTicker(1 * time.Second).C {
+		for range time.NewTicker(time.Duration(p.flushIntervalMS) * time.Millisecond).C {
 			p.mutex.Lock()
 			if p.messageSetSize == 0 {
 				p.mutex.Unlock()
