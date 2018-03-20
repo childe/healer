@@ -12,7 +12,7 @@ import (
 )
 
 type GroupConsumer struct {
-	// TODO do not nedd one connection to each broker
+	// TODO refresh metainfo in ticker
 	brokers              *Brokers
 	topic                string
 	correlationID        uint32
