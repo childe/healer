@@ -127,7 +127,7 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 			p.messageSet = make([]*Message, p.messageMaxCount)
 			p.mutex.Unlock()
 
-			p.emit(messageSet)
+			p.flush(messageSet)
 		}
 	}()
 
@@ -149,13 +149,13 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 	simpleProducer.messageSetSize++
 	// TODO lock
 	if simpleProducer.messageSetSize >= simpleProducer.messageMaxCount {
-		// TODO copy and clean and emit?
-		simpleProducer.Emit()
+		// TODO copy and clean and flush?
+		simpleProducer.Flush()
 	}
 	return nil
 }
 
-func (simpleProducer *SimpleProducer) Emit() error {
+func (simpleProducer *SimpleProducer) Flush() error {
 	simpleProducer.mutex.Lock()
 
 	if simpleProducer.messageSetSize == 0 {
@@ -167,10 +167,10 @@ func (simpleProducer *SimpleProducer) Emit() error {
 	simpleProducer.messageSet = make([]*Message, simpleProducer.messageMaxCount)
 	simpleProducer.mutex.Unlock()
 
-	return simpleProducer.emit(messageSet)
+	return simpleProducer.flush(messageSet)
 }
 
-func (simpleProducer *SimpleProducer) emit(messageSet MessageSet) error {
+func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest := &ProduceRequest{
 		RequiredAcks: simpleProducer.acks,
 		Timeout:      simpleProducer.requestTimeoutMS,
