@@ -27,7 +27,7 @@ func main() {
 	}
 
 	config := make(map[string]interface{})
-	config["message.max.count"] = 1
+	config["message.max.count"] = 10
 	config["bootstrap.servers"] = *brokers
 	config["compression.type"] = *compressionType
 	simpleProducer := healer.NewSimpleProducer(*topic, int32(*partition), config)
@@ -62,6 +62,6 @@ func main() {
 				text = append(text, line...)
 			}
 		}
-		simpleProducer.AddMessage([]byte{}, text)
+		simpleProducer.AddMessage(nil, text)
 	}
 }
