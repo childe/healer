@@ -24,7 +24,7 @@ var DefaultProducerConfig *ProducerConfig = &ProducerConfig{
 	Acks:                     1,
 	CompressionType:          "none",
 	BatchSize:                16384,
-	MessageMaxCount:          10,
+	MessageMaxCount:          1024,
 	FlushIntervalMS:          200,
 	MetadataMaxAgeMS:         300000,
 	FetchTopicMetaDataRetrys: 3,
