@@ -10,33 +10,52 @@ type Producer struct {
 	topic           string
 	simpleProducers map[int32]*SimpleProducer
 	currentProducer *SimpleProducer
+	brokers         *Brokers
+	topicMeta       *TopicMetadata
 }
 
 func NewProducer(topic string, config *ProducerConfig) *Producer {
-	err := config.checkValid()
-	if er != nil {
+	var err error
+	err = config.checkValid()
+	if err != nil {
 		glog.Errorf("producer config error: %s", err)
 		return nil
 	}
-	brokers, err := NewBrokers(config["bootstrap.servers"].(string), clientID, connectTimeout, timeout)
-	if err != nil {
-		glog.Errorf("[%s] init brokers error:%s", topic, err)
-		return nil
-	}
 
-	p = &Producer{
+	p := &Producer{
 		config: config,
 		topic:  topic,
 	}
 
+	connectTimeout := 30000
+	timeout := 60000
+	p.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, connectTimeout, timeout)
+	if err != nil {
+		glog.Errorf("init brokers error: %s", err)
+		return nil
+	}
+
 	return p
+}
+
+func (p *Producer) refreshTopicMeta() error {
+	metadataResponse, err := p.brokers.RequestMetaData(p.config.ClientID, []string{p.topic})
+	if err != nil {
+		return err
+	}
+	if len(metadataResponse.TopicMetadatas) == 0 {
+		return zeroTopicMetadata
+	}
+
+	p.topicMeta = metadataResponse.TopicMetadatas[0]
+	return nil
 }
 
 func (p *Producer) AddMessage(key []byte, value []byte) error {
 	if key == nil || len(key) == 0 {
 		return p.currentProducer.AddMessage(key, value)
 	}
-	partitionID := int32(murmur.MurmurHash2(key, 0)) % count
+	partitionID := int32(murmur.MurmurHash2(key, 0)) % int32(len(p.topicMeta.PartitionMetadatas))
 	if s, ok := p.simpleProducers[partitionID]; ok {
 		return s.AddMessage(key, value)
 	} else {
