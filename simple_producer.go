@@ -27,7 +27,7 @@ type SimpleProducer struct {
 func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *SimpleProducer {
 	err := config.checkValid()
 	if err != nil {
-		glog.Errorf("config error:%s", err)
+		glog.Errorf("config error: %s", err)
 		return nil
 	}
 
@@ -61,13 +61,13 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	// get partition leader
 	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, 60000, 30000)
 	if err != nil {
-		glog.Errorf("init brokers error:%s", err)
+		glog.Errorf("init brokers error: %s", err)
 		return nil
 	}
 
 	leaderID, err := brokers.findLeader(config.ClientID, p.topic, p.partition)
 	if err != nil {
-		glog.Errorf("could not get leader of topic %s[%d]:%s", p.topic, p.partition, err)
+		glog.Errorf("could not get leader of topic %s[%d]: %s", p.topic, p.partition, err)
 		return nil
 	} else {
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
@@ -76,7 +76,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	// TODO
 	p.broker, err = brokers.NewBroker(leaderID)
 	if err != nil {
-		glog.Errorf("create broker error:%s", err)
+		glog.Errorf("create broker error: %s", err)
 		return nil
 	} else {
 		glog.V(5).Infof("leader broker %s", p.broker.GetAddress())
