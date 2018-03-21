@@ -12,10 +12,11 @@ type ProducerConfig struct {
 	FlushIntervalMS          int
 	MetadataMaxAgeMS         int
 	FetchTopicMetaDataRetrys int
-	ConnectionsMaxIdleMS     int
 
-	Retries          int
-	RequestTimeoutMS int32
+	// TODO
+	ConnectionsMaxIdleMS int
+	Retries              int
+	RequestTimeoutMS     int32
 }
 
 var DefaultProducerConfig *ProducerConfig = &ProducerConfig{
