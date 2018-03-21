@@ -1,6 +1,9 @@
 package healer
 
 import (
+	"errors"
+	"time"
+
 	"github.com/aviddiviner/go-murmur"
 	"github.com/golang/glog"
 )
@@ -35,33 +38,39 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		return nil
 	}
 
-	for i := 0; i < config.FetchTopicMetaDataRetrys; i++ {
-		err = p.refreshTopicMeta()
-		if err != nil {
-			glog.Error("get topic meta error: %s", err)
-		} else {
-			break
-		}
-	}
+	err = p.refreshTopicMeta()
 	if err != nil {
-		glog.Error("failed to topic meta after %d tries", config.FetchTopicMetaDataRetrys)
+		glog.Error(err)
 		return nil
 	}
+
+	go func() {
+		for range time.NewTicker(time.Duration(config.MetadataMaxAgeMS) * time.Millisecond).C {
+			err := p.refreshTopicMeta()
+			if err != nil {
+				glog.Error(err)
+			}
+		}
+	}()
 
 	return p
 }
 
 func (p *Producer) refreshTopicMeta() error {
-	metadataResponse, err := p.brokers.RequestMetaData(p.config.ClientID, []string{p.topic})
-	if err != nil {
-		return err
+	for i := 0; i < p.config.FetchTopicMetaDataRetrys; i++ {
+		metadataResponse, err := p.brokers.RequestMetaData(p.config.ClientID, []string{p.topic})
+		if err != nil {
+			glog.Errorf("get topic metadata error: %s", err)
+			continue
+		}
+		if len(metadataResponse.TopicMetadatas) == 0 {
+			glog.Errorf("get topic metadata error: %s", zeroTopicMetadata)
+			continue
+		}
+		p.topicMeta = metadataResponse.TopicMetadatas[0]
+		return nil
 	}
-	if len(metadataResponse.TopicMetadatas) == 0 {
-		return zeroTopicMetadata
-	}
-
-	p.topicMeta = metadataResponse.TopicMetadatas[0]
-	return nil
+	return errors.New("failed to get topic meta after all tries")
 }
 
 func (p *Producer) AddMessage(key []byte, value []byte) error {
