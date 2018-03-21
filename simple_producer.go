@@ -24,6 +24,34 @@ type SimpleProducer struct {
 	compressor       Compressor
 }
 
+func (p *SimpleProducer) createBroker() (*Broker, error) {
+	brokers, err := NewBrokers(p.config.BootstrapServers, p.config.ClientID, 60000, 30000)
+	if err != nil {
+		glog.Errorf("init brokers error: %s", err)
+		return nil, err
+	}
+
+	leaderID, err := brokers.findLeader(p.config.ClientID, p.topic, p.partition)
+	if err != nil {
+		glog.Errorf("could not get leader of topic %s[%d]: %s", p.topic, p.partition, err)
+		return nil, err
+	} else {
+		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
+	}
+
+	broker, err := brokers.NewBroker(leaderID)
+	if err != nil {
+		glog.Errorf("create broker error: %s", err)
+		return nil, err
+	} else {
+		glog.V(5).Infof("leader broker %s", broker.GetAddress())
+	}
+
+	brokers.Close()
+
+	return broker, err
+}
+
 func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *SimpleProducer {
 	err := config.checkValid()
 	if err != nil {
@@ -58,28 +86,10 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 	p.messageSet = make([]*Message, config.MessageMaxCount)
 
-	// get partition leader
-	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, 60000, 30000)
+	p.broker, err = p.createBroker()
 	if err != nil {
-		glog.Errorf("init brokers error: %s", err)
+		glog.Error("create leader broker error: %s", err)
 		return nil
-	}
-
-	leaderID, err := brokers.findLeader(config.ClientID, p.topic, p.partition)
-	if err != nil {
-		glog.Errorf("could not get leader of topic %s[%d]: %s", p.topic, p.partition, err)
-		return nil
-	} else {
-		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
-	}
-
-	// TODO
-	p.broker, err = brokers.NewBroker(leaderID)
-	if err != nil {
-		glog.Errorf("create broker error: %s", err)
-		return nil
-	} else {
-		glog.V(5).Infof("leader broker %s", p.broker.GetAddress())
 	}
 
 	// TODO wait to the next ticker to see if messageSet changes
@@ -188,9 +198,11 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
-	response, err := simpleProducer.broker.Request(produceRequest)
-	glog.Info(response)
-	glog.Info(err)
+	responseBuf, err := simpleProducer.broker.Request(produceRequest)
+	if err != nil {
+		return err
+	}
+	_, err = NewProduceResponse(responseBuf)
 	return err
 }
 
