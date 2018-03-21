@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -202,7 +203,11 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	if err != nil {
 		return err
 	}
-	_, err = NewProduceResponse(responseBuf)
+	response, err := NewProduceResponse(responseBuf)
+	if glog.V(10) {
+		b, _ := json.Marshal(response)
+		glog.Infof("produces response: %s", b)
+	}
 	return err
 }
 
