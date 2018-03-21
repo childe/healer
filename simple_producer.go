@@ -9,53 +9,37 @@ import (
 )
 
 type SimpleProducer struct {
-	clientID         string
-	broker           *Broker
-	topic            string
-	partition        int32
-	acks             int16
-	requestTimeoutMS int32
-	compressionType  string
-	compressionValue int8
-	retries          int
-	batchSize        int
-	messageMaxCount  int
-	metadataMaxAgeMS int
-	flushIntervalMS  int
+	config *ProducerConfig
+
+	broker    *Broker
+	topic     string
+	partition int32
 
 	messageSetSize int
 	messageSet     MessageSet
 
 	mutex sync.Locker
 
-	compressor Compressor
+	compressionValue int8
+	compressor       Compressor
 }
 
-func NewSimpleProducer(topic string, partition int32, config map[string]interface{}) *SimpleProducer {
+func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *SimpleProducer {
+	err := config.checkValid()
+	if err != nil {
+		glog.Errorf("config error:%s", err)
+		return nil
+	}
+
 	p := &SimpleProducer{
-		clientID:         "healer",
-		topic:            topic,
-		partition:        partition,
-		acks:             1,
-		requestTimeoutMS: 30000,
-		compressionType:  "none",
-		retries:          0,
-		batchSize:        16384,
-		messageMaxCount:  10,
-		metadataMaxAgeMS: 300000,
-		flushIntervalMS:  200,
+		config:    config,
+		topic:     topic,
+		partition: partition,
 
 		mutex: &sync.Mutex{},
 	}
 
-	var compressionType string
-	if v, ok := config["compression.type"]; ok {
-		compressionType = v.(string)
-	} else {
-		compressionType = "none"
-	}
-	p.compressionType = compressionType
-	switch compressionType {
+	switch config.CompressionType {
 	case "none":
 		p.compressionValue = COMPRESSION_NONE
 	case "gzip":
@@ -64,49 +48,24 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 		p.compressionValue = COMPRESSION_SNAPPY
 	case "lz4":
 		p.compressionValue = COMPRESSION_LZ4
-	default:
-		glog.Errorf("unknown compression type:%s", compressionType)
-		return nil
 	}
-	p.compressor = NewCompressor(compressionType)
+	p.compressor = NewCompressor(config.CompressionType)
 
 	if p.compressor == nil {
 		glog.Error("could not build compressor for simple_producer")
 		return nil
 	}
 
-	if v, ok := config["message.max.count"]; ok {
-		p.messageMaxCount = v.(int)
-		if p.messageMaxCount <= 0 {
-			glog.Error("message.max.count must > 0")
-			return nil
-		}
-	}
-
-	if v, ok := config["flush.interval.ms"]; ok {
-		p.flushIntervalMS = v.(int)
-		if p.messageMaxCount <= 0 {
-			glog.Error("flush.interval.ms must > 0")
-			return nil
-		}
-	}
-	p.messageSet = make([]*Message, p.messageMaxCount)
+	p.messageSet = make([]*Message, config.MessageMaxCount)
 
 	// get partition leader
-	var brokerList string
-	if v, ok := config["bootstrap.servers"]; ok {
-		brokerList = v.(string)
-	} else {
-		glog.Error("bootstrap.servers must be set")
-		return nil
-	}
-	brokers, err := NewBrokers(brokerList, p.clientID, 60000, 30000)
+	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, 60000, 30000)
 	if err != nil {
 		glog.Errorf("init brokers error:%s", err)
 		return nil
 	}
 
-	leaderID, err := brokers.findLeader(p.clientID, p.topic, p.partition)
+	leaderID, err := brokers.findLeader(config.ClientID, p.topic, p.partition)
 	if err != nil {
 		glog.Errorf("could not get leader of topic %s[%d]:%s", p.topic, p.partition, err)
 		return nil
@@ -125,7 +84,7 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
-		for range time.NewTicker(time.Duration(p.flushIntervalMS) * time.Millisecond).C {
+		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
 			p.mutex.Lock()
 			if p.messageSetSize == 0 {
 				p.mutex.Unlock()
@@ -134,7 +93,7 @@ func NewSimpleProducer(topic string, partition int32, config map[string]interfac
 
 			messageSet := p.messageSet[:p.messageSetSize]
 			p.messageSetSize = 0
-			p.messageSet = make([]*Message, p.messageMaxCount)
+			p.messageSet = make([]*Message, config.MessageMaxCount)
 			p.mutex.Unlock()
 
 			p.flush(messageSet)
@@ -158,7 +117,7 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 	simpleProducer.messageSet[simpleProducer.messageSetSize] = message
 	simpleProducer.messageSetSize++
 	// TODO lock
-	if simpleProducer.messageSetSize >= simpleProducer.messageMaxCount {
+	if simpleProducer.messageSetSize >= simpleProducer.config.MessageMaxCount {
 		// TODO copy and clean and flush?
 		simpleProducer.Flush()
 	}
@@ -174,7 +133,7 @@ func (simpleProducer *SimpleProducer) Flush() error {
 
 	messageSet := simpleProducer.messageSet[:simpleProducer.messageSetSize]
 	simpleProducer.messageSetSize = 0
-	simpleProducer.messageSet = make([]*Message, simpleProducer.messageMaxCount)
+	simpleProducer.messageSet = make([]*Message, simpleProducer.config.MessageMaxCount)
 	simpleProducer.mutex.Unlock()
 
 	return simpleProducer.flush(messageSet)
@@ -182,13 +141,13 @@ func (simpleProducer *SimpleProducer) Flush() error {
 
 func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest := &ProduceRequest{
-		RequiredAcks: simpleProducer.acks,
-		Timeout:      simpleProducer.requestTimeoutMS,
+		RequiredAcks: simpleProducer.config.Acks,
+		Timeout:      simpleProducer.config.RequestTimeoutMS,
 	}
 	produceRequest.RequestHeader = &RequestHeader{
 		ApiKey:     API_ProduceRequest,
 		ApiVersion: 0,
-		ClientId:   simpleProducer.clientID,
+		ClientId:   simpleProducer.config.ClientID,
 	}
 
 	produceRequest.TopicBlocks = make([]struct {

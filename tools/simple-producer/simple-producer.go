@@ -12,11 +12,15 @@ import (
 )
 
 var (
-	brokers         = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
-	topic           = flag.String("topic", "", "REQUIRED: The topic to consume from.")
-	partition       = flag.Int("partition", 0, "The partition to consume from.")
-	compressionType = flag.String("compression.type", "none", "defalut:none")
+	config    = healer.DefaultProducerConfig
+	topic     = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	partition = flag.Int("partition", 0, "The partition to consume from.")
 )
+
+func init() {
+	flag.StringVar(&config.BootstrapServers, "brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
+	flag.StringVar(&config.CompressionType, "compression.type", "none", "defalut:none")
+}
 
 func main() {
 	flag.Parse()
@@ -26,10 +30,6 @@ func main() {
 		os.Exit(4)
 	}
 
-	config := make(map[string]interface{})
-	config["message.max.count"] = 10
-	config["bootstrap.servers"] = *brokers
-	config["compression.type"] = *compressionType
 	simpleProducer := healer.NewSimpleProducer(*topic, int32(*partition), config)
 
 	if simpleProducer == nil {
