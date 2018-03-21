@@ -2,6 +2,7 @@ package healer
 
 import (
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/aviddiviner/go-murmur"
@@ -9,12 +10,13 @@ import (
 )
 
 type Producer struct {
-	config          *ProducerConfig
-	topic           string
-	simpleProducers map[int32]*SimpleProducer
-	currentProducer *SimpleProducer
-	brokers         *Brokers
-	topicMeta       *TopicMetadata
+	config             *ProducerConfig
+	topic              string
+	simpleProducers    map[int32]*SimpleProducer
+	currentProducer    *SimpleProducer
+	currentPartitionID int32
+	brokers            *Brokers
+	topicMeta          *TopicMetadata
 }
 
 func NewProducer(topic string, config *ProducerConfig) *Producer {
@@ -26,8 +28,9 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 	}
 
 	p := &Producer{
-		config: config,
-		topic:  topic,
+		config:          config,
+		topic:           topic,
+		simpleProducers: make(map[int32]*SimpleProducer),
 	}
 
 	connectTimeout := 30000
@@ -43,6 +46,10 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		glog.Error(err)
 		return nil
 	}
+	p.refreshCurrentProducer()
+	if p.currentProducer == nil {
+		return nil
+	}
 
 	go func() {
 		for range time.NewTicker(time.Duration(config.MetadataMaxAgeMS) * time.Millisecond).C {
@@ -50,6 +57,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 			if err != nil {
 				glog.Error(err)
 			}
+			p.refreshCurrentProducer()
 		}
 	}()
 
@@ -71,6 +79,22 @@ func (p *Producer) refreshTopicMeta() error {
 		return nil
 	}
 	return errors.New("failed to get topic meta after all tries")
+}
+
+func (p *Producer) refreshCurrentProducer() {
+	var validPartitionID []int32
+	for _, partition := range p.topicMeta.PartitionMetadatas {
+		if partition.PartitionErrorCode == 0 {
+			validPartitionID = append(validPartitionID, partition.PartitionID)
+		}
+	}
+	partitionID := validPartitionID[rand.Int31n(int32(len(validPartitionID)))]
+	sp := NewSimpleProducer(p.topic, partitionID, p.config)
+	if sp == nil {
+		glog.Error("could not referesh current simple producer")
+	}
+	p.currentProducer = sp
+	p.simpleProducers[partitionID] = p.currentProducer
 }
 
 func (p *Producer) AddMessage(key []byte, value []byte) error {
