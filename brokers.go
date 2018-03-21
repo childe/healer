@@ -297,3 +297,9 @@ func (brokers *Brokers) Request(req Request) ([]byte, error) {
 
 	return nil, fmt.Errorf("could not request %d from all brokers", req.API())
 }
+
+func (brokers *Brokers) Close() {
+	for _, broker := range brokers.brokers {
+		broker.Close()
+	}
+}
