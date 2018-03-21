@@ -62,8 +62,8 @@ func NewProduceResponse(payload []byte) (*ProduceResponse, error) {
 
 	r.ProduceResponses = make([]*ProduceResponsePiece, produceResponsePieceCount)
 
-	for _, produceResponse := range r.ProduceResponses {
-		produceResponse = &ProduceResponsePiece{}
+	for i, _ := range r.ProduceResponses {
+		produceResponse := &ProduceResponsePiece{}
 		l = int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 		produceResponse.Topic = string(payload[offset : offset+l])
@@ -72,8 +72,8 @@ func NewProduceResponse(payload []byte) (*ProduceResponse, error) {
 		ProduceResponse_PartitionResponse_Count := binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
 		produceResponse.Partitions = make([]*ProduceResponse_PartitionResponse, ProduceResponse_PartitionResponse_Count)
-		for _, p := range produceResponse.Partitions {
-			p = &ProduceResponse_PartitionResponse{}
+		for j, _ := range produceResponse.Partitions {
+			p := &ProduceResponse_PartitionResponse{}
 			p.PartitionID = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 			p.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
@@ -83,7 +83,10 @@ func NewProduceResponse(payload []byte) (*ProduceResponse, error) {
 			}
 			p.BaseOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
 			offset += 8
+			produceResponse.Partitions[j] = p
 		}
+
+		r.ProduceResponses[i] = produceResponse
 	}
 
 	return r, err
