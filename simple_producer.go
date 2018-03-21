@@ -193,3 +193,7 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	glog.Info(err)
 	return err
 }
+
+func (p *SimpleProducer) Close() {
+	p.broker.Close()
+}
