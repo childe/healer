@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
 
@@ -28,6 +29,10 @@ Replicas	The set of alive nodes that currently acts as slaves for the leader for
 Isr			The set subset of the replicas that are "caught up" to the leader
 Broker		The node id, hostname, and port information for a kafka brokers
 */
+
+var (
+	zeroTopicMetadata = errors.New("topic metadata length in MetadataResponse is 0")
+)
 
 type BrokerInfo struct {
 	NodeId int32
