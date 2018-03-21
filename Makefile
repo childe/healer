@@ -5,6 +5,7 @@ all:
 	go build -o tools/bin/console-consumer tools/console-consumer/console-consumer.go
 	go build -o tools/bin/group-consumer tools/group-consumer/group-consumer.go
 	go build -o tools/bin/simple-producer tools/simple-producer/simple-producer.go
+	go build -o tools/bin/console-producer tools/console-producer/console-producer.go
 	go build -o tools/bin/check-consumer-offset tools/check-consumer-offset/check-consumer-offset.go
 	go build -o tools/bin/list-groups tools/list-groups/list-groups.go
 	go build -o tools/bin/describe-groups tools/describe-groups/describe-groups.go
