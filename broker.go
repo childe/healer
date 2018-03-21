@@ -20,6 +20,7 @@ type Broker struct {
 	connecTimeout time.Duration // Second
 
 	//since each client should have one broker, so maybe broker should has the same clientID with client?
+	// TODO different clientID should have independent broker?
 	//clientID string
 
 	correlationID uint32
