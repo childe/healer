@@ -35,6 +35,19 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		return nil
 	}
 
+	for i := 0; i < config.FetchTopicMetaDataRetrys; i++ {
+		err = p.refreshTopicMeta()
+		if err != nil {
+			glog.Error("get topic meta error: %s", err)
+		} else {
+			break
+		}
+	}
+	if err != nil {
+		glog.Error("failed to topic meta after %d tries", config.FetchTopicMetaDataRetrys)
+		return nil
+	}
+
 	return p
 }
 

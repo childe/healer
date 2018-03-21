@@ -3,29 +3,31 @@ package healer
 import "errors"
 
 type ProducerConfig struct {
-	BootstrapServers string
-	ClientID         string
-	Acks             int16
-	CompressionType  string
-	BatchSize        int
-	MessageMaxCount  int
-	FlushIntervalMS  int
-	MetadataMaxAgeMS int
+	BootstrapServers         string
+	ClientID                 string
+	Acks                     int16
+	CompressionType          string
+	BatchSize                int
+	MessageMaxCount          int
+	FlushIntervalMS          int
+	MetadataMaxAgeMS         int
+	FetchTopicMetaDataRetrys int
 
 	Retries          int
 	RequestTimeoutMS int32
 }
 
 var DefaultProducerConfig *ProducerConfig = &ProducerConfig{
-	ClientID:         "healer",
-	Acks:             1,
-	RequestTimeoutMS: 30000,
-	CompressionType:  "none",
-	Retries:          0,
-	BatchSize:        16384,
-	MessageMaxCount:  10,
-	MetadataMaxAgeMS: 300000,
-	FlushIntervalMS:  200,
+	ClientID:                 "healer",
+	Acks:                     1,
+	RequestTimeoutMS:         30000,
+	CompressionType:          "none",
+	Retries:                  0,
+	FetchTopicMetaDataRetrys: 3,
+	BatchSize:                16384,
+	MessageMaxCount:          10,
+	MetadataMaxAgeMS:         300000,
+	FlushIntervalMS:          200,
 }
 
 var (
