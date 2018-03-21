@@ -88,6 +88,7 @@ func (p *Producer) refreshCurrentProducer() {
 			validPartitionID = append(validPartitionID, partition.PartitionID)
 		}
 	}
+	rand.Seed(time.Now().Unix())
 	partitionID := validPartitionID[rand.Int31n(int32(len(validPartitionID)))]
 	sp := NewSimpleProducer(p.topic, partitionID, p.config)
 	if sp == nil {
