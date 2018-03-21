@@ -24,6 +24,7 @@ func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeo
 		brokers:       make(map[int32]*Broker),
 	}
 
+	// TODO set topics to [""] ?
 	metadataResponse, err := broker.requestMetaData(clientID, nil)
 	if err != nil {
 		glog.Infof("get metadata(to get nodes info) from %s error:%s", broker.address, err)
