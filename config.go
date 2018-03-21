@@ -12,6 +12,7 @@ type ProducerConfig struct {
 	FlushIntervalMS          int
 	MetadataMaxAgeMS         int
 	FetchTopicMetaDataRetrys int
+	ConnectionsMaxIdleMS     int
 
 	Retries          int
 	RequestTimeoutMS int32
@@ -20,14 +21,16 @@ type ProducerConfig struct {
 var DefaultProducerConfig *ProducerConfig = &ProducerConfig{
 	ClientID:                 "healer",
 	Acks:                     1,
-	RequestTimeoutMS:         30000,
 	CompressionType:          "none",
-	Retries:                  0,
-	FetchTopicMetaDataRetrys: 3,
 	BatchSize:                16384,
 	MessageMaxCount:          10,
-	MetadataMaxAgeMS:         300000,
 	FlushIntervalMS:          200,
+	MetadataMaxAgeMS:         300000,
+	FetchTopicMetaDataRetrys: 3,
+	ConnectionsMaxIdleMS:     540000,
+
+	Retries:          0,
+	RequestTimeoutMS: 30000,
 }
 
 var (
