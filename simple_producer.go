@@ -206,6 +206,7 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	return err
 }
 
+// TODO flush first
 func (p *SimpleProducer) Close() {
 	p.broker.Close()
 }
