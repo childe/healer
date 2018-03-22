@@ -127,9 +127,7 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 	}
 	simpleProducer.messageSet[simpleProducer.messageSetSize] = message
 	simpleProducer.messageSetSize++
-	// TODO lock
 	if simpleProducer.messageSetSize >= simpleProducer.config.MessageMaxCount {
-		// TODO copy and clean and flush?
 		simpleProducer.Flush()
 	}
 	return nil
@@ -211,7 +209,9 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 	return err
 }
 
-// TODO flush first
 func (p *SimpleProducer) Close() {
+	glog.Info("flush before SimpleProducer is closed")
+	p.Flush()
+	glog.Info("SimpleProducer closing")
 	p.broker.Close()
 }
