@@ -62,3 +62,28 @@ func (config *ProducerConfig) checkValid() error {
 	}
 	return nil
 }
+
+type BrokerConfig struct {
+	Address             string
+	NodeID              int32
+	ConnectTimeoutMS    int
+	TimeoutMS           int
+	TimeoutMSForEachAPI []int
+}
+
+var DefaultBrokerConfig = &BrokerConfig{
+	ConnectTimeoutMS:    60000,
+	TimeoutMS:           30000,
+	TimeoutMSForEachAPI: make([]int, 0),
+}
+
+var (
+	brokerAddressNotSet = errors.New("broker address not set in broker config")
+)
+
+func (c *BrokerConfig) checkValid() error {
+	if c.Address == "" {
+		return brokerAddressNotSet
+	}
+	return nil
+}

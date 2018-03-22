@@ -12,12 +12,10 @@ import (
 )
 
 type Broker struct {
-	nodeID        int32
-	address       string
-	conn          net.Conn
-	apiVersions   []*ApiVersion
-	timeout       time.Duration // Second
-	connecTimeout time.Duration // Second
+	config *BrokerConfig
+
+	conn        net.Conn
+	apiVersions []*ApiVersion
 
 	//since each client should have one broker, so maybe broker should has the same clientID with client?
 	// TODO different clientID should have independent broker?
@@ -32,20 +30,16 @@ type Broker struct {
 
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
-func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*Broker, error) {
-	//TODO more parameters, timeout, keepalive, connect timeout ...
+func NewBroker(config *BrokerConfig) (*Broker, error) {
 	//TODO get available api versions
-
 	broker := &Broker{
-		nodeID:  nodeID,
-		address: address,
-		timeout: time.Duration(timeout),
+		config: config,
 
 		correlationID: 0,
 		dead:          true,
 	}
 
-	conn, err := net.DialTimeout("tcp4", address, time.Duration(connecTimeout)*time.Second)
+	conn, err := net.DialTimeout("tcp4", config.Address, time.Duration(config.ConnectTimeoutMS)*time.Millisecond)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
@@ -63,7 +57,7 @@ func NewBroker(address string, nodeID int32, connecTimeout int, timeout int) (*B
 }
 
 func (broker *Broker) GetAddress() string {
-	return broker.address
+	return broker.config.Address
 }
 
 func (broker *Broker) Close() {
@@ -77,8 +71,9 @@ func (broker *Broker) IsDead() bool {
 func (broker *Broker) ensureOpen() {
 	if broker.dead {
 		glog.Infof("broker %s dead, reopen it", broker.address)
-		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.connecTimeout)*time.Second)
+		conn, err := net.DialTimeout("tcp4", broker.config.Address, time.Duration(broker.config.ConnecTimeoutMS)*time.Millisecond)
 		if err != nil {
+			// TODO fatal?
 			glog.Fatalf("could not conn to %s:%s", broker.address, err)
 		}
 		broker.conn = conn
@@ -112,8 +107,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
-		if broker.timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		if broker.config.TimeoutMS > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
@@ -134,8 +129,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 	readLength := 0
 	for {
-		if broker.timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		if broker.config.TimeoutMS > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err != nil {
@@ -174,8 +169,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
-		if broker.timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		if broker.config.TimeoutMS > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
@@ -199,8 +194,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	readLength := 0
 	for {
 		buf := make([]byte, 65535)
-		if broker.timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.timeout * time.Second))
+		if broker.config.TimeoutMS > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
 		}
 		length, err := broker.conn.Read(buf)
 		if err != nil {
