@@ -10,7 +10,7 @@ func TestOffsetCommitRequest(t *testing.T) {
 		topic       string = "test"
 		groupID     string = "hangout"
 	)
-	broker, err := NewBroker(*brokerAddress, -1, 60, 60)
+	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
 
 	r := NewOffsetCommitRequest(0, clientID, groupID)
 

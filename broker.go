@@ -12,7 +12,9 @@ import (
 )
 
 type Broker struct {
-	config *BrokerConfig
+	config  *BrokerConfig
+	address string
+	nodeID  int32
 
 	conn        net.Conn
 	apiVersions []*ApiVersion
@@ -30,16 +32,18 @@ type Broker struct {
 
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
-func NewBroker(config *BrokerConfig) (*Broker, error) {
+func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, error) {
 	//TODO get available api versions
 	broker := &Broker{
-		config: config,
+		config:  config,
+		address: address,
+		nodeID:  nodeID,
 
 		correlationID: 0,
 		dead:          true,
 	}
 
-	conn, err := net.DialTimeout("tcp4", config.Address, time.Duration(config.ConnectTimeoutMS)*time.Millisecond)
+	conn, err := net.DialTimeout("tcp4", address, time.Duration(config.ConnectTimeoutMS)*time.Millisecond)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
@@ -57,7 +61,7 @@ func NewBroker(config *BrokerConfig) (*Broker, error) {
 }
 
 func (broker *Broker) GetAddress() string {
-	return broker.config.Address
+	return broker.address
 }
 
 func (broker *Broker) Close() {
@@ -71,7 +75,7 @@ func (broker *Broker) IsDead() bool {
 func (broker *Broker) ensureOpen() {
 	if broker.dead {
 		glog.Infof("broker %s dead, reopen it", broker.address)
-		conn, err := net.DialTimeout("tcp4", broker.config.Address, time.Duration(broker.config.ConnecTimeoutMS)*time.Millisecond)
+		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.config.ConnectTimeoutMS)*time.Millisecond)
 		if err != nil {
 			// TODO fatal?
 			glog.Fatalf("could not conn to %s:%s", broker.address, err)
@@ -108,7 +112,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	responseLengthBuf := make([]byte, 4)
 	for {
 		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
@@ -130,7 +134,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	readLength := 0
 	for {
 		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err != nil {
@@ -170,7 +174,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	responseLengthBuf := make([]byte, 4)
 	for {
 		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
@@ -195,7 +199,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	for {
 		buf := make([]byte, 65535)
 		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(broker.config.TimeoutMS * time.Millisecond))
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(buf)
 		if err != nil {
@@ -326,8 +330,8 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinato
 	return NewFindCoordinatorResponse(responseBytes)
 }
 
-func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeout int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
-	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeout, memberID, protocolType)
+func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
+	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeoutMS, memberID, protocolType)
 	for _, gp := range gps {
 		joinGroupRequest.AddGroupProtocal(gp)
 	}

@@ -13,18 +13,23 @@ import (
 )
 
 var (
-	brokers        = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
-	topic          = flag.String("topic", "", "REQUIRED: The topic to consume from.")
-	partition      = flag.Int("partition", 0, "The partition to consume from.")
-	offset         = flag.Int64("offset", -2, "The offset id to consume from, default to -2 which means from beginning; while value -1 means from end(default -2).")
-	clientID       = flag.String("clientID", "healer", "The ID of this client.")
-	minBytes       = flag.Int("min-bytes", 1, "The fetch size of each request.")
-	maxWaitTime    = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
-	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
-	maxBytes       = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
-	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
+	brokerConfig = healer.DefaultBrokerConfig()
+
+	brokers     = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
+	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	partition   = flag.Int("partition", 0, "The partition to consume from.")
+	offset      = flag.Int64("offset", -2, "The offset id to consume from, default to -2 which means from beginning; while value -1 means from end(default -2).")
+	clientID    = flag.String("clientID", "healer", "The ID of this client.")
+	minBytes    = flag.Int("min-bytes", 1, "The fetch size of each request.")
+	maxWaitTime = flag.Int("max-wait-ms", 10000, "The max amount of time(ms) each fetch request waits(default 10000).")
+	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
+	maxBytes    = flag.Int("max-bytes", math.MaxInt32, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response.")
 )
+
+func init() {
+	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
+	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
+}
 
 func main() {
 	flag.Parse()
@@ -38,7 +43,7 @@ func main() {
 	var err error
 	simpleConsumer := &healer.SimpleConsumer{}
 	simpleConsumer.ClientID = *clientID
-	simpleConsumer.Brokers, err = healer.NewBrokers(*brokers, *clientID, *connectTimeout, *timeout)
+	simpleConsumer.Brokers, err = healer.NewBrokers(*brokers, *clientID, brokerConfig)
 	if err != nil {
 		glog.Fatalf("could not init brokers from %s:%s", *brokers, err)
 	}

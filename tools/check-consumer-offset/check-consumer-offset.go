@@ -10,13 +10,18 @@ import (
 )
 
 var (
-	brokers        = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
-	topic          = flag.String("topic", "", "REQUIRED: The topic to consume from.")
-	groupID        = flag.String("groupID", "", "REQUIRED")
-	clientID       = flag.String("clientID", "healer", "The ID of this client.")
-	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
+	brokerConfig = healer.DefaultBrokerConfig()
+
+	brokers  = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
+	topic    = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	groupID  = flag.String("groupID", "", "REQUIRED")
+	clientID = flag.String("clientID", "healer", "The ID of this client.")
 )
+
+func init() {
+	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
+	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
+}
 
 func main() {
 	flag.Parse()
@@ -33,7 +38,7 @@ func main() {
 		return
 	}
 
-	brokers, err := healer.NewBrokers(*brokers, *clientID, *connectTimeout, *timeout)
+	brokers, err := healer.NewBrokers(*brokers, *clientID, brokerConfig)
 	if err != nil {
 		glog.Fatalf("could not create brokers from %s:%s", *brokers, err)
 	}

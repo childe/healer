@@ -8,26 +8,25 @@ import (
 )
 
 type Brokers struct {
-	brokersInfo   map[int32]*BrokerInfo
-	brokers       map[int32]*Broker
-	connecTimeout int
-	timeout       int
+	config *BrokerConfig
+
+	brokersInfo map[int32]*BrokerInfo
+	brokers     map[int32]*Broker
 }
 
 // get all brokers meda info from MetaData api
 // it DON'T create connection to each broker
-func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
+func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*Brokers, error) {
 	brokers := &Brokers{
-		connecTimeout: connecTimeout,
-		timeout:       timeout,
-		brokersInfo:   make(map[int32]*BrokerInfo),
-		brokers:       make(map[int32]*Broker),
+		config:      config,
+		brokersInfo: make(map[int32]*BrokerInfo),
+		brokers:     make(map[int32]*Broker),
 	}
 
 	// TODO set topics to [""] ?
 	metadataResponse, err := broker.requestMetaData(clientID, nil)
 	if err != nil {
-		glog.Infof("get metadata(to get nodes info) from %s error:%s", broker.address, err)
+		glog.Errorf("get metadata(to get nodes info) from %s error: %s", broker.GetAddress(), err)
 	}
 
 	if metadataResponse == nil || metadataResponse.Brokers == nil {
@@ -36,8 +35,7 @@ func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeo
 
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokers.brokersInfo[brokerInfo.NodeId] = brokerInfo
-		if broker.address == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
-			broker.nodeID = brokerInfo.NodeId
+		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
 			brokers.brokers[brokerInfo.NodeId] = broker
 		}
 	}
@@ -52,16 +50,17 @@ func newBrokersFromOne(broker *Broker, clientID string, connecTimeout int, timeo
 	return brokers, nil
 }
 
-func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
+func NewBrokers(brokerList string, clientID string, config *BrokerConfig) (*Brokers, error) {
 	for _, brokerAddr := range strings.Split(brokerList, ",") {
-		broker, err := NewBroker(brokerAddr, -1, connecTimeout, timeout)
+		broker, err := NewBroker(brokerAddr, -1, config)
+
 		// TODO conn not established?
 		if err != nil {
 			glog.Infof("init broker from %s error:%s", brokerAddr, err)
 		} else {
-			brokers, err := newBrokersFromOne(broker, clientID, connecTimeout, timeout)
+			brokers, err := newBrokersFromOne(broker, clientID, config)
 			if err != nil {
-				glog.Infof("could not get broker list from %s:%s", broker.address, err)
+				glog.Infof("could not get broker list from %s:%s", broker.GetAddress(), err)
 			} else {
 				return brokers, nil
 			}
@@ -81,7 +80,7 @@ func (brokers *Brokers) refresh() error {
 func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	if nodeID == -1 {
 		for nodeID, brokerInfo := range brokers.brokersInfo {
-			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.connecTimeout, brokers.timeout)
+			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.config)
 			if err == nil {
 				return broker, nil
 			}
@@ -90,7 +89,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.connecTimeout, brokers.timeout)
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
 		if err == nil {
 			return broker, nil
 		} else {
@@ -110,7 +109,7 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 			}
 		}
 		for nodeID, brokerInfo := range brokers.brokersInfo {
-			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.connecTimeout, brokers.timeout)
+			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.config)
 			if err == nil {
 				brokers.brokers[nodeID] = broker
 				return broker, nil
@@ -126,7 +125,7 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.connecTimeout, brokers.timeout)
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
 		if err == nil {
 			brokers.brokers[nodeID] = broker
 			return broker, nil

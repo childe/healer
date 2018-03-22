@@ -144,7 +144,10 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 		offsetsStorage = 1
 	}
 
-	brokers, err := NewBrokers(config["bootstrap.servers"].(string), clientID, connectTimeout, timeout)
+	brokerConfig := DefaultBrokerConfig()
+	brokerConfig.ConnectTimeoutMS = connectTimeout
+	brokerConfig.TimeoutMS = timeout
+	brokers, err := NewBrokers(config["bootstrap.servers"].(string), clientID, brokerConfig)
 	if err != nil {
 		return nil, err
 	}

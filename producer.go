@@ -33,9 +33,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		simpleProducers: make(map[int32]*SimpleProducer),
 	}
 
-	connectTimeout := 30000
-	timeout := 60000
-	p.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, connectTimeout, timeout)
+	p.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, DefaultBrokerConfig())
 	if err != nil {
 		glog.Errorf("init brokers error: %s", err)
 		return nil

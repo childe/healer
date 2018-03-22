@@ -11,14 +11,12 @@ import (
 )
 
 var (
-	brokerList     = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
-	topic          = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
-	timestamp      = flag.Int64("timestamp", -1, "timestamp/-1(latest)/-2(earliest). timestamp of the offsets before that.(default: -1) ")
-	offsets        = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
-	clientID       = flag.String("clientID", "healer", "The ID of this client.")
-	format         = flag.String("format", "", "output original kafka response if set to original")
-	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
+	brokerList = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
+	topic      = flag.String("topic", "", "REQUIRED: The topic to get offset from.")
+	timestamp  = flag.Int64("timestamp", -1, "timestamp/-1(latest)/-2(earliest). timestamp of the offsets before that.(default: -1) ")
+	offsets    = flag.Uint("offsets", 1, "number of offsets returned (default: 1)")
+	clientID   = flag.String("clientID", "healer", "The ID of this client.")
+	format     = flag.String("format", "", "output original kafka response if set to original")
 )
 
 func main() {
@@ -30,7 +28,7 @@ func main() {
 		os.Exit(4)
 	}
 
-	brokers, err := healer.NewBrokers(*brokerList, *clientID, *connectTimeout, *timeout)
+	brokers, err := healer.NewBrokers(*brokerList, *clientID, healer.DefaultBrokerConfig())
 	if err != nil {
 		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)

@@ -14,24 +14,16 @@ type Helper struct {
 	metaInfo *MetaInfo
 }
 
-var DEFAULT_CLIENT_ID string = "HEALERHELPER"
-
-func NewHelper(brokerList string, config map[string]interface{}) (*Helper, error) {
+func NewHelper(brokerList, clientID string, config *BrokerConfig) (*Helper, error) {
 	//func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
 	var (
-		connecTimeout int = 60000
-		timeout       int = 60000
-		err           error
+		err error
 	)
-	h := &Helper{}
-
-	if v, ok := config["clientID"]; ok {
-		h.clientID = v.(string)
-	} else {
-		h.clientID = DEFAULT_CLIENT_ID
+	h := &Helper{
+		clientID: clientID,
 	}
 
-	h.brokers, err = NewBrokers(brokerList, h.clientID, connecTimeout, timeout)
+	h.brokers, err = NewBrokers(brokerList, h.clientID, config)
 	h.metaInfo = &MetaInfo{}
 	if err != nil {
 		return nil, err

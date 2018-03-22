@@ -16,13 +16,12 @@ type Tasks map[string]Group          // topic -> groupID > coordinatorAddress
 var groups = map[string]*healer.Broker{}
 
 var (
+	brokerConfig = healer.DefaultBrokerConfig()
+
 	bootstrapServers = flag.String("bootstrap.servers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic            = flag.String("topic", "", "if topic is left blank: 1.get topics under the groupID if groupID if given. 2.get all topic in the cluster if groupID is not given")
 	groupID          = flag.String("groupID", "", "if groupID is left blank: 1.get all groupID consuming the topic if topic is given. 2.get all groupID in the cluster")
 	clientID         = flag.String("clientID", "healer-get-pending", "The ID of this client.")
-
-	connectTimeout = flag.Int("connect-timeout", 30, "default 30 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
 
 	header = flag.Bool("header", true, "if print header")
 	total  = flag.Bool("total", false, "if print total offset of one topic")
@@ -33,6 +32,11 @@ var (
 	err     error
 	helper  *healer.Helper
 )
+
+func init() {
+	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
+	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
+}
 
 func getPartitions(topic string) ([]int32, error) {
 	var metadataResponse *healer.MetadataResponse
@@ -247,15 +251,13 @@ func initTasks(topic, groupID string) Tasks {
 func main() {
 	flag.Parse()
 
-	brokers, err = healer.NewBrokers(*bootstrapServers, *clientID, *connectTimeout, *timeout)
+	brokers, err = healer.NewBrokers(*bootstrapServers, *clientID, brokerConfig)
 	if err != nil {
 		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)
 	}
 
-	// TODO config
-	config := map[string]interface{}{}
-	helper, err = healer.NewHelper(*bootstrapServers, config)
+	helper, err = healer.NewHelper(*bootstrapServers, *clientID, brokerConfig)
 	if err != nil {
 		glog.Errorf("create helper error:%s", err)
 		os.Exit(5)

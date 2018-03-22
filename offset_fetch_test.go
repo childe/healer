@@ -13,7 +13,7 @@ func TestOffsetFetchRequest(t *testing.T) {
 		topic       string = "test"
 		groupID     string = "hangout"
 	)
-	broker, err := NewBroker(*brokerAddress, -1, 60, 60)
+	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
 	if err != nil {
 		t.Errorf("create broker error:%s", err)
 	}

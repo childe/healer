@@ -26,7 +26,7 @@ type SimpleProducer struct {
 }
 
 func (p *SimpleProducer) createBroker() (*Broker, error) {
-	brokers, err := NewBrokers(p.config.BootstrapServers, p.config.ClientID, 60000, 30000)
+	brokers, err := NewBrokers(p.config.BootstrapServers, p.config.ClientID, DefaultBrokerConfig())
 	if err != nil {
 		glog.Errorf("init brokers error: %s", err)
 		return nil, err

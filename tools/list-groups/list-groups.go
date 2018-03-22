@@ -10,18 +10,21 @@ import (
 )
 
 var (
-	brokerList     = flag.String("brokers", "127.0.0.1:9092", "REQUIRED: The list of hostname and port of the server to connect to.")
-	clientID       = flag.String("clientID", "healer", "The ID of this client.")
-	connectTimeout = flag.Int("connect-timeout", 10, "default 10 Second. connect timeout to broker")
-	timeout        = flag.Int("timeout", 60, "default 60 Second. read timeout from connection to broker")
+	brokerConfig = healer.DefaultBrokerConfig()
+
+	brokerList = flag.String("brokers", "127.0.0.1:9092", "REQUIRED: The list of hostname and port of the server to connect to.")
+	clientID   = flag.String("clientID", "healer", "The ID of this client.")
 )
+
+func init() {
+	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
+	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
+}
 
 func main() {
 	flag.Parse()
 
-	// TODO config
-	config := map[string]interface{}{}
-	helper, err := healer.NewHelper(*brokerList, config)
+	helper, err := healer.NewHelper(*brokerList, *clientID, brokerConfig)
 	if err != nil {
 		glog.Error("create helper error:%s", err)
 		os.Exit(5)
