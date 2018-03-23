@@ -99,12 +99,12 @@ func NewGroupConsumer(config map[string]interface{}) (*GroupConsumer, error) {
 	if v, ok := config["connectTimeout"]; ok {
 		connectTimeout = v.(int)
 	} else {
-		connectTimeout = 30
+		connectTimeout = 30000
 	}
 	if v, ok := config["timeout"]; ok {
 		timeout = v.(int)
 	} else {
-		timeout = 40
+		timeout = 40000
 	}
 	if timeout*1000 <= sessionTimeout {
 		glog.Fatal("socket timeout must be bigger than sessionTimeout")
