@@ -1,6 +1,12 @@
 package healer
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+	"strings"
+
+	"github.com/golang/glog"
+)
 
 type ProducerConfig struct {
 	BootstrapServers         string
@@ -82,5 +88,96 @@ var (
 )
 
 func (c *BrokerConfig) checkValid() error {
+	return nil
+}
+
+type ConsumerConfig struct {
+	BootstrapServers     string `json:"bootstrap.servers"`
+	ClientID             string `json:"client.id"`
+	GroupID              string `json:"group.id"`
+	SessionTimeoutMS     int32  `json:"session.timeout.ms"`
+	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms"`
+	FetchMaxBytes        int32  `json:"fetch.max.bytes"`
+	FetchMinBytes        int32  `json:"fetch.min.bytes"`
+	FromBeginning        bool   `json:"frombeginning"`
+	AutoCommit           bool   `json:"auto.commit"`
+	CommitAfterFetch     bool   `json:"commit.after.fetch"`
+	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`
+	OffsetsStorage       int    `json:"offset.storage"`
+	ConnectTimeoutMS     int    `json:"connect.timeout.ms"`
+	TimeoutMS            int    `json:"timeout.ms"`
+}
+
+func DefaultConsumerConfig() *ConsumerConfig {
+	return &ConsumerConfig{
+		ClientID:             "healer",
+		GroupID:              "",
+		SessionTimeoutMS:     30000,
+		FetchMaxWaitMS:       100,
+		FetchMaxBytes:        10 * 1024 * 1024,
+		FetchMinBytes:        1,
+		FromBeginning:        false,
+		AutoCommit:           true,
+		CommitAfterFetch:     false,
+		AutoCommitIntervalMS: 5000,
+		OffsetsStorage:       1,
+		ConnectTimeoutMS:     30000,
+		TimeoutMS:            60000,
+	}
+}
+
+//  fetch.min.bytes -> FetchMinBytes
+//  session.timeout.ms -> SessionTimeoutMS
+//  client.id -> ClientID
+func convertKey(s string) string {
+	parts := strings.Split(s, ".")
+	switch parts[len(parts)-1] {
+	case "id":
+		parts[len(parts)-1] = "ID"
+	case "ms":
+		parts[len(parts)-1] = "MS"
+	}
+	convertedParts := make([]string, len(parts))
+	for i, part := range parts {
+		convertedParts[i] = strings.Title(part)
+	}
+	return strings.Join(convertedParts, "")
+}
+
+func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
+	b, err := json.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+	glog.Info(string(b))
+
+	consumerConfig := DefaultConsumerConfig()
+	err = json.Unmarshal(b, consumerConfig)
+	if err != nil {
+		return nil, err
+	}
+	//configValue := reflect.ValueOf(consumerConfig).Elem()
+	//for k, v := range config {
+	//convertedKey := convertKey(k)
+	//field := configValue.FieldByName(convertedKey)
+	//if field.CanSet() {
+	//field.Set(reflect.ValueOf(v))
+	//} else {
+	//}
+	//}
+	return consumerConfig, nil
+}
+
+var (
+	emptyGroupID = errors.New("group.id is empty")
+)
+
+func (config *ConsumerConfig) checkValid() error {
+	if config.BootstrapServers == "" {
+		return bootstrapServersNotSet
+	}
+	if config.GroupID == "" {
+		return emptyGroupID
+	}
 	return nil
 }

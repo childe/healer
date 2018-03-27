@@ -4,26 +4,36 @@ import "github.com/golang/glog"
 
 // Consumer instance is built to consume messages from kafka broker
 type Consumer struct {
-	ClientID    string
-	Brokers     *Brokers
-	BrokerList  string
-	TopicName   string
-	MaxBytes    int32
-	MaxWaitTime int32
-	MinBytes    int32
+	topic  string
+	config *ConsumerConfig
+
+	brokers *Brokers
 
 	SimpleConsumers []*SimpleConsumer
 }
 
-func NewConsumer(brokers *Brokers) *Consumer {
-	return nil
+func NewConsumer(topic string, config *ConsumerConfig) (*Consumer, error) {
+	var err error
+	c := &Consumer{
+		config: config,
+		topic:  topic,
+	}
+	brokerConfig := DefaultBrokerConfig()
+	brokerConfig.ConnectTimeoutMS = config.ConnectTimeoutMS
+	brokerConfig.TimeoutMS = config.TimeoutMS
+	c.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	// get partitions info
-	metadataResponse, err := consumer.Brokers.RequestMetaData(consumer.ClientID, []string{consumer.TopicName})
+	metadataResponse, err := consumer.brokers.RequestMetaData(consumer.config.ClientID, []string{consumer.topic})
 	if err != nil {
-		glog.Fatalf("could not get metadata of topic %s:%s", consumer.TopicName, err)
+		glog.Fatalf("could not get metadata of topic %s:%s", consumer.topic, err)
 	}
 	glog.V(10).Info(metadataResponse)
 
@@ -33,9 +43,9 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	} else {
 		time = -1
 	}
-	offsetsResponses, err := consumer.Brokers.RequestOffsets(consumer.ClientID, consumer.TopicName, -1, time, 1)
+	offsetsResponses, err := consumer.brokers.RequestOffsets(consumer.config.ClientID, consumer.topic, -1, time, 1)
 	if err != nil {
-		glog.Fatalf("could not get offset of topic %s:%s", consumer.TopicName, err)
+		glog.Fatalf("could not get offset of topic %s:%s", consumer.topic, err)
 	}
 	glog.V(10).Info(offsetsResponses)
 
@@ -46,13 +56,10 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 		for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 			partitionID := partitionMetadataInfo.PartitionID
 			simpleConsumer := &SimpleConsumer{
-				Partition:   partitionID,
-				Brokers:     consumer.Brokers,
-				TopicName:   topicName,
-				ClientID:    consumer.ClientID,
-				MaxBytes:    consumer.MaxBytes,
-				MaxWaitTime: consumer.MaxWaitTime,
-				MinBytes:    consumer.MinBytes,
+				partitionID: partitionID,
+				brokers:     consumer.brokers,
+				topic:       topicName,
+				config:      consumer.config,
 			}
 			consumer.SimpleConsumers = append(consumer.SimpleConsumers, simpleConsumer)
 		}

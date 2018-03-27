@@ -8,20 +8,11 @@ import (
 
 // SimpleConsumer instance is built to consume messages from kafka broker
 type SimpleConsumer struct {
-	ClientID             string
-	Brokers              *Brokers
-	BrokerList           string
-	TopicName            string
-	Partition            int32
-	FetchOffset          int64
-	MaxBytes             int32
-	MaxWaitTime          int32
-	MinBytes             int32
-	AutoCommitIntervalMs int
-	AutoCommit           bool
-	CommitAfterFetch     bool
-	OffsetsStorage       int // 0 zk, 1 kafka
+	topic       string
+	partitionID int32
+	config      *ConsumerConfig
 
+	brokers      *Brokers
 	leaderBroker *Broker
 
 	stop           bool
@@ -29,16 +20,31 @@ type SimpleConsumer struct {
 	offset         int64
 	offsetCommited int64
 
-	BelongTO *GroupConsumer
+	belongTO *GroupConsumer
 }
 
-func NewSimpleConsumer(brokers *Brokers) *SimpleConsumer {
-	// TODO
-	return nil
+func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) (*SimpleConsumer, error) {
+	var err error
+
+	c := &SimpleConsumer{
+		config:      config,
+		topic:       topic,
+		partitionID: partitionID,
+	}
+
+	brokerConfig := DefaultBrokerConfig()
+	brokerConfig.ConnectTimeoutMS = config.ConnectTimeoutMS
+	brokerConfig.TimeoutMS = config.TimeoutMS
+	c.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 // TOOD put retry in Request
-func (simpleConsumer *SimpleConsumer) getLeaderBroker() error {
+func (c *SimpleConsumer) getLeaderBroker() error {
 	var (
 		err      error
 		leaderID int32
@@ -46,12 +52,12 @@ func (simpleConsumer *SimpleConsumer) getLeaderBroker() error {
 	)
 
 	for i := 0; i < retry; i++ {
-		leaderID, err = simpleConsumer.Brokers.findLeader(simpleConsumer.ClientID, simpleConsumer.TopicName, simpleConsumer.Partition)
+		leaderID, err = c.brokers.findLeader(c.config.ClientID, c.topic, c.partitionID)
 		if err != nil {
 			glog.Errorf("find leader error:%s", err)
 			continue
 		} else {
-			glog.V(5).Infof("leader ID of [%s][%d] is %d", simpleConsumer.TopicName, simpleConsumer.Partition, leaderID)
+			glog.V(5).Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
 			break
 		}
 	}
@@ -61,69 +67,69 @@ func (simpleConsumer *SimpleConsumer) getLeaderBroker() error {
 	}
 
 	for i := 0; i < retry; i++ {
-		simpleConsumer.leaderBroker, err = simpleConsumer.Brokers.NewBroker(leaderID)
+		c.leaderBroker, err = c.brokers.NewBroker(leaderID)
 		if err != nil {
 			glog.Errorf("could not create broker %d. maybe should refresh metadata.", leaderID)
 		} else {
-			glog.V(5).Infof("got leader broker %s with id %d", simpleConsumer.leaderBroker.address, leaderID)
+			glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
 			return nil
 		}
 	}
 	return err
 }
 
-func (sc *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
+func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	var time int64
 	if fromBeginning {
 		time = -2
 	} else {
 		time = -1
 	}
-	offsetsResponses, err := sc.Brokers.RequestOffsets(sc.ClientID, sc.TopicName, sc.Partition, time, 1)
+	offsetsResponses, err := c.brokers.RequestOffsets(c.config.ClientID, c.topic, c.partitionID, time, 1)
 	if err != nil {
 		return -1, err
 	}
 
-	return int64(offsetsResponses[0].TopicPartitionOffsets[sc.TopicName][0].Offsets[0]), nil
+	return int64(offsetsResponses[0].TopicPartitionOffsets[c.topic][0].Offsets[0]), nil
 }
 
-func (simpleConsumer *SimpleConsumer) Stop() {
-	simpleConsumer.stop = true
+func (c *SimpleConsumer) Stop() {
+	c.stop = true
 }
 
 // if offset is -1 or -2, first check if has previous offset committed if its BelongTO is not nil
-func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
+func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
 	var err error
 
-	simpleConsumer.stop = false
-	simpleConsumer.offset = offset
+	c.stop = false
+	c.offset = offset
 
-	glog.V(5).Infof("[%s][%d] offset :%d", simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
+	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
 
-	err = simpleConsumer.getLeaderBroker()
+	err = c.getLeaderBroker()
 	// TODO pass error to caller?
 	if err != nil {
 		glog.Fatalf("could get leader broker:%s", err)
 	}
 
-	if simpleConsumer.BelongTO != nil && (simpleConsumer.offset == -1 || simpleConsumer.offset == -2) {
+	if c.belongTO != nil && (c.offset == -1 || c.offset == -2) {
 		var apiVersion uint16
-		if simpleConsumer.OffsetsStorage == 0 {
+		if c.config.OffsetsStorage == 0 {
 			apiVersion = 0
-		} else if simpleConsumer.OffsetsStorage == 1 {
+		} else if c.config.OffsetsStorage == 1 {
 			apiVersion = 1
 		} else {
-			glog.Fatalf("offsets.storage (%d) illegal", simpleConsumer.OffsetsStorage)
+			glog.Fatalf("offsets.storage (%d) illegal", c.config.OffsetsStorage)
 		}
-		r := NewOffsetFetchRequest(apiVersion, simpleConsumer.ClientID, simpleConsumer.BelongTO.groupID)
-		r.AddPartiton(simpleConsumer.TopicName, simpleConsumer.Partition)
+		r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
+		r.AddPartiton(c.topic, c.partitionID)
 
 		//TODO max retries
 		var res *OffsetFetchResponse
 		for i := 0; i < 3; i++ {
-			response, err := simpleConsumer.BelongTO.coordinator.Request(r)
+			response, err := c.belongTO.coordinator.Request(r)
 			if err != nil {
-				glog.Errorf("request fetch offset of [%s][%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+				glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
 				continue
 			}
 
@@ -136,16 +142,16 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 			}
 		}
 		if err != nil {
-			glog.Fatalf("could not fetch offset of [%s][%d]", simpleConsumer.TopicName, simpleConsumer.Partition)
+			glog.Fatalf("could not fetch offset of [%s][%d]", c.topic, c.partitionID)
 		}
 
 		for _, t := range res.Topics {
-			if t.Topic != simpleConsumer.TopicName {
+			if t.Topic != c.topic {
 				continue
 			}
 			for _, p := range t.Partitions {
-				if int32(p.PartitionID) == simpleConsumer.Partition {
-					simpleConsumer.offset = p.Offset
+				if int32(p.PartitionID) == c.partitionID {
+					c.offset = p.Offset
 					break
 				}
 			}
@@ -153,17 +159,17 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 	}
 
 	// offset not fetched from OffsetFetchRequest
-	if simpleConsumer.offset == -1 {
-		simpleConsumer.fromBeginning = false
-		simpleConsumer.offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
-	} else if simpleConsumer.offset == -2 {
-		simpleConsumer.fromBeginning = true
-		simpleConsumer.offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
+	if c.offset == -1 {
+		c.fromBeginning = false
+		c.offset, err = c.getOffset(c.fromBeginning)
+	} else if c.offset == -2 {
+		c.fromBeginning = true
+		c.offset, err = c.getOffset(c.fromBeginning)
 	}
 	if err != nil {
-		glog.Fatalf("could not get offset %s[%d]:%s", simpleConsumer.TopicName, simpleConsumer.Partition, err)
+		glog.Fatalf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
 	}
-	glog.Infof("consume [%s][%d] from %d", simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
+	glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
 
 	var messages chan *FullMessage
 	if messageChan == nil {
@@ -172,15 +178,15 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 		messages = messageChan
 	}
 
-	if simpleConsumer.AutoCommit {
-		ticker := time.NewTicker(time.Millisecond * time.Duration(simpleConsumer.AutoCommitIntervalMs))
+	if c.belongTO != nil && c.config.AutoCommit {
+		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
 		go func() {
 			for range ticker.C {
-				if simpleConsumer.offset != simpleConsumer.offsetCommited {
-					simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
-					simpleConsumer.offsetCommited = simpleConsumer.offset
+				if c.offset != c.offsetCommited {
+					c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
+					c.offsetCommited = c.offset
 				}
-				if simpleConsumer.stop {
+				if c.stop {
 					return
 				}
 			}
@@ -189,17 +195,17 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 
 	go func(messages chan *FullMessage) {
 		defer func() {
-			glog.V(10).Infof("simple consumer (%s) stop consuming", simpleConsumer.ClientID)
+			glog.V(10).Infof("simple consumer (%s) stop consuming", c.config.ClientID)
 		}()
-		for simpleConsumer.stop == false {
+		for c.stop == false {
 			// TODO set CorrelationID to 0 firstly and then set by broker
-			fetchRequest := NewFetchRequest(simpleConsumer.ClientID, simpleConsumer.MaxWaitTime, simpleConsumer.MinBytes)
-			fetchRequest.addPartition(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset, simpleConsumer.MaxBytes)
+			fetchRequest := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
+			fetchRequest.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
 			buffers := make(chan []byte, 10)
 			innerMessages := make(chan *FullMessage, 10)
 			go func() {
-				err := simpleConsumer.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
+				err := c.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 				if err != nil {
 					glog.Errorf("fetch error:%s", err)
 				}
@@ -213,25 +219,25 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				more:        true,
 			}
 			go fetchResponseStreamDecoder.consumeFetchResponse()
-			for simpleConsumer.stop == false {
+			for c.stop == false {
 				message, more := <-innerMessages
 				if more {
 					if message.Error != nil {
-						glog.Infof("consumer %s[%d] error:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+						glog.Infof("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
 						if message.Error == AllError[1] {
-							simpleConsumer.offset, err = simpleConsumer.getOffset(simpleConsumer.fromBeginning)
+							c.offset, err = c.getOffset(c.fromBeginning)
 							if err != nil {
-								glog.Errorf("could not get %s[%d] offset:%s", simpleConsumer.TopicName, simpleConsumer.Partition, message.Error)
+								glog.Errorf("could not get %s[%d] offset:%s", c.topic, c.partitionID, message.Error)
 							}
 						} else if message.Error == AllError[6] {
-							err = simpleConsumer.getLeaderBroker()
+							err = c.getLeaderBroker()
 							if err != nil {
 								// TODO pass errro to caller?
 								glog.Fatalf("could get leader broker:%s", err)
 							}
 						}
 					} else {
-						simpleConsumer.offset = message.Message.Offset + 1
+						c.offset = message.Message.Offset + 1
 						messages <- message
 					}
 				} else {
@@ -245,12 +251,12 @@ func (simpleConsumer *SimpleConsumer) Consume(offset int64, messageChan chan *Fu
 				}
 			}
 
-			if simpleConsumer.BelongTO != nil && simpleConsumer.CommitAfterFetch && simpleConsumer.offset != simpleConsumer.offsetCommited {
-				simpleConsumer.BelongTO.CommitOffset(simpleConsumer.TopicName, simpleConsumer.Partition, simpleConsumer.offset)
-				simpleConsumer.offsetCommited = simpleConsumer.offset
+			if c.belongTO != nil && c.config.CommitAfterFetch && c.offset != c.offsetCommited {
+				c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
+				c.offsetCommited = c.offset
 			}
 		}
-		simpleConsumer.leaderBroker.Close()
+		c.leaderBroker.Close()
 	}(messages)
 
 	return messages, nil
