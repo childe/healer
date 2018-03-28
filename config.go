@@ -110,7 +110,7 @@ type ConsumerConfig struct {
 
 func DefaultConsumerConfig() *ConsumerConfig {
 	return &ConsumerConfig{
-		ClientID:             "healer",
+		ClientID:             "",
 		GroupID:              "",
 		SessionTimeoutMS:     30000,
 		FetchMaxWaitMS:       100,
