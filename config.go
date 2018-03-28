@@ -3,9 +3,6 @@ package healer
 import (
 	"encoding/json"
 	"errors"
-	"strings"
-
-	"github.com/childe/glog"
 )
 
 type ProducerConfig struct {
@@ -106,10 +103,11 @@ type ConsumerConfig struct {
 	OffsetsStorage       int    `json:"offset.storage"`
 	ConnectTimeoutMS     int    `json:"connect.timeout.ms"`
 	TimeoutMS            int    `json:"timeout.ms"`
+	TimeoutMSForEachAPI  []int  `json:"timeout.ms.for.eachapi"`
 }
 
 func DefaultConsumerConfig() *ConsumerConfig {
-	return &ConsumerConfig{
+	c := &ConsumerConfig{
 		ClientID:             "",
 		GroupID:              "",
 		SessionTimeoutMS:     30000,
@@ -122,26 +120,20 @@ func DefaultConsumerConfig() *ConsumerConfig {
 		AutoCommitIntervalMS: 5000,
 		OffsetsStorage:       1,
 		ConnectTimeoutMS:     30000,
-		TimeoutMS:            60000,
+		TimeoutMS:            30000,
 	}
-}
 
-//  fetch.min.bytes -> FetchMinBytes
-//  session.timeout.ms -> SessionTimeoutMS
-//  client.id -> ClientID
-func convertKey(s string) string {
-	parts := strings.Split(s, ".")
-	switch parts[len(parts)-1] {
-	case "id":
-		parts[len(parts)-1] = "ID"
-	case "ms":
-		parts[len(parts)-1] = "MS"
+	if c.TimeoutMSForEachAPI == nil {
+		c.TimeoutMSForEachAPI = make([]int, 38)
+		for i := range c.TimeoutMSForEachAPI {
+			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
+		}
+		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5
+		c.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
+		c.TimeoutMSForEachAPI[API_FetchRequest] = c.TimeoutMS + int(c.FetchMaxWaitMS)
 	}
-	convertedParts := make([]string, len(parts))
-	for i, part := range parts {
-		convertedParts[i] = strings.Title(part)
-	}
-	return strings.Join(convertedParts, "")
+
+	return c
 }
 
 func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
@@ -149,23 +141,24 @@ func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	glog.Info(string(b))
 
-	consumerConfig := DefaultConsumerConfig()
-	err = json.Unmarshal(b, consumerConfig)
+	c := DefaultConsumerConfig()
+	err = json.Unmarshal(b, c)
 	if err != nil {
 		return nil, err
 	}
-	//configValue := reflect.ValueOf(consumerConfig).Elem()
-	//for k, v := range config {
-	//convertedKey := convertKey(k)
-	//field := configValue.FieldByName(convertedKey)
-	//if field.CanSet() {
-	//field.Set(reflect.ValueOf(v))
-	//} else {
-	//}
-	//}
-	return consumerConfig, nil
+
+	if c.TimeoutMSForEachAPI == nil {
+		c.TimeoutMSForEachAPI = make([]int, 38)
+		for i := range c.TimeoutMSForEachAPI {
+			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
+		}
+		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5
+		c.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
+		c.TimeoutMSForEachAPI[API_FetchRequest] = c.TimeoutMS + int(c.FetchMaxWaitMS)
+	}
+
+	return c, nil
 }
 
 var (
