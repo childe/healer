@@ -93,10 +93,14 @@ func (broker *Broker) Request(r Request) ([]byte, error) {
 
 	broker.correlationID++
 	r.SetCorrelationID(broker.correlationID)
-	return broker.request(r.Encode())
+	timeout := broker.config.TimeoutMS
+	if len(broker.config.TimeoutMSForEachAPI) > int(r.API()) {
+		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
+	}
+	return broker.request(r.Encode(), timeout)
 }
 
-func (broker *Broker) request(payload []byte) ([]byte, error) {
+func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 	// TODO log?
 	glog.V(10).Info(broker.conn.LocalAddr())
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
@@ -111,8 +115,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
-		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
+		if timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
@@ -133,8 +137,8 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 
 	readLength := 0
 	for {
-		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
+		if timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err != nil {
@@ -158,7 +162,7 @@ func (broker *Broker) request(payload []byte) ([]byte, error) {
 	return responseBuf, nil
 }
 
-func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) error {
+func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, timeout int) error {
 	defer close(buffers)
 
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
@@ -173,8 +177,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
-		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
+		if timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
@@ -198,8 +202,8 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte) er
 	readLength := 0
 	for {
 		buf := make([]byte, 65535)
-		if broker.config.TimeoutMS > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(broker.config.TimeoutMS) * time.Millisecond))
+		if timeout > 0 {
+			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
 		}
 		length, err := broker.conn.Read(buf)
 		if err != nil {
@@ -317,7 +321,12 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 	fetchRequest.SetCorrelationID(broker.correlationID)
 	payload := fetchRequest.Encode()
 
-	return broker.requestStreamingly(payload, buffers)
+	timeout := broker.config.TimeoutMS
+	if len(broker.config.TimeoutMSForEachAPI) > int(fetchRequest.API()) {
+		timeout = broker.config.TimeoutMSForEachAPI[fetchRequest.API()]
+	}
+
+	return broker.requestStreamingly(payload, buffers, timeout)
 }
 
 func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {

@@ -38,7 +38,7 @@ func TestOffsetCommitRequest(t *testing.T) {
 		t.Error("offsetcommit request payload length should be 71")
 	}
 
-	responseBuf, err := broker.request(payload)
+	responseBuf, err := broker.Request(r)
 	if err != nil {
 		t.Errorf("requet offsetcommit error:%s", err)
 	}

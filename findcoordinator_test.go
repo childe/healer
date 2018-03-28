@@ -22,7 +22,7 @@ func TestFindCoordinator(t *testing.T) {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", -1)
 	}
 
-	responseBytes, err := broker.request(payload)
+	responseBytes, err := broker.Request(request)
 	if err != nil {
 		t.Errorf("send findcoordinator request error:%s", err)
 	} else {

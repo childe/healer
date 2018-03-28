@@ -20,8 +20,6 @@ func TestGroup(t *testing.T) {
 	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeout, memberID, protocolType)
 	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 
-	payload := joinGroupRequest.Encode()
-
 	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
 	if err != nil {
 		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
@@ -29,7 +27,7 @@ func TestGroup(t *testing.T) {
 		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", -1)
 	}
 
-	responseBytes, err := broker.request(payload)
+	responseBytes, err := broker.Request(joinGroupRequest)
 	if err != nil {
 		t.Errorf("send join_group request error:%s", err)
 	} else {
@@ -48,9 +46,8 @@ func TestGroup(t *testing.T) {
 	generationID = joinGroupResponse.GenerationID
 	memberID = joinGroupResponse.MemberID
 	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, nil)
-	payload = syncGroupRequest.Encode()
 
-	responseBytes, err = broker.request(payload)
+	responseBytes, err = broker.Request(syncGroupRequest)
 	if err != nil {
 		t.Errorf("send sync_group request error:%s", err)
 	} else {
@@ -67,9 +64,8 @@ func TestGroup(t *testing.T) {
 
 	// leave group
 	leaveGroupRequest := NewLeaveGroupRequest(clientID, groupID, memberID)
-	payload = leaveGroupRequest.Encode()
 
-	responseBytes, err = broker.request(payload)
+	responseBytes, err = broker.Request(leaveGroupRequest)
 
 	leaveGroupResponse, err := NewLeaveGroupResponse(responseBytes)
 	if err != nil {
@@ -81,9 +77,8 @@ func TestGroup(t *testing.T) {
 
 	// describe group
 	describeGroupRequest := NewDescribeGroupsRequest(clientID, groups)
-	payload = describeGroupRequest.Encode()
 
-	responseBytes, err = broker.request(payload)
+	responseBytes, err = broker.Request(describeGroupRequest)
 
 	describeGroupResponse, err := NewDescribeGroupsResponse(responseBytes)
 	if err != nil {
@@ -96,7 +91,7 @@ func TestGroup(t *testing.T) {
 	// heartbeat
 	heartbeatRequest := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
-	responseBytes, err = broker.request(heartbeatRequest.Encode())
+	responseBytes, err = broker.Request(heartbeatRequest)
 	if err != nil {
 		t.Errorf("failed to send heartbeat request:%s", err)
 	}
