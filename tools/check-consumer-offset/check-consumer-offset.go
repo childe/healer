@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 
@@ -46,11 +45,6 @@ func main() {
 	metadata, err := brokers.RequestMetaData(*clientID, []string{*topic})
 	if err != nil {
 		glog.Fatalf("could not get metadata:%s", err)
-	}
-
-	b, err := json.Marshal(metadata)
-	if err != nil {
-		glog.Fatalf("could not marshal metadata:%s", err)
 	}
 
 	r := healer.NewOffsetFetchRequest(0, *clientID, *groupID)
