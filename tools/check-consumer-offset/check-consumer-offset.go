@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/childe/glog"
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 )
 
 var (
@@ -52,7 +52,6 @@ func main() {
 	if err != nil {
 		glog.Fatalf("could not marshal metadata:%s", err)
 	}
-	glog.Info(string(b))
 
 	r := healer.NewOffsetFetchRequest(0, *clientID, *groupID)
 	for _, t := range metadata.TopicMetadatas {

@@ -3,7 +3,7 @@ package healer
 import (
 	"encoding/binary"
 
-	"github.com/golang/glog"
+	"github.com/childe/glog"
 )
 
 /*

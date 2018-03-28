@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	"github.com/childe/glog"
 )
 
 type SimpleProducer struct {

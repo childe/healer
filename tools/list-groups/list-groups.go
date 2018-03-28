@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
+	"github.com/childe/glog"
 )
 
 var (

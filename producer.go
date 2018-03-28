@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/aviddiviner/go-murmur"
-	"github.com/golang/glog"
+	"github.com/childe/glog"
 )
 
 type Producer struct {

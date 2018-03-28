@@ -7,10 +7,12 @@ import (
 	"math"
 	"os"
 
+	goflag "flag"
+
 	flag "github.com/spf13/pflag"
 
+	"github.com/childe/glog"
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 )
 
 var (
@@ -23,6 +25,8 @@ var (
 )
 
 func init() {
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+
 	flag.StringVar(&consumerConfig.BootstrapServers, "bootstrap.servers", "", "REQUIRED: The list of hostname and port of the server to connect to")
 	flag.StringVar(&consumerConfig.ClientID, "client.id", consumerConfig.ClientID, "The ID of this client.")
 	flag.StringVar(&consumerConfig.GroupID, "group.id", "", "REQUIRED")

@@ -1,6 +1,6 @@
 package healer
 
-import "github.com/golang/glog"
+import "github.com/childe/glog"
 
 // Consumer instance is built to consume messages from kafka broker
 type Consumer struct {
