@@ -37,18 +37,19 @@ type GroupConsumer struct {
 }
 
 func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, error) {
+	var clientID string
 	if config.ClientID == "" {
-		clientID := config.GroupID
-		ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
-		hostname, err := os.Hostname()
-		if err != nil {
-			glog.Infof("could not get hostname for clientID:%s", err)
-			clientID = fmt.Sprintf("%s-%s", clientID, ts)
-		} else {
-			clientID = fmt.Sprintf("%s-%s-%s", clientID, ts, hostname)
-		}
-		config.ClientID = clientID
+		clientID = config.GroupID
 	}
+	ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
+	hostname, err := os.Hostname()
+	if err != nil {
+		glog.Infof("could not get hostname for clientID:%s", err)
+		clientID = fmt.Sprintf("%s-%s", clientID, ts)
+	} else {
+		clientID = fmt.Sprintf("%s-%s-%s", clientID, ts, hostname)
+	}
+	config.ClientID = clientID
 
 	brokerConfig := DefaultBrokerConfig()
 	brokerConfig.ConnectTimeoutMS = config.ConnectTimeoutMS
