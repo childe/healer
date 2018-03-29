@@ -181,12 +181,13 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
 		go func() {
 			for range ticker.C {
+				// one messages maybe consumed twice
+				if c.stop {
+					return
+				}
 				if c.offset != c.offsetCommited {
 					c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
 					c.offsetCommited = c.offset
-				}
-				if c.stop {
-					return
 				}
 			}
 		}()
