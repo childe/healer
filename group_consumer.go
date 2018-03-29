@@ -99,7 +99,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 			break
 		} else {
 			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topic, err)
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 		}
 	}
 
