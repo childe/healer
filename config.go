@@ -128,7 +128,7 @@ func DefaultConsumerConfig() *ConsumerConfig {
 		for i := range c.TimeoutMSForEachAPI {
 			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
 		}
-		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5
+		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
 		c.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
 		c.TimeoutMSForEachAPI[API_FetchRequest] = c.TimeoutMS + int(c.FetchMaxWaitMS)
 	}
@@ -153,7 +153,7 @@ func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
 		for i := range c.TimeoutMSForEachAPI {
 			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
 		}
-		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5
+		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
 		c.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
 		c.TimeoutMSForEachAPI[API_FetchRequest] = c.TimeoutMS + int(c.FetchMaxWaitMS)
 	}
