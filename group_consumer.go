@@ -209,12 +209,13 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	syncGroupResponse, err := c.coordinator.requestSyncGroup(
 		c.config.ClientID, c.config.GroupID, c.generationID, c.memberID, groupAssignment)
 
-	if err != nil {
-		return nil, err
-	}
 	if glog.V(2) {
 		b, _ := json.Marshal(syncGroupResponse)
 		glog.Infof("sync response:%s", b)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	err = c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
