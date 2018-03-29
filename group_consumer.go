@@ -200,7 +200,6 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	if c.ifLeader {
 		c.getTopicPartitionInfo()
 		groupAssignment = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
-		groupAssignment = nil
 	} else {
 		groupAssignment = nil
 	}
