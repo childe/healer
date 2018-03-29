@@ -18,9 +18,8 @@ func NewConsumer(topic string, config *ConsumerConfig) (*Consumer, error) {
 		config: config,
 		topic:  topic,
 	}
-	brokerConfig := DefaultBrokerConfig()
-	brokerConfig.ConnectTimeoutMS = config.ConnectTimeoutMS
-	brokerConfig.TimeoutMS = config.TimeoutMS
+	brokerConfig := getBrokerConfigFromConsumerConfig(config)
+
 	c.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
 	if err != nil {
 		return nil, err

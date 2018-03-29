@@ -80,6 +80,14 @@ func DefaultBrokerConfig() *BrokerConfig {
 	}
 }
 
+func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
+	b := DefaultBrokerConfig()
+	b.ConnectTimeoutMS = c.ConnectTimeoutMS
+	b.TimeoutMS = c.TimeoutMS
+	b.TimeoutMSForEachAPI = c.TimeoutMSForEachAPI
+	return b
+}
+
 var (
 	brokerAddressNotSet = errors.New("broker address not set in broker config")
 )

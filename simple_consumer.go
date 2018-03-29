@@ -32,9 +32,8 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 		partitionID: partitionID,
 	}
 
-	brokerConfig := DefaultBrokerConfig()
-	brokerConfig.ConnectTimeoutMS = config.ConnectTimeoutMS
-	brokerConfig.TimeoutMS = config.TimeoutMS
+	brokerConfig := getBrokerConfigFromConsumerConfig(config)
+
 	c.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
 	if err != nil {
 		return nil, err

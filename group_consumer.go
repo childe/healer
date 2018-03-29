@@ -51,9 +51,8 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 	}
 	config.ClientID = clientID
 
-	brokerConfig := DefaultBrokerConfig()
-	brokerConfig.ConnectTimeoutMS = config.ConnectTimeoutMS
-	brokerConfig.TimeoutMS = config.TimeoutMS
+	brokerConfig := getBrokerConfigFromConsumerConfig(config)
+
 	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
 	if err != nil {
 		return nil, err
