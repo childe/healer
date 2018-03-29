@@ -99,6 +99,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 			break
 		} else {
 			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topic, err)
+			time.Sleep(200 * time.Millisecond)
 		}
 	}
 
@@ -199,6 +200,7 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	if c.ifLeader {
 		c.getTopicPartitionInfo()
 		groupAssignment = c.assignmentStrategy.Assign(c.members, c.topicMetadatas)
+		groupAssignment = nil
 	} else {
 		groupAssignment = nil
 	}
