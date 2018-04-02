@@ -6,20 +6,20 @@ import (
 )
 
 type ProducerConfig struct {
-	BootstrapServers         string
-	ClientID                 string
-	Acks                     int16
-	CompressionType          string
-	BatchSize                int
-	MessageMaxCount          int
-	FlushIntervalMS          int
-	MetadataMaxAgeMS         int
-	FetchTopicMetaDataRetrys int
-	ConnectionsMaxIdleMS     int
+	BootstrapServers         string `json:"bootstrap.servers"`
+	ClientID                 string `json:"client.id"`
+	Acks                     int16  `json:"acks"`
+	CompressionType          string `json:"compress.type"`
+	BatchSize                int    `json:"batch.size"`
+	MessageMaxCount          int    `json:"message.max.count"`
+	FlushIntervalMS          int    `json:"flush.interval.ms"`
+	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms"`
+	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
+	ConnectionsMaxIdleMS     int    `json:"connection.max.idle.ms"`
 
 	// TODO
-	Retries          int
-	RequestTimeoutMS int32
+	Retries          int   `json:"retries"`
+	RequestTimeoutMS int32 `json:"request.timeout.ms"`
 }
 
 func DefaultProducerConfig() *ProducerConfig {
