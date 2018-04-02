@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -9,12 +10,15 @@ import (
 	"github.com/childe/glog"
 )
 
+var SimpleProducerClosedError = errors.New("simple producer has been closed and failed to open")
+
 type SimpleProducer struct {
 	config *ProducerConfig
 
 	broker    *Broker
 	topic     string
 	partition int32
+	closed    bool
 
 	messageSetSize int
 	messageSet     MessageSet
@@ -65,6 +69,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		config:    config,
 		topic:     topic,
 		partition: partition,
+		closed:    false,
 
 		mutex: &sync.Mutex{},
 	}
@@ -90,7 +95,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 	p.broker, err = p.createBroker()
 	if err != nil {
-		glog.Error("create leader broker error: %s", err)
+		glog.Error("create producer broker error: %s", err)
 		return nil
 	}
 
@@ -123,7 +128,33 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	return p
 }
 
+func (p *SimpleProducer) ensureOpen() bool {
+	var err error
+	if p.closed == false {
+		return true
+	}
+
+	p.broker, err = p.createBroker()
+	if err != nil {
+		glog.Error("create producer broker error: %s", err)
+		return false
+	}
+
+	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
+	go func() {
+		select {
+		case <-p.timer.C:
+			p.Close()
+		}
+	}()
+
+	return true
+}
+
 func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
+	if p.ensureOpen() == false {
+		return SimpleProducerClosedError
+	}
 	message := &Message{
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
@@ -227,5 +258,6 @@ func (p *SimpleProducer) Close() {
 	glog.Info("flush before SimpleProducer is closed")
 	p.Flush()
 	glog.Info("SimpleProducer closing")
+	p.closed = true
 	p.broker.Close()
 }

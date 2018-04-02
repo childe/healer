@@ -2,13 +2,15 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 
+	goflag "flag"
+
 	"github.com/childe/glog"
 	"github.com/childe/healer"
+	flag "github.com/spf13/pflag"
 )
 
 var (
@@ -18,8 +20,11 @@ var (
 )
 
 func init() {
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+
 	flag.StringVar(&config.BootstrapServers, "brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
-	flag.StringVar(&config.CompressionType, "compression.type", "none", "defalut:none")
+	flag.StringVar(&config.CompressionType, "compression.type", "none", "")
+	flag.IntVar(&config.ConnectionsMaxIdleMS, "connection.max.idle.ms", config.ConnectionsMaxIdleMS, "")
 }
 
 func main() {
