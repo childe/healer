@@ -20,6 +20,7 @@ type SimpleProducer struct {
 	messageSet     MessageSet
 
 	mutex sync.Locker
+	timer *time.Timer
 
 	compressionValue int8
 	compressor       Compressor
@@ -93,6 +94,14 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		return nil
 	}
 
+	p.timer = time.NewTimer(time.Duration(config.ConnectionsMaxIdleMS) * time.Millisecond)
+	go func() {
+		select {
+		case <-p.timer.C:
+			p.Close()
+		}
+	}()
+
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
 		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
@@ -114,7 +123,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	return p
 }
 
-func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error {
+func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 	message := &Message{
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
@@ -125,38 +134,43 @@ func (simpleProducer *SimpleProducer) AddMessage(key []byte, value []byte) error
 		Key:        key,
 		Value:      value,
 	}
-	simpleProducer.messageSet[simpleProducer.messageSetSize] = message
-	simpleProducer.messageSetSize++
-	if simpleProducer.messageSetSize >= simpleProducer.config.MessageMaxCount {
-		simpleProducer.Flush()
+	p.messageSet[p.messageSetSize] = message
+	p.messageSetSize++
+	if p.messageSetSize >= p.config.MessageMaxCount {
+		p.Flush()
 	}
 	return nil
 }
 
-func (simpleProducer *SimpleProducer) Flush() error {
-	simpleProducer.mutex.Lock()
+func (p *SimpleProducer) Flush() error {
+	p.mutex.Lock()
 
-	if simpleProducer.messageSetSize == 0 {
+	if p.messageSetSize == 0 {
 		return nil
 	}
 
-	messageSet := simpleProducer.messageSet[:simpleProducer.messageSetSize]
-	simpleProducer.messageSetSize = 0
-	simpleProducer.messageSet = make([]*Message, simpleProducer.config.MessageMaxCount)
-	simpleProducer.mutex.Unlock()
+	messageSet := p.messageSet[:p.messageSetSize]
+	p.messageSetSize = 0
+	p.messageSet = make([]*Message, p.config.MessageMaxCount)
+	p.mutex.Unlock()
 
-	return simpleProducer.flush(messageSet)
+	if !p.timer.Stop() {
+		<-p.timer.C
+	}
+	p.timer.Reset(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
+
+	return p.flush(messageSet)
 }
 
-func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
+func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest := &ProduceRequest{
-		RequiredAcks: simpleProducer.config.Acks,
-		Timeout:      simpleProducer.config.RequestTimeoutMS,
+		RequiredAcks: p.config.Acks,
+		Timeout:      p.config.RequestTimeoutMS,
 	}
 	produceRequest.RequestHeader = &RequestHeader{
 		ApiKey:     API_ProduceRequest,
 		ApiVersion: 0,
-		ClientId:   simpleProducer.config.ClientID,
+		ClientId:   p.config.ClientID,
 	}
 
 	produceRequest.TopicBlocks = make([]struct {
@@ -167,17 +181,17 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 			MessageSet     MessageSet
 		}
 	}, 1)
-	produceRequest.TopicBlocks[0].TopicName = simpleProducer.topic
+	produceRequest.TopicBlocks[0].TopicName = p.topic
 	produceRequest.TopicBlocks[0].PartitonBlocks = make([]struct {
 		Partition      int32
 		MessageSetSize int32
 		MessageSet     MessageSet
 	}, 1)
 
-	if simpleProducer.compressionValue != 0 {
+	if p.compressionValue != 0 {
 		value := make([]byte, messageSet.Length())
 		messageSet.Encode(value, 0)
-		compressed_value, err := simpleProducer.compressor.Compress(value)
+		compressed_value, err := p.compressor.Compress(value)
 		if err != nil {
 			return fmt.Errorf("compress messageset error:%s", err)
 		}
@@ -186,18 +200,18 @@ func (simpleProducer *SimpleProducer) flush(messageSet MessageSet) error {
 			MessageSize: 0, // compute in message encode
 
 			Crc:        0, // compute in message encode
-			Attributes: 0x00 | simpleProducer.compressionValue,
+			Attributes: 0x00 | p.compressionValue,
 			MagicByte:  1,
 			Key:        nil,
 			Value:      compressed_value,
 		}
 		messageSet = []*Message{message}
 	}
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = simpleProducer.partition
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = p.partition
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
-	responseBuf, err := simpleProducer.broker.Request(produceRequest)
+	responseBuf, err := p.broker.Request(produceRequest)
 	if err != nil {
 		return err
 	}
