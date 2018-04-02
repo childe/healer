@@ -22,19 +22,21 @@ type ProducerConfig struct {
 	RequestTimeoutMS int32
 }
 
-var DefaultProducerConfig *ProducerConfig = &ProducerConfig{
-	ClientID:                 "healer",
-	Acks:                     1,
-	CompressionType:          "none",
-	BatchSize:                16384,
-	MessageMaxCount:          1024,
-	FlushIntervalMS:          200,
-	MetadataMaxAgeMS:         300000,
-	FetchTopicMetaDataRetrys: 3,
-	ConnectionsMaxIdleMS:     540000,
+func DefaultProducerConfig() *ProducerConfig {
+	return &ProducerConfig{
+		ClientID:                 "healer",
+		Acks:                     1,
+		CompressionType:          "none",
+		BatchSize:                16384,
+		MessageMaxCount:          1024,
+		FlushIntervalMS:          200,
+		MetadataMaxAgeMS:         300000,
+		FetchTopicMetaDataRetrys: 3,
+		ConnectionsMaxIdleMS:     540000,
 
-	Retries:          0,
-	RequestTimeoutMS: 30000,
+		Retries:          0,
+		RequestTimeoutMS: 30000,
+	}
 }
 
 var (

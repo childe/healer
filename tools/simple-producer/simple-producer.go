@@ -7,12 +7,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/childe/healer"
 	"github.com/childe/glog"
+	"github.com/childe/healer"
 )
 
 var (
-	config    = healer.DefaultProducerConfig
+	config    = healer.DefaultProducerConfig()
 	topic     = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition = flag.Int("partition", 0, "The partition to consume from.")
 )
