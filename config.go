@@ -15,7 +15,7 @@ type ProducerConfig struct {
 	FlushIntervalMS          int    `json:"flush.interval.ms"`
 	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms"`
 	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
-	ConnectionsMaxIdleMS     int    `json:"connection.max.idle.ms"`
+	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
 
 	// TODO
 	Retries          int   `json:"retries"`
