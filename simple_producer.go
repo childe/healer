@@ -101,10 +101,8 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 	p.timer = time.NewTimer(time.Duration(config.ConnectionsMaxIdleMS) * time.Millisecond)
 	go func() {
-		select {
-		case <-p.timer.C:
-			p.Close()
-		}
+		<-p.timer.C
+		p.Close()
 	}()
 
 	// TODO wait to the next ticker to see if messageSet changes
@@ -142,10 +140,8 @@ func (p *SimpleProducer) ensureOpen() bool {
 
 	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
 	go func() {
-		select {
-		case <-p.timer.C:
-			p.Close()
-		}
+		<-p.timer.C
+		p.Close()
 	}()
 
 	return true
