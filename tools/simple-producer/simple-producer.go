@@ -67,6 +67,8 @@ func main() {
 				text = append(text, line...)
 			}
 		}
-		simpleProducer.AddMessage(nil, text)
+		if err = simpleProducer.AddMessage(nil, text); err != nil {
+			glog.Errorf("add message error: %s", err)
+		}
 	}
 }
