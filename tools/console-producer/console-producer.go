@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 	"github.com/childe/healer"
 )
 

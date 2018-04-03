@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 type Broker struct {

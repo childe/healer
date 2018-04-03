@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/childe/healer"
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 type Group map[string]*healer.Broker // groupID -> broker

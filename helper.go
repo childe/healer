@@ -1,6 +1,6 @@
 package healer
 
-import "github.com/childe/glog"
+import "github.com/golang/glog"
 
 type MetaInfo struct {
 	brokers        []*BrokerInfo

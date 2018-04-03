@@ -11,7 +11,7 @@ import (
 
 	"github.com/bkaradzic/go-lz4"
 	"github.com/eapache/go-xerial-snappy"
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 /*

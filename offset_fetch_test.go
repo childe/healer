@@ -3,7 +3,7 @@ package healer
 import (
 	"testing"
 
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 func TestOffsetFetchRequest(t *testing.T) {

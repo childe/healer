@@ -3,7 +3,7 @@ package healer
 import (
 	"time"
 
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 // SimpleConsumer instance is built to consume messages from kafka broker

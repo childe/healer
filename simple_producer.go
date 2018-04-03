@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 var SimpleProducerClosedError = errors.New("simple producer has been closed and failed to open")

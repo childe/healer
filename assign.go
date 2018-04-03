@@ -3,7 +3,7 @@ package healer
 import (
 	"sort"
 
-	"github.com/childe/glog"
+	"github.com/golang/glog"
 )
 
 type AssignmentStrategy interface {
