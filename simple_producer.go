@@ -95,7 +95,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 	p.broker, err = p.createBroker()
 	if err != nil {
-		glog.Error("create producer broker error: %s", err)
+		glog.Errorf("create producer broker error: %s", err)
 		return nil
 	}
 
