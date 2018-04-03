@@ -138,6 +138,8 @@ func (p *SimpleProducer) ensureOpen() bool {
 		return false
 	}
 
+	p.closed = false
+
 	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
 	go func() {
 		<-p.timer.C
@@ -173,6 +175,7 @@ func (p *SimpleProducer) Flush() error {
 	p.mutex.Lock()
 
 	if p.messageSetSize == 0 {
+		p.mutex.Unlock()
 		return nil
 	}
 
