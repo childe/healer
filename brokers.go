@@ -5,12 +5,14 @@ package healer
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 )
 
 type Brokers struct {
-	config *BrokerConfig
+	config           *BrokerConfig
+	bootstrapServers string
 
 	brokersInfo map[int32]*BrokerInfo
 	brokers     map[int32]*Broker
@@ -52,8 +54,8 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	return brokers, nil
 }
 
-func NewBrokers(brokerList string, clientID string, config *BrokerConfig) (*Brokers, error) {
-	for _, brokerAddr := range strings.Split(brokerList, ",") {
+func NewBrokers(bootstrapServers string, clientID string, config *BrokerConfig) (*Brokers, error) {
+	for _, brokerAddr := range strings.Split(bootstrapServers, ",") {
 		broker, err := NewBroker(brokerAddr, -1, config)
 
 		// TODO conn not established?
@@ -64,17 +66,85 @@ func NewBrokers(brokerList string, clientID string, config *BrokerConfig) (*Brok
 			if err != nil {
 				glog.Infof("could not get broker list from %s:%s", broker.GetAddress(), err)
 			} else {
+				go func() {
+					for range time.NewTicker(time.Duration(config.MetadataRefreshIntervalMS) * time.Millisecond).C {
+						if !brokers.refreshMetadata() {
+							glog.Error("refresh metadata error")
+						}
+					}
+				}()
 				return brokers, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("could not get any available broker from %s", brokerList)
+	return nil, fmt.Errorf("could not get any available broker from %s", bootstrapServers)
 
 }
 
-// TODO
-func (brokers *Brokers) refresh() error {
-	return nil
+func (brokers *Brokers) refreshMetadata() bool {
+	topics := []string{""}
+	clientID := "healer-refresh-metadata"
+
+	// from origianl bootstrapServers
+	for _, brokerAddr := range strings.Split(brokers.bootstrapServers, ",") {
+		broker, err := NewBroker(brokerAddr, -1, brokers.config)
+		if err != nil {
+			glog.Errorf("create broker[%s] error: %s", brokerAddr, err)
+			continue
+		}
+
+		metadataResponse, err := broker.requestMetaData(clientID, topics)
+		if err != nil {
+			glog.Errorf("request metadata error: %s", err)
+			continue
+		}
+
+		brokersInfo := make(map[int32]*BrokerInfo)
+		for _, brokerInfo := range metadataResponse.Brokers {
+			brokersInfo[brokerInfo.NodeId] = brokerInfo
+		}
+		brokers.brokersInfo = brokersInfo
+
+		glog.Infof("got %d brokers", len(brokers.brokersInfo))
+		if glog.V(2) {
+			for nodeID, broker := range brokers.brokersInfo {
+				glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
+			}
+		}
+		return true
+	}
+
+	glog.Info("update metadata from latest brokersInfo")
+	// from latest brokersinfo
+	for _, brokerInfo := range brokers.brokersInfo {
+		brokerAddr := fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port)
+		broker, err := NewBroker(brokerAddr, -1, brokers.config)
+		if err != nil {
+			glog.Errorf("create broker[%s] error: %s", brokerAddr, err)
+			continue
+		}
+
+		metadataResponse, err := broker.requestMetaData(clientID, topics)
+		if err != nil {
+			glog.Errorf("request metadata error: %s", err)
+			continue
+		}
+
+		brokersInfo := make(map[int32]*BrokerInfo)
+		for _, brokerInfo := range metadataResponse.Brokers {
+			brokersInfo[brokerInfo.NodeId] = brokerInfo
+		}
+		brokers.brokersInfo = brokersInfo
+
+		glog.Infof("got %d brokers", len(brokers.brokersInfo))
+		if glog.V(2) {
+			for nodeID, broker := range brokers.brokersInfo {
+				glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // TODO merge with GetBroker

@@ -5,80 +5,19 @@ import (
 	"errors"
 )
 
-type ProducerConfig struct {
-	BootstrapServers         string `json:"bootstrap.servers"`
-	ClientID                 string `json:"client.id"`
-	Acks                     int16  `json:"acks"`
-	CompressionType          string `json:"compress.type"`
-	BatchSize                int    `json:"batch.size"`
-	MessageMaxCount          int    `json:"message.max.count"`
-	FlushIntervalMS          int    `json:"flush.interval.ms"`
-	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms"`
-	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
-	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
-
-	// TODO
-	Retries          int   `json:"retries"`
-	RequestTimeoutMS int32 `json:"request.timeout.ms"`
-}
-
-func DefaultProducerConfig() *ProducerConfig {
-	return &ProducerConfig{
-		ClientID:                 "healer",
-		Acks:                     1,
-		CompressionType:          "none",
-		BatchSize:                16384,
-		MessageMaxCount:          1024,
-		FlushIntervalMS:          200,
-		MetadataMaxAgeMS:         300000,
-		FetchTopicMetaDataRetrys: 3,
-		ConnectionsMaxIdleMS:     540000,
-
-		Retries:          0,
-		RequestTimeoutMS: 30000,
-	}
-}
-
-var (
-	messageMaxCountError   = errors.New("message.max.count must > 0")
-	flushIntervalMSError   = errors.New("flush.interval.ms must > 0")
-	unknownCompressionType = errors.New("unknown compression type")
-	bootstrapServersNotSet = errors.New("bootstrap servers not set")
-)
-
-func (config *ProducerConfig) checkValid() error {
-	if config.BootstrapServers == "" {
-		return bootstrapServersNotSet
-	}
-	if config.MessageMaxCount <= 0 {
-		return messageMaxCountError
-	}
-	if config.FlushIntervalMS <= 0 {
-		return flushIntervalMSError
-	}
-
-	switch config.CompressionType {
-	case "none":
-	case "gzip":
-	case "snappy":
-	case "lz4":
-	default:
-		return unknownCompressionType
-	}
-	return nil
-}
-
 type BrokerConfig struct {
-	ConnectTimeoutMS    int
-	TimeoutMS           int
-	TimeoutMSForEachAPI []int
+	ConnectTimeoutMS          int   `json:"connect.timeout.ms"`
+	TimeoutMS                 int   `json:"timeout.ms"`
+	TimeoutMSForEachAPI       []int `json:"timeout.ms.for.eachapi"`
+	MetadataRefreshIntervalMS int   `json:"metadata.refresh.interval.ms"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
-		ConnectTimeoutMS:    60000,
-		TimeoutMS:           30000,
-		TimeoutMSForEachAPI: make([]int, 0),
+		ConnectTimeoutMS:          60000,
+		TimeoutMS:                 30000,
+		TimeoutMSForEachAPI:       make([]int, 0),
+		MetadataRefreshIntervalMS: 300 * 1000,
 	}
 }
 
@@ -181,6 +120,69 @@ func (config *ConsumerConfig) checkValid() error {
 	}
 	if config.GroupID == "" {
 		return emptyGroupID
+	}
+	return nil
+}
+
+type ProducerConfig struct {
+	BootstrapServers         string `json:"bootstrap.servers"`
+	ClientID                 string `json:"client.id"`
+	Acks                     int16  `json:"acks"`
+	CompressionType          string `json:"compress.type"`
+	BatchSize                int    `json:"batch.size"`
+	MessageMaxCount          int    `json:"message.max.count"`
+	FlushIntervalMS          int    `json:"flush.interval.ms"`
+	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms"`
+	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
+	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
+
+	// TODO
+	Retries          int   `json:"retries"`
+	RequestTimeoutMS int32 `json:"request.timeout.ms"`
+}
+
+func DefaultProducerConfig() *ProducerConfig {
+	return &ProducerConfig{
+		ClientID:                 "healer",
+		Acks:                     1,
+		CompressionType:          "none",
+		BatchSize:                16384,
+		MessageMaxCount:          1024,
+		FlushIntervalMS:          200,
+		MetadataMaxAgeMS:         300000,
+		FetchTopicMetaDataRetrys: 3,
+		ConnectionsMaxIdleMS:     540000,
+
+		Retries:          0,
+		RequestTimeoutMS: 30000,
+	}
+}
+
+var (
+	messageMaxCountError   = errors.New("message.max.count must > 0")
+	flushIntervalMSError   = errors.New("flush.interval.ms must > 0")
+	unknownCompressionType = errors.New("unknown compression type")
+	bootstrapServersNotSet = errors.New("bootstrap servers not set")
+)
+
+func (config *ProducerConfig) checkValid() error {
+	if config.BootstrapServers == "" {
+		return bootstrapServersNotSet
+	}
+	if config.MessageMaxCount <= 0 {
+		return messageMaxCountError
+	}
+	if config.FlushIntervalMS <= 0 {
+		return flushIntervalMSError
+	}
+
+	switch config.CompressionType {
+	case "none":
+	case "gzip":
+	case "snappy":
+	case "lz4":
+	default:
+		return unknownCompressionType
 	}
 	return nil
 }
