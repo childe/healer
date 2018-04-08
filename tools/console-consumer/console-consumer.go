@@ -7,7 +7,7 @@ import (
 
 	goflag "flag"
 
-	flag "github.com/childe/pflag"
+	flag "github.com/spf13/pflag"
 
 	"github.com/golang/glog"
 	"github.com/childe/healer"

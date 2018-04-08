@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/childe/healer"
-	flag "github.com/childe/pflag"
+	flag "github.com/spf13/pflag"
 )
 
 var (
