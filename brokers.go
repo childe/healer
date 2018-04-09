@@ -94,7 +94,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 		}
 
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
-		if err != nil {
+		if err != nil && err != AllError[17] {
 			glog.Errorf("request metadata error: %s", err)
 			continue
 		}
@@ -125,7 +125,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 		}
 
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
-		if err != nil {
+		if err != nil && err != AllError[17] {
 			glog.Errorf("request metadata error: %s", err)
 			continue
 		}
