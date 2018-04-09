@@ -73,6 +73,7 @@ func NewBrokers(bootstrapServers string, clientID string, config *BrokerConfig) 
 						}
 					}
 				}()
+				brokers.bootstrapServers = bootstrapServers
 				return brokers, nil
 			}
 		}
