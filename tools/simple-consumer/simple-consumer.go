@@ -11,8 +11,8 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/golang/glog"
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 )
 
 var (
@@ -22,6 +22,8 @@ var (
 	partition   = flag.Int("partition", 0, "The partition to consume from.")
 	offset      = flag.Int64("offset", -2, "The offset id to consume from, default to -2 which means from beginning; while value -1 means from end(default -2).")
 	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
+
+	printOffset = true
 )
 
 func init() {
@@ -40,6 +42,7 @@ func init() {
 	flag.BoolVar(&consumerConfig.CommitAfterFetch, "commit.after.fetch", consumerConfig.CommitAfterFetch, "commit offset after every fetch request")
 	flag.IntVar(&consumerConfig.ConnectTimeoutMS, "connect.timeout.ms", consumerConfig.ConnectTimeoutMS, "connect timeout to broker")
 	flag.IntVar(&consumerConfig.TimeoutMS, "timeout.ms", consumerConfig.TimeoutMS, "read timeout from connection to broker")
+	flag.BoolVar(&printOffset, "printoffset", printOffset, "if print offset before message")
 }
 
 func main() {
@@ -68,6 +71,10 @@ func main() {
 			fmt.Printf("messag error:%s\n", message.Error)
 			return
 		}
-		fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+		if printOffset {
+			fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+		} else {
+			fmt.Printf("%s\n", message.Message.Value)
+		}
 	}
 }
