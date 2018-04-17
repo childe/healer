@@ -9,13 +9,13 @@ import (
 	goflag "flag"
 
 	"github.com/childe/healer"
-	flag "github.com/spf13/pflag"
 	"github.com/golang/glog"
+	flag "github.com/spf13/pflag"
 )
 
 var (
 	config    = healer.DefaultProducerConfig()
-	topic     = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	topic     = flag.String("topic", "", "REQUIRED: The topic write message to.")
 	partition = flag.Int("partition", 0, "The partition to consume from.")
 )
 
