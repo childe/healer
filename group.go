@@ -86,6 +86,9 @@ func (memberAssignment *MemberAssignment) Encode() []byte {
 }
 
 func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
+	if len(payload) == 0 {
+		return nil, &emptyPayload
+	}
 	r := &MemberAssignment{}
 	offset := 0
 	count := 0
