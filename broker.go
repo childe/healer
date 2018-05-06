@@ -132,7 +132,7 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	glog.V(10).Infof("response length: %d", responseLength+4)
+	glog.V(10).Infof("response length in header: %d", responseLength+4)
 	responseBuf := make([]byte, 4+responseLength)
 
 	readLength := 0
