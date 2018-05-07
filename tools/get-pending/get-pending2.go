@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -37,6 +38,12 @@ func init() {
 	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
 }
 
+type By []int32
+
+func (a By) Len() int           { return len(a) }
+func (a By) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a By) Less(i, j int) bool { return a[i] < a[j] }
+
 func getPartitions(topic string) ([]int32, error) {
 	var metadataResponse *healer.MetadataResponse
 	metadataResponse, err = brokers.RequestMetaData(*clientID, []string{topic})
@@ -52,6 +59,7 @@ func getPartitions(topic string) ([]int32, error) {
 		}
 	}
 
+	sort.Sort(By(partitions))
 	return partitions, nil
 }
 
@@ -259,6 +267,7 @@ func main() {
 			if *header {
 				fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag\towner")
 			}
+
 			for _, partitionID := range partitions {
 				pending := offsets[partitionID] - committedOffsets[partitionID]
 				offsetSum += offsets[partitionID]
@@ -270,6 +279,5 @@ func main() {
 				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, committedSum, pendingSum)
 			}
 		}
-
 	}
 }
