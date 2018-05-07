@@ -235,6 +235,9 @@ func main() {
 				pendingSum   int64 = 0
 			)
 
+			if *header {
+				fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag\towner")
+			}
 			for _, partitionID := range partitions {
 				pending := offsets[partitionID] - committedOffsets[partitionID]
 				offsetSum += offsets[partitionID]
