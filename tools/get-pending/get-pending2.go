@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/childe/healer"
@@ -168,6 +170,33 @@ func getSubscriptionsInGroup(groupID string) (map[string]map[int32]string, error
 	return subscriptions, nil
 }
 
+func getGroups(groupID string) []string {
+	if groupID == "" {
+		return helper.GetGroups()
+	}
+	if !strings.Contains(groupID, "*") {
+		return []string{groupID}
+	}
+
+	var p string = strings.Replace(groupID, ".", `\.`, -1)
+	p = strings.Replace(groupID, "*", ".*", -1)
+	var groupPattern *regexp.Regexp = regexp.MustCompile("^" + p + "$")
+
+	var (
+		rst      []string = make([]string, 0)
+		groupIDs []string = helper.GetGroups()
+	)
+	if groupIDs == nil {
+		return nil
+	}
+	for _, g := range groupIDs {
+		if groupPattern.MatchString(g) {
+			rst = append(rst, g)
+		}
+	}
+	return rst
+}
+
 func main() {
 	flag.Parse()
 
@@ -183,19 +212,11 @@ func main() {
 		os.Exit(5)
 	}
 
-	var groupIDs []string
-	if *groupID == "" {
-		groupIDs = helper.GetGroups()
-		if groupIDs == nil {
-			glog.Fatalf("get groups error: %s", err)
+	groupIDs := getGroups(*groupID)
+	if glog.V(5) {
+		for i, group := range groupIDs {
+			glog.Infof("%d/%d %s", i, len(groupIDs), group)
 		}
-		if glog.V(5) {
-			for i, group := range groupIDs {
-				glog.Infof("%d/%d %s", i, len(groupIDs), group)
-			}
-		}
-	} else {
-		groupIDs = []string{*groupID}
 	}
 
 	for i, groupID := range groupIDs {
