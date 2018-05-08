@@ -276,7 +276,7 @@ func main() {
 				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\t%s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, v[partitionID])
 			}
 			if *total {
-				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, committedSum, pendingSum)
+				fmt.Printf("TOTAL\t%s\t%s\t%d\t%d\t%d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
 			}
 		}
 	}
