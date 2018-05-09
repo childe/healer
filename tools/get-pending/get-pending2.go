@@ -265,7 +265,7 @@ func main() {
 			)
 
 			if *header {
-				fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag\towner")
+				fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag  owner")
 			}
 
 			for _, partitionID := range partitions {
@@ -273,10 +273,10 @@ func main() {
 				offsetSum += offsets[partitionID]
 				committedSum += committedOffsets[partitionID]
 				pendingSum += pending
-				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\t%s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, v[partitionID])
+				fmt.Printf("%d  %s  %s  %d  %d  %d  %d  %s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, v[partitionID])
 			}
 			if *total {
-				fmt.Printf("TOTAL\t%s\t%s\t%d\t%d\t%d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
+				fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
 			}
 		}
 	}
