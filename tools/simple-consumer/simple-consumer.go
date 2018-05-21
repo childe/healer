@@ -34,7 +34,7 @@ func init() {
 	flag.StringVar(&consumerConfig.GroupID, "group.id", "", "REQUIRED")
 	flag.Int32Var(&consumerConfig.FetchMinBytes, "fetch.min.bytes", consumerConfig.FetchMinBytes, "The minimum amount of data the server should return for a fetch request. If insufficient data is available the request will wait for that much data to accumulate before answering the request.")
 	flag.Int32Var(&consumerConfig.FetchMaxBytes, "fetch.max.bytes", consumerConfig.FetchMaxBytes, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response")
-	flag.Int32Var(&consumerConfig.FetchMaxWaitMS, "fetch.max.wait.ms", consumerConfig.FetchMaxBytes, "The maximum amount of time the server will block before answering the fetch request if there isn't sufficient data to immediately satisfy fetch.min.bytes")
+	flag.Int32Var(&consumerConfig.FetchMaxWaitMS, "fetch.max.wait.ms", consumerConfig.FetchMaxWaitMS, "The maximum amount of time the server will block before answering the fetch request if there isn't sufficient data to immediately satisfy fetch.min.bytes")
 	flag.Int32Var(&consumerConfig.SessionTimeoutMS, "session.timeout.ms", consumerConfig.SessionTimeoutMS, "The timeout used to detect failures when using Kafka's group management facilities.")
 	flag.IntVar(&consumerConfig.OffsetsStorage, "offsets.storage", 1, "Select where offsets should be stored (0 zookeeper or 1 kafka)")
 	flag.BoolVar(&consumerConfig.AutoCommit, "auto.commit.enable", consumerConfig.AutoCommit, "If true, periodically commit the offset of messages already fetched by the consumer. This committed offset will be used when the process fails as the position from which the new consumer will begin")
