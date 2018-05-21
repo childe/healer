@@ -41,6 +41,7 @@ type ConsumerConfig struct {
 	BootstrapServers     string `json:"bootstrap.servers"`
 	ClientID             string `json:"client.id"`
 	GroupID              string `json:"group.id"`
+	MetadataMaxAgeMS     int  `json:"metadata.max.age.ms"`
 	SessionTimeoutMS     int32  `json:"session.timeout.ms"`
 	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms"`
 	FetchMaxBytes        int32  `json:"fetch.max.bytes"`
@@ -60,6 +61,7 @@ func DefaultConsumerConfig() *ConsumerConfig {
 		ClientID:             "",
 		GroupID:              "",
 		SessionTimeoutMS:     30000,
+		MetadataMaxAgeMS:     300000,
 		FetchMaxWaitMS:       100,
 		FetchMaxBytes:        10 * 1024 * 1024,
 		FetchMinBytes:        1,
