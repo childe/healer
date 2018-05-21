@@ -26,6 +26,7 @@ type GroupConsumer struct {
 	topicMetadatas       []*TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
+	topics               []string
 	fromBeginning        bool
 	partitionAssignments []*PartitionAssignment
 	simpleConsumers      []*SimpleConsumer
@@ -88,12 +89,12 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 		}
 	}
 
-	topics := []string{}
+	c.topics = []string{}
 	for t, _ := range _topics {
-		topics = append(topics, t)
+		c.topics = append(topics, t)
 	}
 	for {
-		metaDataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, topics)
+		metaDataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, c.topics)
 		if err == nil {
 			break
 		} else {
@@ -104,7 +105,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 
 	if glog.V(5) {
 		b, _ := json.Marshal(metaDataResponse)
-		glog.Infof("topics[%s] metadata:%s", topics, b)
+		glog.Infof("topics[%s] metadata:%s", c.topics, b)
 	}
 	c.topicMetadatas = metaDataResponse.TopicMetadatas
 }
@@ -342,6 +343,16 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 					c.joined = false
 					c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
 				}
+			}
+		}
+	}()
+
+	// go refresh topic metadata
+	go func() {
+		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
+		for range ticker.C {
+			if !c.ifLeader {
+				continue
 			}
 		}
 	}()
