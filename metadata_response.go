@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sort"
 )
 
 /*
@@ -139,6 +140,16 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 		}
 	}
 	//end encode TopicMetadatas
+
+	// sort by TopicName & PartitionID
+	sort.Slice(metadataResponse.TopicMetadatas, func(i, j int) bool {
+		return metadataResponse.TopicMetadatas[i].TopicName < metadataResponse.TopicMetadatas[j].TopicName
+	})
+	for _, p := range metadataResponse.TopicMetadatas {
+		sort.Slice(p.PartitionMetadatas, func(i, j int) bool {
+			return p.PartitionMetadatas[i].PartitionID < p.PartitionMetadatas[j].PartitionID
+		})
+	}
 
 	return metadataResponse, err
 }
