@@ -91,21 +91,21 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 
 	c.topics = []string{}
 	for t, _ := range _topics {
-		c.topics = append(topics, t)
+		c.topics = append(c.topics, t)
 	}
 	for {
 		metaDataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, c.topics)
 		if err == nil {
 			break
 		} else {
-			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topic, err)
+			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topics, err)
 			time.Sleep(1000 * time.Millisecond)
 		}
 	}
 
 	if glog.V(5) {
 		b, _ := json.Marshal(metaDataResponse)
-		glog.Infof("topics[%s] metadata:%s", c.topics, b)
+		glog.Infof("topics[%s] metadata :%s", c.topics, b)
 	}
 	c.topicMetadatas = metaDataResponse.TopicMetadatas
 }
@@ -349,10 +349,29 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 
 	// go refresh topic metadata
 	go func() {
-		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
+		var (
+			ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
+		)
 		for range ticker.C {
 			if !c.ifLeader {
 				continue
+			}
+
+			metaDataResponse, err := c.brokers.RequestMetaData(c.config.ClientID, c.topics)
+			if err != nil {
+				glog.Errorf("request metadata (in goroutine) error: %s", err)
+				continue
+			}
+
+			if glog.V(5) {
+				b, _ := json.Marshal(metaDataResponse)
+				glog.Infof("topics[%s] metadata: %s", c.topics, b)
+			}
+			if topicMetadatasChanged(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
+				c.topicMetadatas = metaDataResponse.TopicMetadatas
+				c.stop()
+				c.joined = false
+				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
 			}
 		}
 	}()
@@ -391,4 +410,42 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 	}
 
 	return messages, nil
+}
+
+func topicMetadatasChanged(a []*TopicMetadata, b []*TopicMetadata) bool {
+	if a == nil && a == nil {
+		return false
+	}
+
+	if a == nil || b == nil {
+		return true
+	}
+
+	if len(a) != len(b) {
+		return true
+	}
+
+	for i, _ := range a {
+		if a[i].TopicName != b[i].TopicName || a[i].TopicErrorCode != b[i].TopicErrorCode {
+			return false
+		}
+
+		if len(a[i].PartitionMetadatas) != len(b[i].PartitionMetadatas) {
+			return false
+		}
+
+		for j, _ := range a[i].PartitionMetadatas {
+			if a[i].PartitionMetadatas[j].PartitionID != b[i].PartitionMetadatas[j].PartitionID {
+				return false
+			}
+			if a[i].PartitionMetadatas[j].PartitionErrorCode != b[i].PartitionMetadatas[j].PartitionErrorCode {
+				return false
+			}
+			if a[i].PartitionMetadatas[j].Leader != b[i].PartitionMetadatas[j].Leader {
+				return false
+			}
+		}
+	}
+
+	return true
 }
