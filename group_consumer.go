@@ -323,6 +323,10 @@ func (c *GroupConsumer) Close() {
 	c.leave()
 }
 
+// TODO AwaitClose implement
+func (c *GroupConsumer) AwaitClose(d time.Duration) {
+}
+
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	c.fromBeginning = fromBeginning
 
