@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/signal"
+	"time"
 
 	goflag "flag"
 
@@ -56,6 +58,15 @@ func main() {
 		glog.Fatalf("could not init GroupConsumer:%s", err)
 	}
 
+	signalC := make(chan os.Signal, 1)
+	signal.Notify(signalC, os.Interrupt)
+	go func() {
+		<-signalC
+		signal.Stop(signalC)
+		c.AwaitClose(time.Second * 10)
+		os.Exit(0)
+	}()
+
 	messages, err := c.Consume(*fromBeginning, nil)
 	defer c.Close()
 	if err != nil {
@@ -64,6 +75,6 @@ func main() {
 
 	for i := 0; i < *maxMessages; i++ {
 		message := <-messages
-		fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+		fmt.Printf("%s:%d:%d:%s\n", message.TopicName, message.PartitionID, message.Message.Offset, message.Message.Value)
 	}
 }

@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -21,6 +22,8 @@ type SimpleConsumer struct {
 	offsetCommited int64
 
 	belongTO *GroupConsumer
+
+	wg *sync.WaitGroup // call ws.Done in defer when Consume return
 }
 
 func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) (*SimpleConsumer, error) {
@@ -194,9 +197,17 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	}
 
 	go func(messages chan *FullMessage) {
+		c.wg.Add(1)
+
 		defer func() {
 			glog.V(10).Infof("simple consumer (%s) stop consuming", c.config.ClientID)
+			if c.belongTO != nil && c.offset != c.offsetCommited {
+				c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
+				c.offsetCommited = c.offset
+			}
+			c.wg.Done()
 		}()
+
 		for c.stop == false {
 			// TODO set CorrelationID to 0 firstly and then set by broker
 			fetchRequest := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)

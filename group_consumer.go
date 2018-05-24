@@ -34,6 +34,7 @@ type GroupConsumer struct {
 	messages chan *FullMessage
 
 	mutex              sync.Locker
+	wg                 sync.WaitGroup // wg is used to tell if all consumer has already stopped
 	assignmentStrategy AssignmentStrategy
 }
 
@@ -146,6 +147,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 				config:      c.config,
 				brokers:     c.brokers,
 				belongTO:    c,
+				wg:          &c.wg,
 			}
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 		}
@@ -323,8 +325,25 @@ func (c *GroupConsumer) Close() {
 	c.leave()
 }
 
-// TODO AwaitClose implement
-func (c *GroupConsumer) AwaitClose(d time.Duration) {
+func (gc *GroupConsumer) AwaitClose(timeout time.Duration) {
+	c := make(chan bool)
+	defer func() {
+		select {
+		case <-c:
+			glog.Info("all simple consumers stopped. return")
+			return
+		case <-time.After(timeout):
+			glog.Info("group consumer await timeout. return")
+			return
+		}
+	}()
+
+	gc.stop()
+
+	go func() {
+		gc.wg.Wait()
+		c <- true
+	}()
 }
 
 func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
