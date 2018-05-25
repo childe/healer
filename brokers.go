@@ -214,12 +214,16 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeId)
 		if err != nil {
-			glog.Infof("could not get metadata from %s:%d:%s", brokerInfo.Host, brokerInfo.Port, err)
-			continue
+			glog.Infof("get broker from %s:%d error: %s", brokerInfo.Host, brokerInfo.Port, err)
 		}
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
 		if err != nil {
-			glog.Errorf("could not get metadata from %s:%s", broker.address, err)
+			glog.Errorf("get metadata from %s error: %s", broker.address, err)
+			if err != AllError[9] {
+				continue
+			}
+			glog.Info("ignore the error")
+			return metadataResponse, nil
 		} else {
 			return metadataResponse, nil
 		}
