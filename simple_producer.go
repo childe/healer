@@ -15,7 +15,7 @@ var SimpleProducerClosedError = errors.New("simple producer has been closed and 
 type SimpleProducer struct {
 	config *ProducerConfig
 
-	broker    *Broker
+	leader    *Broker
 	topic     string
 	partition int32
 	closed    bool
@@ -30,7 +30,7 @@ type SimpleProducer struct {
 	compressor       Compressor
 }
 
-func (p *SimpleProducer) createBroker() (*Broker, error) {
+func (p *SimpleProducer) createLeader() (*Broker, error) {
 	brokers, err := NewBrokers(p.config.BootstrapServers, p.config.ClientID, DefaultBrokerConfig())
 	if err != nil {
 		glog.Errorf("init brokers error: %s", err)
@@ -45,17 +45,17 @@ func (p *SimpleProducer) createBroker() (*Broker, error) {
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
 	}
 
-	broker, err := brokers.NewBroker(leaderID)
+	leader, err := brokers.NewBroker(leaderID)
 	if err != nil {
-		glog.Errorf("create broker error: %s", err)
+		glog.Errorf("create leader error: %s", err)
 		return nil, err
 	} else {
-		glog.V(5).Infof("leader broker %s", broker.GetAddress())
+		glog.V(5).Infof("leader broker %s", leader.GetAddress())
 	}
 
 	brokers.Close()
 
-	return broker, err
+	return leader, err
 }
 
 func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *SimpleProducer {
@@ -93,9 +93,9 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 	p.messageSet = make([]*Message, config.MessageMaxCount)
 
-	p.broker, err = p.createBroker()
+	p.leader, err = p.createLeader()
 	if err != nil {
-		glog.Errorf("create producer broker error: %s", err)
+		glog.Errorf("create producer leader error: %s", err)
 		return nil
 	}
 
@@ -132,9 +132,9 @@ func (p *SimpleProducer) ensureOpen() bool {
 		return true
 	}
 
-	p.broker, err = p.createBroker()
+	p.leader, err = p.createLeader()
 	if err != nil {
-		glog.Error("create producer broker error: %s", err)
+		glog.Error("create producer leader error: %s", err)
 		return false
 	}
 
@@ -241,7 +241,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
-	responseBuf, err := p.broker.Request(produceRequest)
+	responseBuf, err := p.leader.Request(produceRequest)
 	if err != nil {
 		return err
 	}
@@ -258,5 +258,5 @@ func (p *SimpleProducer) Close() {
 	p.Flush()
 	glog.Info("SimpleProducer closing")
 	p.closed = true
-	p.broker.Close()
+	p.leader.Close()
 }
