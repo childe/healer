@@ -20,8 +20,7 @@ type SimpleProducer struct {
 	partition int32
 	closed    bool
 
-	messageSetSize int
-	messageSet     MessageSet
+	messageSet MessageSet
 
 	mutex sync.Locker
 	timer *time.Timer
@@ -92,6 +91,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	}
 
 	p.messageSet = make([]*Message, config.MessageMaxCount)
+	p.messageSet = p.messageSet[:0]
 
 	p.leader, err = p.createLeader()
 	if err != nil {
@@ -109,14 +109,14 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	go func() {
 		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
 			p.mutex.Lock()
-			if p.messageSetSize == 0 {
+			if len(p.messageSet) == 0 {
 				p.mutex.Unlock()
 				continue
 			}
 
-			messageSet := p.messageSet[:p.messageSetSize]
-			p.messageSetSize = 0
+			messageSet := p.messageSet
 			p.messageSet = make([]*Message, config.MessageMaxCount)
+			p.messageSet = p.messageSet[:0]
 			p.mutex.Unlock()
 
 			p.flush(messageSet)
@@ -163,9 +163,8 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 		Key:        key,
 		Value:      value,
 	}
-	p.messageSet[p.messageSetSize] = message
-	p.messageSetSize++
-	if p.messageSetSize >= p.config.MessageMaxCount {
+	p.messageSet = append(p.messageSet, message)
+	if len(p.messageSet) >= p.config.MessageMaxCount {
 		p.Flush()
 	}
 	return nil
@@ -174,14 +173,14 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 func (p *SimpleProducer) Flush() error {
 	p.mutex.Lock()
 
-	if p.messageSetSize == 0 {
+	if len(p.messageSet) == 0 {
 		p.mutex.Unlock()
 		return nil
 	}
 
-	messageSet := p.messageSet[:p.messageSetSize]
-	p.messageSetSize = 0
+	messageSet := p.messageSet
 	p.messageSet = make([]*Message, p.config.MessageMaxCount)
+	p.messageSet = p.messageSet[:0]
 
 	// TODO should below code put between lock & unlock
 	if !p.timer.Stop() {
