@@ -33,6 +33,8 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 		config:      config,
 		topic:       topic,
 		partitionID: partitionID,
+
+		wg: &sync.WaitGroup{},
 	}
 
 	brokerConfig := getBrokerConfigFromConsumerConfig(config)
