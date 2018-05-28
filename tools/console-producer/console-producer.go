@@ -51,6 +51,7 @@ func main() {
 			line, isPrefix, err = reader.ReadLine()
 			if err != nil {
 				if err == io.EOF {
+					producer.Close()
 					os.Exit(0)
 				}
 				glog.Errorf("readline error:%s", err)
