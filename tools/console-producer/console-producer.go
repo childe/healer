@@ -19,6 +19,8 @@ var (
 func init() {
 	flag.StringVar(&config.BootstrapServers, "brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
 	flag.StringVar(&config.CompressionType, "compression.type", "none", "defalut:none")
+	flag.IntVar(&config.MessageMaxCount, "message.max.count", config.MessageMaxCount, "")
+	flag.IntVar(&config.FlushIntervalMS, "flush.interval.ms", config.FlushIntervalMS, "")
 	flag.IntVar(&config.MetadataMaxAgeMS, "metadata.max.age.ms", config.MetadataMaxAgeMS, "The period of time in milliseconds after which we force a refresh of metadata even if we haven't seen any partition leadership changes to proactively discover any new brokers or partitions.")
 }
 
