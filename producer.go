@@ -110,6 +110,7 @@ func (p *Producer) AddMessage(key []byte, value []byte) error {
 		return simpleProducer.AddMessage(key, value)
 	}
 }
+
 func (p *Producer) Close() {
 	for _, sp := range p.simpleProducers {
 		sp.Close()
