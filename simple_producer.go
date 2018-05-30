@@ -163,7 +163,9 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 		Key:        key,
 		Value:      value,
 	}
+	p.mutex.Lock()
 	p.messageSet = append(p.messageSet, message)
+	p.mutex.Unlock()
 	if len(p.messageSet) >= p.config.MessageMaxCount {
 		p.Flush()
 	}
@@ -194,6 +196,8 @@ func (p *SimpleProducer) Flush() error {
 }
 
 func (p *SimpleProducer) flush(messageSet MessageSet) error {
+	glog.V(5).Infof("produce %d messsages", len(messageSet))
+
 	produceRequest := &ProduceRequest{
 		RequiredAcks: p.config.Acks,
 		Timeout:      p.config.RequestTimeoutMS,
