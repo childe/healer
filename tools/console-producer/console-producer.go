@@ -59,11 +59,7 @@ func main() {
 				glog.Errorf("readline error:%s", err)
 				os.Exit(5)
 			}
-			if text == nil {
-				text = line
-			} else {
-				text = append(text, line...)
-			}
+			text = append(text, line...)
 		}
 		producer.AddMessage(nil, text)
 	}
