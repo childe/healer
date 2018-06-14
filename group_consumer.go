@@ -408,6 +408,7 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 		err = c.getCoordinator()
 		if err != nil {
 			glog.Errorf("could not find coordinator:%s", err)
+			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 
@@ -416,6 +417,7 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 			break
 		} else {
 			glog.Error(err)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 
