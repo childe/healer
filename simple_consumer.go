@@ -128,25 +128,22 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
 		r.AddPartiton(c.topic, c.partitionID)
 
-		//TODO max retries
 		var res *OffsetFetchResponse
-		for i := 0; i < 3; i++ {
+		for {
 			response, err := c.belongTO.coordinator.Request(r)
 			if err != nil {
 				glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
+				time.Sleep(500 * time.Millisecond)
 				continue
 			}
 
 			res, err = NewOffsetFetchResponse(response)
 			if res == nil {
 				glog.Errorf("decode offset fetch response error:%s", err)
+				time.Sleep(500 * time.Millisecond)
 			} else {
-				err = nil
 				break
 			}
-		}
-		if err != nil {
-			glog.Fatalf("could not fetch offset of [%s][%d]", c.topic, c.partitionID)
 		}
 
 		for _, t := range res.Topics {
