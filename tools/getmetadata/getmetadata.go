@@ -32,7 +32,7 @@ func main() {
 		metadataResponse, err = brokers.RequestMetaData(*clientID, []string{*topic})
 	}
 
-	if err != nil {
+	if metadataResponse == nil || len(metadataResponse.TopicMetadatas) == 0 {
 		glog.Errorf("failed to get metadata response:%s", err)
 		os.Exit(5)
 	}
