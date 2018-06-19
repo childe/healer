@@ -4,6 +4,7 @@ package healer
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -213,15 +214,15 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 			glog.Infof("get broker from %s:%d error: %s", brokerInfo.Host, brokerInfo.Port, err)
 		}
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
-		if err != nil {
-			glog.Errorf("get metadata from %s error: %s", broker.address, err)
-			if err != AllError[9] {
-				continue
-			}
-			glog.Info("ignore the error")
-			return metadataResponse, nil
-		} else {
-			return metadataResponse, nil
+
+		if err == nil {
+			return metadataResponse, err
+		}
+
+		glog.Errorf("get metadata from %s error: %s", broker.address, err)
+		if "*healer.Error" == reflect.TypeOf(err).String() && !err.(*Error).Retriable {
+			glog.Info("error not retriable")
+			return metadataResponse, err
 		}
 	}
 
