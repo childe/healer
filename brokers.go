@@ -28,11 +28,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	}
 
 	// TODO set topics to [""] ?
-	metadataResponse, err := broker.requestMetaData(clientID, nil)
-	if err != nil {
-		glog.Errorf("get metadata(to get nodes info) from %s error: %s", broker.GetAddress(), err)
-	}
-
+	metadataResponse, err := broker.requestMetaData(clientID, []string{""})
 	if metadataResponse == nil || metadataResponse.Brokers == nil {
 		return nil, err
 	}
