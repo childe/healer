@@ -118,7 +118,7 @@ func (c *GroupConsumer) getCoordinator() error {
 		return err
 	}
 
-	coordinatorBroker, err := c.brokers.NewBroker(coordinatorResponse.Coordinator.NodeID)
+	coordinatorBroker, err := c.brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
 	if err != nil {
 		return err
 	}
