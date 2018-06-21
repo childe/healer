@@ -246,11 +246,11 @@ func (c *GroupConsumer) joinAndSync() error {
 	for {
 		if c.coordinator == nil {
 			err = c.getCoordinator()
-		}
-		if err != nil {
-			glog.Errorf("could not find coordinator: %s", err)
-			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
-			continue
+			if err != nil {
+				glog.Errorf("could not find coordinator: %s", err)
+				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+				continue
+			}
 		}
 
 		err = c.join()
