@@ -413,10 +413,12 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	var err error
 	for {
-		err = c.getCoordinator()
+		if c.coordinator == nil {
+			err = c.getCoordinator()
+		}
 		if err != nil {
-			glog.Errorf("could not find coordinator:%s", err)
-			time.Sleep(500 * time.Millisecond)
+			glog.Errorf("could not find coordinator: %s", err)
+			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 			continue
 		}
 
@@ -424,8 +426,7 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 		if err == nil {
 			break
 		} else {
-			glog.Error(err)
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 		}
 	}
 
