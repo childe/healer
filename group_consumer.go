@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -158,7 +159,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 }
 
 // join && set generationID&memberID
-func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
+func (c *GroupConsumer) join() error {
 	glog.Infof("try to join group %s", c.config.GroupID)
 	c.memberID = ""
 	var (
@@ -176,12 +177,22 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	joinGroupResponse, err := c.coordinator.requestJoinGroup(
 		c.config.ClientID, c.config.GroupID, int32(c.config.SessionTimeoutMS), memberID, protocolType, gps)
 
-	if err != nil {
-		return nil, err
-	}
 	if glog.V(2) {
 		b, _ := json.Marshal(joinGroupResponse)
 		glog.Infof("join response:%s", b)
+	}
+
+	if err != nil {
+		glog.Infof("join %s error: %s", c.config.GroupID, err)
+
+		if "*healer.Error" != reflect.TypeOf(err).String() {
+			return err
+		}
+
+		if err == AllError[15] || err == AllError[16] {
+			c.coordinator = nil
+		}
+		return err
 	}
 
 	c.generationID = joinGroupResponse.GenerationID
@@ -194,10 +205,10 @@ func (c *GroupConsumer) join() (*JoinGroupResponse, error) {
 	} else {
 		c.ifLeader = false
 	}
-	return joinGroupResponse, nil
+	return nil
 }
 
-func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
+func (c *GroupConsumer) sync() error {
 	glog.Infof("try to sync group %s", c.config.GroupID)
 	var groupAssignment GroupAssignment
 	if c.ifLeader {
@@ -217,43 +228,39 @@ func (c *GroupConsumer) sync() (*SyncGroupResponse, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		glog.Infof("sync %s error: %s", c.config.GroupID, err)
+		return err
 	}
 
 	err = c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
 	if err != nil {
-		glog.Errorf("parse group assignments error:%s", err)
-		return syncGroupResponse, err
+		glog.Errorf("parse group assignments error: %s", err)
+		return err
 	}
 
-	return syncGroupResponse, nil
+	return nil
 }
 
 func (c *GroupConsumer) joinAndSync() error {
+	var err error
 	for {
-		_, err := c.join()
-		if err != nil {
-			glog.Infof("join %s error:%s", c.config.GroupID, err)
-			if err == AllError[16] {
-				return err
-			}
-			time.Sleep(time.Second * 1)
-			continue
+		err = c.join()
+		if err == nil {
+			err = c.sync()
 		}
 
-		for i := 0; i < 3; i++ {
-			_, err := c.sync()
-			if err != nil {
-				glog.Infof("sync %s error:%s", c.config.GroupID, err)
-				if err == AllError[27] {
-					break // rejoin group
-				} else {
-					continue
-				}
-			} else {
-				return nil
-			}
+		if err == nil {
+			return nil
 		}
+
+		if err == AllError[22] || err == AllError[25] || err == AllError[27] {
+			continue
+		}
+		if "*healer.Error" == reflect.TypeOf(err).String() && err.(*Error).Retriable {
+			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+			continue
+		}
+		return err
 	}
 }
 
