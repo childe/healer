@@ -98,7 +98,7 @@ func getCommittedOffset(topic string, partitions []int32, groupID string) (map[i
 		if err != nil {
 			return nil, err
 		}
-		glog.V(5).Infof("coordinator of %s:%s", groupID, coordinator.GetAddress())
+		glog.V(5).Infof("coordinator of %s: %s", groupID, coordinator.GetAddress())
 		groups[groupID] = coordinator
 	}
 
@@ -214,11 +214,7 @@ func main() {
 		os.Exit(5)
 	}
 
-	helper, err = healer.NewHelper(*bootstrapServers, *clientID, brokerConfig)
-	if err != nil {
-		glog.Errorf("create helper error:%s", err)
-		os.Exit(5)
-	}
+	helper = healer.NewHelperFromBrokers(brokers, *clientID)
 
 	groupIDs := getGroups(*groupID)
 	if glog.V(5) {
@@ -234,7 +230,11 @@ func main() {
 			glog.Errorf("get subscriptions of %s error: %s", groupID, err)
 			continue
 		}
+
+		glog.V(5).Infof("%d topics", len(subscriptions))
+
 		for topicName, v := range subscriptions {
+			glog.V(5).Infof("topic: %s", topicName)
 			if *topic != "" && topicName != *topic {
 				continue
 			}

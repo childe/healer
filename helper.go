@@ -14,6 +14,15 @@ type Helper struct {
 	metaInfo *MetaInfo
 }
 
+func NewHelperFromBrokers(brokers *Brokers, clientID string) *Helper {
+	h := &Helper{
+		clientID: clientID,
+		brokers:  brokers,
+		metaInfo: &MetaInfo{},
+	}
+
+	return h
+}
 func NewHelper(brokerList, clientID string, config *BrokerConfig) (*Helper, error) {
 	//func NewBrokers(brokerList string, clientID string, connecTimeout int, timeout int) (*Brokers, error) {
 	var (
