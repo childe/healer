@@ -287,6 +287,10 @@ func (c *GroupConsumer) heartbeat() error {
 }
 
 func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
+	if c.coordinator == nil {
+		glog.V(5).Infof("do not commit offset [%s][%d]:%d because coordinator is nil now", topic, partitionID, offset)
+		return
+	}
 	var apiVersion uint16
 	if c.config.OffsetsStorage == 1 {
 		apiVersion = 2
