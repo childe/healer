@@ -27,6 +27,7 @@ type GroupConsumer struct {
 	topicMetadatas       []*TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
+	coordinatorAvailable bool
 	topics               []string
 	fromBeginning        bool
 	partitionAssignments []*PartitionAssignment
@@ -70,7 +71,8 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},
 
-		joined: false,
+		joined:               false,
+		coordinatorAvailable: false,
 	}
 
 	return c, nil
@@ -190,7 +192,7 @@ func (c *GroupConsumer) join() error {
 		}
 
 		if err == AllError[15] || err == AllError[16] {
-			c.coordinator = nil
+			c.coordinatorAvailable = false
 		}
 		return err
 	}
@@ -244,7 +246,7 @@ func (c *GroupConsumer) sync() error {
 func (c *GroupConsumer) joinAndSync() error {
 	var err error
 	for {
-		if c.coordinator == nil {
+		if !c.coordinatorAvailable {
 			err = c.getCoordinator()
 			if err != nil {
 				glog.Errorf("could not find coordinator: %s", err)
@@ -287,8 +289,8 @@ func (c *GroupConsumer) heartbeat() error {
 }
 
 func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
-	if c.coordinator == nil {
-		glog.V(5).Infof("do not commit offset [%s][%d]:%d because coordinator is nil now", topic, partitionID, offset)
+	if !c.coordinatorAvailable {
+		glog.V(5).Infof("do not commit offset [%s][%d]:%d because coordinator is not available", topic, partitionID, offset)
 		return
 	}
 	var apiVersion uint16
