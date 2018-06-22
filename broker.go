@@ -67,6 +67,7 @@ func (broker *Broker) GetAddress() string {
 func (broker *Broker) Close() {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
+	broker.dead = true
 	broker.conn.Close()
 }
 
