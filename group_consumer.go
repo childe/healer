@@ -254,6 +254,7 @@ func (c *GroupConsumer) joinAndSync() error {
 				continue
 			}
 		}
+		c.coordinatorAvailable = true
 
 		err = c.join()
 		if err == nil {
