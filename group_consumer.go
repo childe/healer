@@ -384,11 +384,9 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 			err := c.heartbeat()
 			if err != nil {
 				glog.Errorf("failed to send heartbeat:%s", err)
-				if err != nil {
-					c.stop()
-					c.joined = false
-					c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
-				}
+				c.stop()
+				c.joined = false
+				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
 			}
 		}
 	}()
