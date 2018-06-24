@@ -65,6 +65,7 @@ func (broker *Broker) GetAddress() string {
 }
 
 func (broker *Broker) Close() {
+	broker.dead = true
 	broker.conn.Close()
 }
 
@@ -120,7 +121,6 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
-			broker.dead = true
 			broker.Close()
 			return nil, err
 		}
@@ -142,7 +142,6 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 		}
 		length, err := broker.conn.Read(responseBuf[4+readLength:])
 		if err != nil {
-			broker.dead = true
 			broker.Close()
 			return nil, err
 		}
@@ -182,7 +181,6 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 		}
 		length, err := broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
-			broker.dead = true
 			broker.Close()
 			return err
 		}
@@ -207,7 +205,6 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 		}
 		length, err := broker.conn.Read(buf)
 		if err != nil {
-			broker.dead = true
 			broker.Close()
 			return err
 		}
