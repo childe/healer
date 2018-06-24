@@ -290,8 +290,8 @@ func (c *GroupConsumer) heartbeat() error {
 }
 
 func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
-	if !c.coordinatorAvailable {
-		glog.V(5).Infof("do not commit offset [%s][%d]:%d because coordinator is not available", topic, partitionID, offset)
+	if c.memberID == "" {
+		glog.V(5).Infof("do not commit offset [%s][%d]:%d because memberID is not available", topic, partitionID, offset)
 		return
 	}
 	var apiVersion uint16
