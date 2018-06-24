@@ -105,7 +105,7 @@ func (broker *Broker) Request(r Request) ([]byte, error) {
 
 func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 	// TODO log?
-	glog.V(10).Info(broker.conn.LocalAddr())
+	glog.V(10).Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
 	n, err := broker.conn.Write(payload)
 	if err != nil {
@@ -220,7 +220,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 		buffers <- buf[:length]
 
 		readLength += length
-		glog.V(12).Infof("totally send %d/%d bytes to fetch response payload", readLength+4, responseLength+4)
+		glog.V(15).Infof("totally send %d/%d bytes to fetch response payload", readLength+4, responseLength+4)
 		if readLength > responseLength {
 			return errors.New("fetch more data than needed while read fetch response")
 		}
