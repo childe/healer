@@ -21,6 +21,8 @@ var (
 	groupID          = flag.String("group.id", "", "if groupID is left blank: 1.get all groupID consuming the topic if topic is given. 2.get all groupID in the cluster")
 	clientID         = flag.String("client.id", "healer-get-pending", "The ID of this client.")
 
+	offsetsStorage = flag.Int("offsets.storage", 1, "Select where offsets are stored (0 zookeeper or 1 kafka)")
+
 	header = flag.Bool("header", true, "if print header")
 	total  = flag.Bool("total", false, "if print total offset of one topic")
 )
@@ -102,7 +104,7 @@ func getCommittedOffset(topic string, partitions []int32, groupID string) (map[i
 		groups[groupID] = coordinator
 	}
 
-	r := healer.NewOffsetFetchRequest(1, *clientID, groupID)
+	r := healer.NewOffsetFetchRequest((uint16)(*offsetsStorage), *clientID, groupID)
 	for _, p := range partitions {
 		r.AddPartiton(topic, p)
 	}

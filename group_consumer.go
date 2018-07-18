@@ -414,6 +414,9 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 			}
 			if !topicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
+				if !c.joined {
+					continue
+				}
 				c.stop()
 				c.joined = false
 				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
