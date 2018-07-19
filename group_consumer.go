@@ -35,9 +35,10 @@ type GroupConsumer struct {
 
 	messages chan *FullMessage
 
-	mutex              sync.Locker
-	wg                 sync.WaitGroup // wg is used to tell if all consumer has already stopped
-	assignmentStrategy AssignmentStrategy
+	mutex                        sync.Locker
+	consumeWithoutHeartBeatMutex sync.Locker
+	wg                           sync.WaitGroup // wg is used to tell if all consumer has already stopped
+	assignmentStrategy           AssignmentStrategy
 }
 
 func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, error) {
@@ -68,8 +69,9 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 		correlationID: 0,
 		config:        config,
 
-		mutex:              &sync.Mutex{},
-		assignmentStrategy: &RangeAssignmentStrategy{},
+		mutex: &sync.Mutex{},
+		consumeWithoutHeartBeatMutex: &sync.Mutex{},
+		assignmentStrategy:           &RangeAssignmentStrategy{},
 
 		joined:               false,
 		coordinatorAvailable: false,
@@ -414,9 +416,6 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 			}
 			if !topicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
-				if !c.joined {
-					continue
-				}
 				c.stop()
 				c.joined = false
 				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
@@ -428,6 +427,12 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 }
 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
+	c.consumeWithoutHeartBeatMutex.Lock()
+	if c.joined {
+		return messages, nil
+	}
+	defer c.consumeWithoutHeartBeatMutex.Unlock()
+
 	var err error
 	for {
 		err = c.joinAndSync()
