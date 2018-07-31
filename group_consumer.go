@@ -428,10 +428,10 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	c.consumeWithoutHeartBeatMutex.Lock()
+	defer c.consumeWithoutHeartBeatMutex.Unlock()
 	if c.joined {
 		return messages, nil
 	}
-	defer c.consumeWithoutHeartBeatMutex.Unlock()
 
 	var err error
 	for {
