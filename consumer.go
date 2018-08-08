@@ -54,12 +54,7 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 		topicName := topicMetadatas.TopicName
 		for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 			partitionID := partitionMetadataInfo.PartitionID
-			simpleConsumer := &SimpleConsumer{
-				partitionID: partitionID,
-				brokers:     consumer.brokers,
-				topic:       topicName,
-				config:      consumer.config,
-			}
+			simpleConsumer := NewSimpleConsumerWithBrokers(topicName, partitionID, consumer.config, consumer.brokers)
 			consumer.SimpleConsumers = append(consumer.SimpleConsumers, simpleConsumer)
 		}
 	}
