@@ -159,7 +159,7 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 
 		Crc:        0,    // compute in message encode
 		Attributes: 0x00, // compress in upper message set level
-		MagicByte:  1,
+		MagicByte:  0,
 		Key:        key,
 		Value:      value,
 	}
@@ -236,7 +236,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 
 			Crc:        0, // compute in message encode
 			Attributes: 0x00 | p.compressionValue,
-			MagicByte:  1,
+			MagicByte:  0,
 			Key:        nil,
 			Value:      compressed_value,
 		}
