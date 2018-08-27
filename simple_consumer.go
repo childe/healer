@@ -81,6 +81,7 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 		return err
 	}
 
+	var retry = 3
 	for i := 0; i < retry; i++ {
 		c.leaderBroker, err = c.brokers.NewBroker(leaderID)
 		if err != nil {
