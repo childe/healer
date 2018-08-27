@@ -75,7 +75,8 @@ func main() {
 	for _, partitionMetadata := range topicMetadata.PartitionMetadatas {
 		partitionID = partitionMetadata.PartitionID
 		if partitionMetadata.PartitionErrorCode != 0 {
-			glog.Fatalf("get partition[%d] metainfo errorcode:%d", partitionID, partitionMetadata.PartitionErrorCode)
+			glog.Errorf("partition[%d] metainfo error: %s", partitionID, healer.AllError[partitionMetadata.PartitionErrorCode])
+			continue
 		}
 
 		// get offset
