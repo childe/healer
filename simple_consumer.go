@@ -73,7 +73,12 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 			continue
 		} else {
 			glog.V(5).Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
-			break
+			if leaderID != -1 {
+				break
+			} else {
+				glog.V(5).Infof("sleep 1 second and retry")
+				time.Sleep(time.Second * 1)
+			}
 		}
 	}
 
