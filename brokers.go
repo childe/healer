@@ -295,7 +295,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (int32, error) {
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
 	if err != nil {
-		return -1, fmt.Errorf("could not get metadata of topic %s:%s", topic, err)
+		return -1, fmt.Errorf("could not get metadata of topic %s: %s", topic, err)
 	}
 
 	partitionMetadatas := metadataResponse.TopicMetadatas[0].PartitionMetadatas
