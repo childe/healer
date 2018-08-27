@@ -63,13 +63,13 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 	var (
 		err      error
 		leaderID int32
-		retry    = 3
 	)
 
-	for i := 0; i < retry; i++ {
+	for {
 		leaderID, err = c.brokers.findLeader(c.config.ClientID, c.topic, c.partitionID)
 		if err != nil {
-			glog.Errorf("find leader error:%s", err)
+			glog.Errorf("find leader error: %s", err)
+			time.Sleep(time.Second * 1)
 			continue
 		} else {
 			glog.V(5).Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
