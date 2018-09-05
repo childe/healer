@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -17,6 +18,8 @@ type Brokers struct {
 
 	brokersInfo map[int32]*BrokerInfo
 	brokers     map[int32]*Broker
+
+	mutex sync.Locker
 }
 
 // get all brokers meda info from MetaData api
@@ -26,6 +29,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		config:      config,
 		brokersInfo: make(map[int32]*BrokerInfo),
 		brokers:     make(map[int32]*Broker),
+		mutex:       &sync.Mutex{},
 	}
 
 	// TODO set topics to [""] ?
@@ -34,6 +38,8 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		return nil, err
 	}
 
+	brokers.mutex.Lock()
+	defer brokers.mutex.Unlock()
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokers.brokersInfo[brokerInfo.NodeId] = brokerInfo
 		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
@@ -172,6 +178,9 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 
 // GetBroke returns random one broker if nodeID is -1
 func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
+	brokers.mutex.Lock()
+	defer brokers.mutex.Unlock()
+
 	if nodeID == -1 {
 		for _, broker := range brokers.brokers {
 			if broker.dead == false {
