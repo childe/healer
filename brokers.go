@@ -238,6 +238,8 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 			glog.Info("error not retriable")
 			return metadataResponse, err
 		}
+
+		time.Sleep(time.Millisecond * 200)
 	}
 
 	return metadataResponse, err
