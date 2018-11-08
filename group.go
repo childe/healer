@@ -90,17 +90,19 @@ func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 		return nil, &emptyPayload
 	}
 	r := &MemberAssignment{}
-	offset := 0
-	count := 0
+	var (
+		offset int   = 0
+		count  int32 = 0
+	)
 
 	r.Version = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
-	count = int(binary.BigEndian.Uint32(payload[offset:]))
+	count = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 	r.PartitionAssignments = make([]*PartitionAssignment, count)
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < int(count); i++ {
 		r.PartitionAssignments[i] = &PartitionAssignment{}
 		topicLength := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
@@ -117,10 +119,13 @@ func NewMemberAssignment(payload []byte) (*MemberAssignment, error) {
 		}
 	}
 
-	count = int(binary.BigEndian.Uint32(payload[offset:]))
+	count = int32(binary.BigEndian.Uint32(payload[offset:]))
+	if count == -1 {
+		return r, nil
+	}
 	offset += 4
 	r.UserData = make([]byte, count)
-	copy(r.UserData, payload)
+	copy(r.UserData, payload[offset:])
 
 	return r, nil
 }
