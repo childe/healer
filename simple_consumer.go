@@ -116,6 +116,15 @@ func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 
 func (c *SimpleConsumer) Stop() {
 	c.stop = true
+	c.commitOffset()
+}
+
+func (c *SimpleConsumer) commitOffset() {
+	if c.belongTO != nil {
+		if c.belongTO.commitOffset(c.topic, c.partitionID, c.offset) {
+			c.offsetCommited = c.offset
+		}
+	}
 }
 
 // if offset is -1 or -2, first check if has previous offset committed if its BelongTO is not nil
@@ -207,8 +216,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 					return
 				}
 				if c.offset != c.offsetCommited {
-					c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
-					c.offsetCommited = c.offset
+					c.commitOffset()
 				}
 			}
 		}()
@@ -220,8 +228,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		defer func() {
 			glog.V(10).Infof("simple consumer (%s) stop consuming", c.config.ClientID)
 			if c.belongTO != nil && c.offset != c.offsetCommited {
-				c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
-				c.offsetCommited = c.offset
+				c.commitOffset()
 			}
 			c.wg.Done()
 		}()
@@ -280,9 +287,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 				}
 			}
 
+			// is this really needed ?
 			if c.belongTO != nil && c.config.CommitAfterFetch && c.offset != c.offsetCommited {
-				c.belongTO.CommitOffset(c.topic, c.partitionID, c.offset)
-				c.offsetCommited = c.offset
+				c.commitOffset()
 			}
 		}
 		c.leaderBroker.Close()
