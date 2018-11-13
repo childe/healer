@@ -384,7 +384,7 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 	c.fromBeginning = fromBeginning
 
 	if messages == nil {
-		messages = make(chan *FullMessage, 1024)
+		messages = make(chan *FullMessage, 10)
 	}
 	c.messages = messages
 
@@ -437,9 +437,6 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
 	c.consumeWithoutHeartBeatMutex.Lock()
 	defer c.consumeWithoutHeartBeatMutex.Unlock()
-	if c.joined {
-		return messages, nil
-	}
 
 	var err error
 	for {

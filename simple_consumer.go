@@ -202,7 +202,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 
 	var messages chan *FullMessage
 	if messageChan == nil {
-		messages = make(chan *FullMessage, 1024)
+		messages = make(chan *FullMessage, 10)
 	} else {
 		messages = messageChan
 	}
@@ -239,7 +239,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 			fetchRequest.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
 			buffers := make(chan []byte, 10)
-			innerMessages := make(chan *FullMessage, 1024)
+			innerMessages := make(chan *FullMessage, 10)
 			go func() {
 				err := c.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
 				if err != nil {
