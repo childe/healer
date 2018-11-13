@@ -292,9 +292,15 @@ func (c *GroupConsumer) heartbeat() error {
 }
 
 func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
+	for _, s := range c.simpleConsumers {
+		s.commitOffset()
+	}
+}
+
+func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int64) bool {
 	if c.memberID == "" {
 		glog.V(5).Infof("do not commit offset [%s][%d]:%d because memberID is not available", topic, partitionID, offset)
-		return
+		return false
 	}
 	var apiVersion uint16
 	if c.config.OffsetsStorage == 1 {
@@ -316,8 +322,10 @@ func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int
 		} else {
 			glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 		}
+		return true
 	} else {
 		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
+		return false
 	}
 }
 
