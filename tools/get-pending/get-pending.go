@@ -4,30 +4,32 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
 )
 
-type Group map[string]*healer.Broker // groupID -> broker
-type Tasks map[string]Group          // topic -> groupID > coordinatorAddress
-
-var groups = map[string]*healer.Broker{}
-
 var (
 	brokerConfig = healer.DefaultBrokerConfig()
 
 	bootstrapServers = flag.String("bootstrap.servers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic            = flag.String("topic", "", "if topic is left blank: 1.get topics under the groupID if groupID if given. 2.get all topic in the cluster if groupID is not given")
-	groupID          = flag.String("groupID", "", "if groupID is left blank: 1.get all groupID consuming the topic if topic is given. 2.get all groupID in the cluster")
-	clientID         = flag.String("clientID", "healer-get-pending", "The ID of this client.")
+	groupID          = flag.String("group.id", "", "if groupID is left blank: 1.get all groupID consuming the topic if topic is given. 2.get all groupID in the cluster")
+	clientID         = flag.String("client.id", "healer-get-pending", "The ID of this client.")
+
+	offsetsStorage = flag.Int("offsets.storage", 1, "Select where offsets are stored (0 zookeeper or 1 kafka)")
 
 	header = flag.Bool("header", true, "if print header")
 	total  = flag.Bool("total", false, "if print total offset of one topic")
 )
 
 var (
+	groups = map[string]*healer.Broker{}
+
 	brokers *healer.Brokers
 	err     error
 	helper  *healer.Helper
@@ -37,6 +39,12 @@ func init() {
 	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
 	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
 }
+
+type By []int32
+
+func (a By) Len() int           { return len(a) }
+func (a By) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a By) Less(i, j int) bool { return a[i] < a[j] }
 
 func getPartitions(topic string) ([]int32, error) {
 	var metadataResponse *healer.MetadataResponse
@@ -53,6 +61,7 @@ func getPartitions(topic string) ([]int32, error) {
 		}
 	}
 
+	sort.Sort(By(partitions))
 	return partitions, nil
 }
 
@@ -80,8 +89,8 @@ func getOffset(topic string) (map[int32]int64, error) {
 	return rst, nil
 }
 
-// TODO remove partitons
-func getCommitedOffset(topic string, partitions []int32, groupID string) (map[int32]int64, error) {
+// TODO remove partitons parameters
+func getCommittedOffset(topic string, partitions []int32, groupID string) (map[int32]int64, error) {
 	if _, ok := groups[groupID]; !ok {
 		coordinatorResponse, err := brokers.FindCoordinator(*clientID, groupID)
 		if err != nil {
@@ -91,11 +100,11 @@ func getCommitedOffset(topic string, partitions []int32, groupID string) (map[in
 		if err != nil {
 			return nil, err
 		}
-		glog.V(5).Infof("coordinator of %s:%s", groupID, coordinator.GetAddress())
+		glog.V(5).Infof("coordinator of %s: %s", groupID, coordinator.GetAddress())
 		groups[groupID] = coordinator
 	}
 
-	r := healer.NewOffsetFetchRequest(1, *clientID, groupID)
+	r := healer.NewOffsetFetchRequest((uint16)(*offsetsStorage), *clientID, groupID)
 	for _, p := range partitions {
 		r.AddPartiton(topic, p)
 	}
@@ -119,31 +128,16 @@ func getCommitedOffset(topic string, partitions []int32, groupID string) (map[in
 	return rst, nil
 }
 
-func getAllTopics() ([]string, error) {
-	var metadataResponse *healer.MetadataResponse
-	metadataResponse, err = brokers.RequestMetaData(*clientID, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	topics := make([]string, 0)
-	for _, t := range metadataResponse.TopicMetadatas {
-		topics = append(topics, t.TopicName)
-	}
-
-	return topics, nil
-}
-
-func getTopicsInGroup(groupID string) (map[string]bool, error) {
+// topicName -> partitionID -> memberID
+func getSubscriptionsInGroup(groupID string) (map[string]map[int32]string, error) {
 	if _, ok := groups[groupID]; !ok {
 		coordinatorResponse, err := brokers.FindCoordinator(*clientID, groupID)
 		if err != nil {
-			return nil, err
+			glog.Fatalf("could not find coordinator: %s", err)
 		}
 		coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
 		if err != nil {
-			return nil, err
+			glog.Fatalf("get broker error: %s", err)
 		}
 		glog.V(5).Infof("coordinator of %s:%s", groupID, coordinator.GetAddress())
 		groups[groupID] = coordinator
@@ -161,9 +155,10 @@ func getTopicsInGroup(groupID string) (map[string]bool, error) {
 		return nil, err
 	}
 
-	topics := make(map[string]bool)
+	subscriptions := make(map[string]map[int32]string)
 	for _, group := range response.Groups {
 		for _, memberDetail := range group.Members {
+			memberID := memberDetail.MemberID
 			if len(memberDetail.MemberAssignment) == 0 {
 				continue
 			}
@@ -172,80 +167,242 @@ func getTopicsInGroup(groupID string) (map[string]bool, error) {
 				return nil, err
 			}
 			for _, p := range memberAssignment.PartitionAssignments {
-				topics[p.Topic] = true
+				topicName := p.Topic
+				if _, ok := subscriptions[topicName]; !ok {
+					subscriptions[topicName] = make(map[int32]string)
+				}
+				for _, partitionID := range p.Partitions {
+					subscriptions[topicName][partitionID] = memberID
+				}
 			}
 		}
 	}
+	return subscriptions, nil
+}
+
+func getGroups(groupID string) []string {
+	if groupID == "" {
+		return helper.GetGroups()
+	}
+	if !strings.Contains(groupID, "*") {
+		return []string{groupID}
+	}
+
+	var p string = strings.Replace(groupID, ".", `\.`, -1)
+	p = strings.Replace(groupID, "*", ".*", -1)
+	var groupPattern *regexp.Regexp = regexp.MustCompile("^" + p + "$")
+
+	var (
+		rst      []string = make([]string, 0)
+		groupIDs []string = helper.GetGroups()
+	)
+	if groupIDs == nil {
+		return nil
+	}
+	for _, g := range groupIDs {
+		if groupPattern.MatchString(g) {
+			rst = append(rst, g)
+		}
+	}
+	return rst
+}
+
+func getAllTopics() ([]string, error) {
+	var metadataResponse *healer.MetadataResponse
+	metadataResponse, err = brokers.RequestMetaData(*clientID, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	topics := make([]string, 0)
+	for _, t := range metadataResponse.TopicMetadatas {
+		topics = append(topics, t.TopicName)
+	}
+
 	return topics, nil
 }
 
-func initTasks(topic, groupID string) Tasks {
-	tasks := map[string]Group{}
-	if topic != "" && groupID != "" {
-		tasks[topic] = Group{groupID: nil}
-		return tasks
-	}
+func mainGroupGiven() {
+	helper = healer.NewHelperFromBrokers(brokers, *clientID)
 
-	if topic == "" && groupID != "" {
-		topics, err := getTopicsInGroup(groupID)
-		if err != nil {
-			glog.Errorf("fetch topics in group[%s] error:%s", groupID, err)
-			return nil
-		}
-		for topic := range topics {
-			tasks[topic] = Group{groupID: nil}
-		}
-		return tasks
-	}
-
-	// group is ""
-	groupIDs := helper.GetGroups()
-	if groupIDs == nil {
-		glog.Errorf("get groups error:%s", err)
-		return nil
-	}
+	groupIDs := getGroups(*groupID)
 	if glog.V(5) {
 		for i, group := range groupIDs {
 			glog.Infof("%d/%d %s", i, len(groupIDs), group)
 		}
 	}
 
-	groupTopics := make(map[string]map[string]bool)
-	for _, groupID := range groupIDs {
-		topics, err := getTopicsInGroup(groupID)
+	for i, groupID := range groupIDs {
+		glog.V(10).Infof("%d/%d %s", i, len(groupIDs), groupID)
+		subscriptions, err := getSubscriptionsInGroup(groupID)
 		if err != nil {
-			glog.Errorf("get topics in [%s] error:%s", groupID, err)
-			return nil
+			glog.Errorf("get subscriptions of %s error: %s", groupID, err)
+			continue
 		}
-		groupTopics[groupID] = topics
-	}
 
-	// topic != "" && group == ""
-	if topic != "" {
-		tasks[topic] = Group{}
-		for groupID, topics := range groupTopics {
-			if _, ok := topics[topic]; ok {
-				tasks[topic][groupID] = groups[groupID]
+		glog.V(5).Infof("%d topics", len(subscriptions))
+
+		for topicName, v := range subscriptions {
+			glog.V(5).Infof("topic: %s", topicName)
+			if *topic != "" && topicName != *topic {
+				continue
+			}
+
+			timestamp := time.Now().Unix()
+
+			offsets, err := getOffset(topicName)
+			if err != nil {
+				glog.Errorf("get offsets error: %s", err)
+				continue
+			}
+
+			partitions, err := getPartitions(topicName)
+			if err != nil {
+				glog.Errorf("get partitions of %s error: %s", topicName, err)
+				continue
+			}
+			committedOffsets, err := getCommittedOffset(topicName, partitions, groupID)
+			if err != nil {
+				glog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
+				continue
+			}
+
+			var (
+				offsetSum    int64 = 0
+				committedSum int64 = 0
+				pendingSum   int64 = 0
+			)
+
+			if *header {
+				fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag  owner")
+			}
+
+			for _, partitionID := range partitions {
+				pending := offsets[partitionID] - committedOffsets[partitionID]
+				offsetSum += offsets[partitionID]
+				committedSum += committedOffsets[partitionID]
+				pendingSum += pending
+				fmt.Printf("%d  %s  %s  %d  %d  %d  %d  %s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, v[partitionID])
+			}
+			if *total {
+				fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
 			}
 		}
-		return tasks
+	}
+}
+
+func mainGroupNotGiven() {
+	helper = healer.NewHelperFromBrokers(brokers, *clientID)
+
+	groupIDs := getGroups(*groupID)
+	if glog.V(5) {
+		for i, group := range groupIDs {
+			glog.Infof("%d/%d %s", i, len(groupIDs), group)
+		}
 	}
 
-	// topic != "" && group != ""
-	topics, err := getAllTopics()
-	if err != nil {
-		glog.Errorf("get all topics error:%s", err)
-		return nil
+	var (
+		topics []string = make([]string, 0)
+		err    error
+	)
+
+	if *topic != "" {
+		topics = append(topics, *topic)
+	} else {
+		topics, err = getAllTopics()
+		if err != nil {
+			glog.Fatalf("failed to get topics: %s", err)
+		}
 	}
-	for _, topic := range topics {
-		tasks[topic] = Group{}
-		for groupID, topics := range groupTopics {
-			if _, ok := topics[topic]; ok {
-				tasks[topic][groupID] = groups[groupID]
+
+	glog.V(5).Infof("%d topics", len(topics))
+
+	for j, _ := range topics {
+		hasOwner := false
+
+		for i, groupID := range groupIDs {
+			glog.V(10).Infof("%d/%d %s", i, len(groupIDs), groupID)
+			subscriptions, err := getSubscriptionsInGroup(groupID)
+			if err != nil {
+				glog.Errorf("get subscriptions of %s error: %s", groupID, err)
+				continue
+			}
+
+			glog.V(5).Infof("%d topics", len(subscriptions))
+			for topicName, v := range subscriptions {
+				glog.V(5).Infof("topic: %s", topicName)
+				if topicName != topics[j] {
+					continue
+				}
+
+				hasOwner = true
+
+				timestamp := time.Now().Unix()
+
+				offsets, err := getOffset(topicName)
+				if err != nil {
+					glog.Errorf("get offsets error: %s", err)
+					continue
+				}
+
+				partitions, err := getPartitions(topicName)
+				if err != nil {
+					glog.Errorf("get partitions of %s error: %s", topicName, err)
+					continue
+				}
+				committedOffsets, err := getCommittedOffset(topicName, partitions, groupID)
+				if err != nil {
+					glog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
+					continue
+				}
+
+				var (
+					offsetSum    int64 = 0
+					committedSum int64 = 0
+					pendingSum   int64 = 0
+				)
+
+				if *header {
+					fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag  owner")
+				}
+
+				for _, partitionID := range partitions {
+					pending := offsets[partitionID] - committedOffsets[partitionID]
+					offsetSum += offsets[partitionID]
+					committedSum += committedOffsets[partitionID]
+					pendingSum += pending
+					fmt.Printf("%d  %s  %s  %d  %d  %d  %d  %s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, v[partitionID])
+				}
+				if *total {
+					fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
+				}
+			}
+		}
+
+		if !hasOwner {
+			topicName := topics[j]
+			partitions, err := getPartitions(topicName)
+			if err != nil {
+				glog.Errorf("get partitions error:%s", err)
+				continue
+			}
+			offsets, err := getOffset(topics[j])
+			if err != nil {
+				glog.Errorf("get offsets error:%s", err)
+				continue
+			}
+			timestamp := time.Now().Unix()
+			var offsetSum int64 = 0
+			for _, partitionID := range partitions {
+				offsetSum += offsets[partitionID]
+				fmt.Printf("%d\t%s\t%d\t%d\n", timestamp, topicName, partitionID, offsets[partitionID])
+			}
+			if *total {
+				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, -1, -1)
 			}
 		}
 	}
-	return tasks
 }
 
 func main() {
@@ -257,68 +414,9 @@ func main() {
 		os.Exit(5)
 	}
 
-	helper, err = healer.NewHelper(*bootstrapServers, *clientID, brokerConfig)
-	if err != nil {
-		glog.Errorf("create helper error:%s", err)
-		os.Exit(5)
-	}
-
-	tasks := initTasks(*topic, *groupID)
-	if tasks == nil {
-		os.Exit(5)
-	}
-
-	if *header {
-		fmt.Println("timestamp\ttopic\tgroupID\tpid\toffset\tcommited\tlag")
-	}
-	for topicName, group := range tasks {
-		partitions, err := getPartitions(topicName)
-		if err != nil {
-			glog.Errorf("get partitions error:%s", err)
-			os.Exit(5)
-		}
-
-		timestamp := time.Now().Unix()
-		offsets, err := getOffset(topicName)
-		if err != nil {
-			glog.Errorf("get offsets error:%s", err)
-			os.Exit(5)
-		}
-
-		if group == nil || len(group) == 0 {
-			var offsetSum int64 = 0
-			for _, partitionID := range partitions {
-				offsetSum += offsets[partitionID]
-				fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, "NA", partitionID, offsets[partitionID], -1, -1)
-			}
-			if *total {
-				fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, -1, -1)
-			}
-		} else {
-			for groupID := range group {
-				commitedOffsets, err := getCommitedOffset(topicName, partitions, groupID)
-				if err != nil {
-					glog.Errorf("get commitedOffsets error:%s", err)
-					os.Exit(5)
-				}
-
-				var (
-					offsetSum   int64 = 0
-					commitedSum int64 = 0
-					pendingSum  int64 = 0
-				)
-
-				for _, partitionID := range partitions {
-					pending := offsets[partitionID] - commitedOffsets[partitionID]
-					offsetSum += offsets[partitionID]
-					commitedSum += commitedOffsets[partitionID]
-					pendingSum += pending
-					fmt.Printf("%d\t%s\t%s\t%d\t%d\t%d\t%d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], commitedOffsets[partitionID], pending)
-				}
-				if *total {
-					fmt.Printf("TOTAL\t%s\t%d\t%d\t%d\n", topicName, offsetSum, commitedSum, pendingSum)
-				}
-			}
-		}
+	if *groupID != "" {
+		mainGroupGiven()
+	} else {
+		mainGroupNotGiven()
 	}
 }
