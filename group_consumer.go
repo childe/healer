@@ -376,7 +376,7 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 	c.fromBeginning = fromBeginning
 
 	if messages == nil {
-		messages = make(chan *FullMessage, 10)
+		messages = make(chan *FullMessage, 1024)
 	}
 	c.messages = messages
 
