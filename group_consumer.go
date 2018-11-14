@@ -291,7 +291,7 @@ func (c *GroupConsumer) heartbeat() error {
 	return err
 }
 
-func (c *GroupConsumer) CommitOffset(topic string, partitionID int32, offset int64) {
+func (c *GroupConsumer) CommitOffset() {
 	for _, s := range c.simpleConsumers {
 		s.commitOffset()
 	}
