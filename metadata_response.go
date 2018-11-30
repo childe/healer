@@ -120,6 +120,9 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionErrorCode = partitionErrorCode
 			if err == nil && partitionErrorCode != 0 {
 				err = getErrorFromErrorCode(partitionErrorCode)
+				if err == AllError[9] {
+					err = nil
+				}
 			}
 			offset += 2
 			metadataResponse.TopicMetadatas[i].PartitionMetadatas[j].PartitionID = int32(binary.BigEndian.Uint32(payload[offset:]))
