@@ -68,6 +68,9 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 	for {
 		leaderID, err = c.brokers.findLeader(c.config.ClientID, c.topic, c.partitionID)
 		if err != nil {
+			if err == AllError[9] {
+				break
+			}
 			glog.Errorf("find leader error: %s", err)
 			time.Sleep(time.Second * 1)
 			continue
