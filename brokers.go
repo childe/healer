@@ -235,7 +235,6 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 
 		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
 		if "*healer.Error" == reflect.TypeOf(err).String() && !err.(*Error).Retriable {
-			glog.Info("error not retriable")
 			return metadataResponse, err
 		}
 
