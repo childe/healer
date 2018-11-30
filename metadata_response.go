@@ -101,6 +101,9 @@ func NewMetadataResponse(payload []byte) (*MetadataResponse, error) {
 		metadataResponse.TopicMetadatas[i].TopicErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 		if err == nil && metadataResponse.TopicMetadatas[i].TopicErrorCode != 0 {
 			err = getErrorFromErrorCode(metadataResponse.TopicMetadatas[i].TopicErrorCode)
+			if err == AllError[9] {
+				err = nil
+			}
 		}
 		offset += 2
 		topicNameLength := int(binary.BigEndian.Uint16(payload[offset:]))
