@@ -192,10 +192,13 @@ func NewProtocolMetadata(payload []byte) *ProtocolMetadata {
 		p.Subscription[i] = string(payload[offset : offset+l])
 		offset += l
 	}
-	l := int(binary.BigEndian.Uint32(payload[offset:]))
+	l := int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	p.UserData = make([]byte, l)
-	copy(p.UserData, payload[offset:offset+l])
+
+	if l != -1 {
+		p.UserData = make([]byte, int(l))
+		copy(p.UserData, payload[offset:offset+int(l)])
+	}
 
 	return p
 }
