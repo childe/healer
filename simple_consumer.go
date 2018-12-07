@@ -178,7 +178,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 			}
 			for _, p := range t.Partitions {
 				if int32(p.PartitionID) == c.partitionID {
-					c.offset = p.Offset
+					if p.Offset >= 0 {
+						c.offset = p.Offset
+					}
 					break
 				}
 			}
