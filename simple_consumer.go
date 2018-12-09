@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -58,6 +59,8 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 	return c, nil
 }
 
+var InvalidLeaderIDError = errors.New("leaderID of topic/partition must not be -1")
+
 // TOOD put retry in Request
 func (c *SimpleConsumer) getLeaderBroker() error {
 	var (
@@ -65,31 +68,21 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 		leaderID int32
 	)
 
-	for {
-		leaderID, err = c.brokers.findLeader(c.config.ClientID, c.topic, c.partitionID)
-		if err != nil {
-			glog.Errorf("find leader error: %s", err)
-			time.Sleep(time.Second * 1)
-			continue
-		} else {
-			glog.V(5).Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
-			if leaderID != -1 {
-				break
-			} else {
-				glog.V(5).Infof("sleep 1 second and retry")
-				time.Sleep(time.Second * 1)
-			}
-		}
-	}
-
+	leaderID, err = c.brokers.findLeader(c.config.ClientID, c.topic, c.partitionID)
 	if err != nil {
 		return err
+	}
+
+	glog.V(5).Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
+	if leaderID == -1 {
+		return InvalidLeaderIDError
 	}
 
 	var retry = 3
 	for i := 0; i < retry; i++ {
 		c.leaderBroker, err = c.brokers.NewBroker(leaderID)
 		if err != nil {
+			// TODO refresh metadata?
 			glog.Errorf("could not create broker %d. maybe should refresh metadata.", leaderID)
 		} else {
 			glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
@@ -127,7 +120,6 @@ func (c *SimpleConsumer) commitOffset() {
 	}
 }
 
-// if offset is -1 or -2, first check if has previous offset committed if its BelongTO is not nil
 func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
 	var err error
 
@@ -136,10 +128,12 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 
 	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
 
-	err = c.getLeaderBroker()
-	// TODO pass error to caller?
-	if err != nil {
-		glog.Fatalf("could get leader broker:%s", err)
+	for !c.stop {
+		if err = c.getLeaderBroker(); err != nil {
+			glog.Errorf("get leader broker error: %s", err)
+		} else {
+			break
+		}
 	}
 
 	if c.belongTO != nil && (c.offset == -1 || c.offset == -2) {
