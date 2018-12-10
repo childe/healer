@@ -153,7 +153,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 			apiVersion = 1
 		} else {
 			// TODO return error to caller
-			glog.Fatalf(invallidOffsetsStorageConfig)
+			glog.Fatalf("invalid config: %s", invallidOffsetsStorageConfig)
 			//return messages, invallidOffsetsStorageConfig
 		}
 		r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
