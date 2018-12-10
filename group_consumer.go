@@ -42,6 +42,9 @@ type GroupConsumer struct {
 }
 
 func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, error) {
+	if err := config.checkValid(); err != nil {
+		return nil, err
+	}
 	var clientID string
 	if config.ClientID == "" {
 		clientID = config.GroupID

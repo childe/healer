@@ -55,7 +55,7 @@ func main() {
 
 	c, err := healer.NewGroupConsumer(*topic, consumerConfig)
 	if err != nil {
-		glog.Fatalf("could not init GroupConsumer:%s", err)
+		glog.Fatalf("could not init GroupConsumer: %s", err)
 	}
 
 	signalC := make(chan os.Signal, 1)
