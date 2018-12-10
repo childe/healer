@@ -27,7 +27,11 @@ type SimpleConsumer struct {
 	wg *sync.WaitGroup // call ws.Done in defer when Consume return
 }
 
-func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *ConsumerConfig, brokers *Brokers) *SimpleConsumer {
+func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *ConsumerConfig, brokers *Brokers) (*SimpleConsumer, error) {
+	var err error
+	if err = validateConsumerConfig(config); err != nil {
+		return nil, err
+	}
 	return &SimpleConsumer{
 		config:      config,
 		topic:       topic,
@@ -35,11 +39,14 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		brokers:     brokers,
 
 		wg: &sync.WaitGroup{},
-	}
+	}, nil
 }
 
 func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) (*SimpleConsumer, error) {
 	var err error
+	if err = validateConsumerConfig(config); err != nil {
+		return nil, err
+	}
 
 	c := &SimpleConsumer{
 		config:      config,

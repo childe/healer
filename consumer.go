@@ -13,6 +13,9 @@ type Consumer struct {
 }
 
 func NewConsumer(topic string, config *ConsumerConfig) (*Consumer, error) {
+	if err := validateConsumerConfig(config); err != nil {
+		return nil, err
+	}
 	var err error
 	c := &Consumer{
 		config: config,
@@ -48,7 +51,10 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 		topicName := topicMetadatas.TopicName
 		for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 			partitionID := partitionMetadataInfo.PartitionID
-			simpleConsumer := NewSimpleConsumerWithBrokers(topicName, partitionID, consumer.config, consumer.brokers)
+			simpleConsumer, err := NewSimpleConsumerWithBrokers(topicName, partitionID, consumer.config, consumer.brokers)
+			if err != nil {
+				return nil, err
+			}
 			consumer.SimpleConsumers = append(consumer.SimpleConsumers, simpleConsumer)
 		}
 	}
@@ -66,4 +72,11 @@ func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error)
 	}
 
 	return messages, nil
+}
+
+func validateConsumerConfig(config *ConsumerConfig) error {
+	if config.OffsetsStorage != 0 && config.OffsetsStorage != 1 {
+		return invallidOffsetsStorageConfig
+	}
+	return nil
 }
