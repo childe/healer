@@ -59,7 +59,9 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 	return c, nil
 }
 
-var InvalidLeaderIDError = errors.New("leaderID of topic/partition must not be -1")
+var (
+	invalidLeaderIDError = errors.New("leaderID of topic/partition must not be -1")
+)
 
 // TOOD put retry in Request
 func (c *SimpleConsumer) getLeaderBroker() error {
@@ -75,7 +77,7 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 
 	glog.V(5).Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
 	if leaderID == -1 {
-		return InvalidLeaderIDError
+		return invalidLeaderIDError
 	}
 
 	var retry = 3
