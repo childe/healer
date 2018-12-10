@@ -44,6 +44,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		glog.Error(err)
 		return nil
 	}
+	rand.Seed(time.Now().Unix())
 	p.refreshCurrentProducer()
 	if p.currentProducer == nil {
 		return nil
@@ -86,7 +87,6 @@ func (p *Producer) refreshCurrentProducer() {
 			validPartitionID = append(validPartitionID, partition.PartitionID)
 		}
 	}
-	rand.Seed(time.Now().Unix())
 	partitionID := validPartitionID[rand.Int31n(int32(len(validPartitionID)))]
 	glog.V(5).Infof("current partitionID is %d", partitionID)
 	sp := NewSimpleProducer(p.topic, partitionID, p.config)
