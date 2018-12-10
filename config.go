@@ -126,7 +126,7 @@ func (config *ConsumerConfig) checkValid() error {
 	if config.GroupID == "" {
 		return emptyGroupID
 	}
-	if config.OffsetsStorage != 0 || config.OffsetsStorage != 1 {
+	if config.OffsetsStorage != 0 && config.OffsetsStorage != 1 {
 		return invallidOffsetsStorageConfig
 	}
 	return nil
