@@ -268,10 +268,12 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 								glog.Errorf("could not get %s[%d] offset:%s", c.topic, c.partitionID, message.Error)
 							}
 						} else if message.Error == AllError[6] {
-							err = c.getLeaderBroker()
-							if err != nil {
-								// TODO pass errro to caller?
-								glog.Fatalf("could get leader broker:%s", err)
+							for !c.stop {
+								if err = c.getLeaderBroker(); err != nil {
+									glog.Errorf("get leader broker of [%s/%d] error: %s", c.topic, c.partitionID, err)
+								} else {
+									break
+								}
 							}
 						}
 					} else {
