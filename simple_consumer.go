@@ -123,6 +123,13 @@ func (c *SimpleConsumer) commitOffset() {
 }
 
 func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
+	var messages chan *FullMessage
+	if messageChan == nil {
+		messages = make(chan *FullMessage, 10)
+	} else {
+		messages = messageChan
+	}
+
 	var err error
 
 	c.stop = false
@@ -145,7 +152,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		} else if c.config.OffsetsStorage == 1 {
 			apiVersion = 1
 		} else {
-			glog.Fatalf("offsets.storage (%d) illegal", c.config.OffsetsStorage)
+			return messages, invallidOffsetsStorageConfig
 		}
 		r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
 		r.AddPartiton(c.topic, c.partitionID)
