@@ -152,7 +152,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		} else if c.config.OffsetsStorage == 1 {
 			apiVersion = 1
 		} else {
-			return messages, invallidOffsetsStorageConfig
+			// TODO return error to caller
+			glog.Fatalf(invallidOffsetsStorageConfig)
+			//return messages, invallidOffsetsStorageConfig
 		}
 		r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
 		r.AddPartiton(c.topic, c.partitionID)
