@@ -195,21 +195,16 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	// offset not fetched from OffsetFetchRequest
 	if c.offset == -1 {
 		c.fromBeginning = false
-		c.offset, err = c.getOffset(c.fromBeginning)
 	} else if c.offset == -2 {
 		c.fromBeginning = true
-		c.offset, err = c.getOffset(c.fromBeginning)
 	}
-	if err != nil {
-		glog.Fatalf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
-	}
-	glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
-
-	var messages chan *FullMessage
-	if messageChan == nil {
-		messages = make(chan *FullMessage, 10)
-	} else {
-		messages = messageChan
+	for !c.stop {
+		if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
+			glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
+		} else {
+			glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
+			break
+		}
 	}
 
 	if c.belongTO != nil && c.config.AutoCommit {
