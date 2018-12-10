@@ -187,9 +187,9 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		if compression != COMPRESSION_NONE {
 			message.Value, err = message.decompress()
 			if err != nil {
-				// TODO go on to next message in the messageSet?
-				glog.Fatalf("decompress message error:%s", err)
-				return messageSet, err
+				// TODO go on to next message in the messageSet or stop?
+				glog.Errorf("decompress message error:%s", err)
+				//return messageSet, err
 			}
 		}
 
