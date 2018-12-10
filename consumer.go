@@ -30,23 +30,17 @@ func NewConsumer(topic string, config *ConsumerConfig) (*Consumer, error) {
 
 func (consumer *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	// get partitions info
-	metadataResponse, err := consumer.brokers.RequestMetaData(consumer.config.ClientID, []string{consumer.topic})
-	if err != nil {
-		glog.Fatalf("could not get metadata of topic %s:%s", consumer.topic, err)
+	var (
+		metadataResponse *MetadataResponse
+		err              error
+	)
+	for {
+		if metadataResponse, err = consumer.brokers.RequestMetaData(consumer.config.ClientID, []string{consumer.topic}); err != nil {
+			glog.Errorf("could not get metadata of topic %s: %s", consumer.topic, err)
+		} else {
+			break
+		}
 	}
-	glog.V(10).Info(metadataResponse)
-
-	var time int64
-	if fromBeginning {
-		time = -2
-	} else {
-		time = -1
-	}
-	offsetsResponses, err := consumer.brokers.RequestOffsets(consumer.config.ClientID, consumer.topic, -1, time, 1)
-	if err != nil {
-		glog.Fatalf("could not get offset of topic %s:%s", consumer.topic, err)
-	}
-	glog.V(10).Info(offsetsResponses)
 
 	consumer.SimpleConsumers = make([]*SimpleConsumer, 0)
 
