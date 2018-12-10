@@ -195,17 +195,20 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
 
 	// offset not fetched from OffsetFetchRequest
-	if c.offset == -1 {
-		c.fromBeginning = false
-	} else if c.offset == -2 {
-		c.fromBeginning = true
-	}
-	for !c.stop {
-		if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
-			glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
-		} else {
-			glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
-			break
+	if c.offset < 0 {
+		if c.offset == -1 {
+			c.fromBeginning = false
+		} else if c.offset == -2 {
+			c.fromBeginning = true
+		}
+
+		for !c.stop {
+			if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
+				glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
+			} else {
+				glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
+				break
+			}
 		}
 	}
 

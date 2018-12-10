@@ -73,24 +73,27 @@ func (broker *Broker) IsDead() bool {
 	return broker.dead
 }
 
-func (broker *Broker) ensureOpen() {
+func (broker *Broker) ensureOpen() error {
 	if broker.dead {
 		glog.Infof("broker %s dead, reopen it", broker.address)
 		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.config.ConnectTimeoutMS)*time.Millisecond)
 		if err != nil {
-			// TODO fatal?
-			glog.Fatalf("could not conn to %s:%s", broker.address, err)
+			glog.Errorf("could not conn to %s: %s", broker.address, err)
+			return err
 		}
 		broker.conn = conn
 		broker.dead = false
 	}
+	return nil
 }
 
 func (broker *Broker) Request(r Request) ([]byte, error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
-	broker.ensureOpen()
+	if err := broker.ensureOpen(); err != nil {
+		return nil, err
+	}
 
 	broker.correlationID++
 	r.SetCorrelationID(broker.correlationID)
