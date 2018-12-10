@@ -51,7 +51,7 @@ type ConsumerConfig struct {
 	AutoCommit           bool   `json:"auto.commit"`
 	CommitAfterFetch     bool   `json:"commit.after.fetch"`
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`
-	OffsetsStorage       int    `json:"offset.storage"`
+	OffsetsStorage       int    `json:"offsets.storage"`
 	ConnectTimeoutMS     int    `json:"connect.timeout.ms"`
 	TimeoutMS            int    `json:"timeout.ms"`
 	TimeoutMSForEachAPI  []int  `json:"timeout.ms.for.eachapi"`
@@ -115,7 +115,8 @@ func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
 }
 
 var (
-	emptyGroupID = errors.New("group.id is empty")
+	emptyGroupID                 = errors.New("group.id is empty")
+	invallidOffsetsStorageConfig = errors.New("offsets.storage must be 0 or 1")
 )
 
 func (config *ConsumerConfig) checkValid() error {
@@ -124,6 +125,9 @@ func (config *ConsumerConfig) checkValid() error {
 	}
 	if config.GroupID == "" {
 		return emptyGroupID
+	}
+	if config.OffsetsStorage != 0 || config.OffsetsStorage != 1 {
+		return invallidOffsetsStorageConfig
 	}
 	return nil
 }
