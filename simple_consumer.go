@@ -145,6 +145,10 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		}
 	}
 
+	if c.stop {
+		return messages, nil
+	}
+
 	if c.belongTO != nil && (c.offset == -1 || c.offset == -2) {
 		var apiVersion uint16
 		if c.config.OffsetsStorage == 0 {
