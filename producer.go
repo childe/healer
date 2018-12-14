@@ -87,6 +87,10 @@ func (p *Producer) refreshCurrentProducer() {
 			validPartitionID = append(validPartitionID, partition.PartitionID)
 		}
 	}
+	if len(validPartitionID) == 0 {
+		return
+	}
+
 	partitionID := validPartitionID[rand.Int31n(int32(len(validPartitionID)))]
 	glog.V(5).Infof("current partitionID is %d", partitionID)
 	sp := NewSimpleProducer(p.topic, partitionID, p.config)
