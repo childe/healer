@@ -109,6 +109,53 @@ func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	return int64(offsetsResponses[0].TopicPartitionOffsets[c.topic][0].Offsets[0]), nil
 }
 
+func (c *SimpleConsumer) getCommitedOffet() {
+	var apiVersion uint16
+	if c.config.OffsetsStorage == 0 {
+		apiVersion = 0
+	} else if c.config.OffsetsStorage == 1 {
+		apiVersion = 1
+	} else {
+		// TODO return error to caller
+		glog.Fatalf("invalid config: %s", invallidOffsetsStorageConfig)
+		//return messages, invallidOffsetsStorageConfig
+	}
+	r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
+	r.AddPartiton(c.topic, c.partitionID)
+
+	var res *OffsetFetchResponse
+	for {
+		response, err := c.belongTO.coordinator.Request(r)
+		if err != nil {
+			glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		res, err = NewOffsetFetchResponse(response)
+		if res == nil {
+			glog.Errorf("decode offset fetch response error:%s", err)
+			time.Sleep(500 * time.Millisecond)
+		} else {
+			break
+		}
+	}
+
+	for _, t := range res.Topics {
+		if t.Topic != c.topic {
+			continue
+		}
+		for _, p := range t.Partitions {
+			if int32(p.PartitionID) == c.partitionID {
+				if p.Offset >= 0 {
+					c.offset = p.Offset
+				}
+				break
+			}
+		}
+	}
+}
+
 func (c *SimpleConsumer) Stop() {
 	c.stop = true
 	c.commitOffset()
@@ -150,50 +197,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	}
 
 	if c.belongTO != nil && (c.offset == -1 || c.offset == -2) {
-		var apiVersion uint16
-		if c.config.OffsetsStorage == 0 {
-			apiVersion = 0
-		} else if c.config.OffsetsStorage == 1 {
-			apiVersion = 1
-		} else {
-			// TODO return error to caller
-			glog.Fatalf("invalid config: %s", invallidOffsetsStorageConfig)
-			//return messages, invallidOffsetsStorageConfig
-		}
-		r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
-		r.AddPartiton(c.topic, c.partitionID)
-
-		var res *OffsetFetchResponse
-		for {
-			response, err := c.belongTO.coordinator.Request(r)
-			if err != nil {
-				glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
-				time.Sleep(500 * time.Millisecond)
-				continue
-			}
-
-			res, err = NewOffsetFetchResponse(response)
-			if res == nil {
-				glog.Errorf("decode offset fetch response error:%s", err)
-				time.Sleep(500 * time.Millisecond)
-			} else {
-				break
-			}
-		}
-
-		for _, t := range res.Topics {
-			if t.Topic != c.topic {
-				continue
-			}
-			for _, p := range t.Partitions {
-				if int32(p.PartitionID) == c.partitionID {
-					if p.Offset >= 0 {
-						c.offset = p.Offset
-					}
-					break
-				}
-			}
-		}
+		c.getCommitedOffet()
 	}
 
 	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
