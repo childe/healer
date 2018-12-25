@@ -10,6 +10,7 @@ all:
 	go build -o tools/bin/list-groups tools/list-groups/list-groups.go
 	go build -o tools/bin/describe-groups tools/describe-groups/describe-groups.go
 	go build -o tools/bin/reset-offset tools/reset-offset/reset-offset.go
+	go build -o tools/bin/transplant-offset tools/transplant-offset/transplant-offset.go
 	go build -o tools/bin/get-pending tools/get-pending/get-pending.go
 
 test:
