@@ -224,12 +224,12 @@ func (c *GroupConsumer) sync() error {
 	} else {
 		groupAssignment = nil
 	}
-	glog.V(2).Infof("group assignment:%v", groupAssignment)
+	glog.V(5).Infof("group assignment: %v", groupAssignment)
 
 	syncGroupResponse, err := c.coordinator.requestSyncGroup(
 		c.config.ClientID, c.config.GroupID, c.generationID, c.memberID, groupAssignment)
 
-	if glog.V(2) {
+	if glog.V(5) {
 		b, _ := json.Marshal(syncGroupResponse)
 		glog.Infof("sync response:%s", b)
 	}
