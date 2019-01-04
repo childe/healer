@@ -296,7 +296,7 @@ func (c *GroupConsumer) heartbeat() error {
 
 func (c *GroupConsumer) CommitOffset() {
 	for _, s := range c.simpleConsumers {
-		s.commitOffset()
+		s.CommitOffset()
 	}
 }
 
@@ -322,14 +322,14 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 		_, err := NewOffsetCommitResponse(payload)
 		if err == nil {
 			glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
+			return true
 		} else {
 			glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 		}
-		return true
 	} else {
 		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
-		return false
 	}
+	return false
 }
 
 func (c *GroupConsumer) stop() {

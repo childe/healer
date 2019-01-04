@@ -24,7 +24,7 @@ type SimpleConsumer struct {
 
 	belongTO *GroupConsumer
 
-	wg *sync.WaitGroup // call ws.Done in defer when Consume return
+	wg *sync.WaitGroup // call wg.Done in defer when Consume return
 }
 
 func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *ConsumerConfig, brokers *Brokers) *SimpleConsumer {
@@ -158,14 +158,46 @@ func (c *SimpleConsumer) getCommitedOffet() {
 
 func (c *SimpleConsumer) Stop() {
 	c.stop = true
-	c.commitOffset()
+	c.CommitOffset()
 }
 
+// when NOT belong to GroupConsumer
 func (c *SimpleConsumer) commitOffset() {
+	var apiVersion uint16
+	if c.config.OffsetsStorage == 1 {
+		apiVersion = 2
+	} else {
+		apiVersion = 0
+	}
+
+	offsetComimtReq := NewOffsetCommitRequest(apiVersion, c.config.ClientID, c.config.GroupID)
+	offsetComimtReq.SetMemberID("")
+	offsetComimtReq.SetGenerationID(-1)
+	offsetComimtReq.SetRetentionTime(-1)
+	offsetComimtReq.AddPartiton(c.topic, c.partitionID, c.offset, "")
+
+	payload, err := c.coordinator.Request(offsetComimtReq)
+	if err == nil {
+		_, err := NewOffsetCommitResponse(payload)
+		if err == nil {
+			glog.V(5).Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
+			return true
+		} else {
+			glog.Errorf("commit offset [%s][%d]:%d error: %s", topic, partitionID, offset, err)
+		}
+	} else {
+		glog.Errorf("commit offset [%s][%d]:%d error: %s", topic, partitionID, offset, err)
+	}
+	return false
+}
+
+func (c *SimpleConsumer) CommitOffset() {
 	if c.belongTO != nil {
 		if c.belongTO.commitOffset(c.topic, c.partitionID, c.offset) {
 			c.offsetCommited = c.offset
 		}
+	} else if c.config.GroupID != "" {
+		c.CommitOffset()
 	}
 }
 
@@ -229,7 +261,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 					return
 				}
 				if c.offset != c.offsetCommited {
-					c.commitOffset()
+					c.CommitOffset()
 				}
 			}
 		}()
@@ -241,7 +273,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		defer func() {
 			glog.V(10).Infof("simple consumer (%s) stop consuming", c.config.ClientID)
 			if c.belongTO != nil && c.offset != c.offsetCommited {
-				c.commitOffset()
+				c.CommitOffset()
 			}
 			c.wg.Done()
 		}()
@@ -304,7 +336,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 
 			// is this really needed ?
 			if c.belongTO != nil && c.config.CommitAfterFetch && c.offset != c.offsetCommited {
-				c.commitOffset()
+				c.CommitOffset()
 			}
 		}
 		c.leaderBroker.Close()
