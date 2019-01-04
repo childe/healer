@@ -223,7 +223,7 @@ func (c *SimpleConsumer) CommitOffset() {
 			c.offsetCommited = c.offset
 		}
 	} else if c.config.GroupID != "" {
-		c.CommitOffset()
+		c.commitOffset()
 	}
 }
 
@@ -278,7 +278,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		}
 	}
 
-	if c.belongTO != nil && c.config.AutoCommit {
+	if c.config.AutoCommit && c.config.GroupID != "" {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
 		go func() {
 			for range ticker.C {
