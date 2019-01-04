@@ -1,10 +1,13 @@
 package healer
 
-import "github.com/golang/glog"
+import (
+	"time"
+
+	"github.com/golang/glog"
+)
 
 // Consumer instance is built to consume messages from kafka broker
 type Consumer struct {
-	topic  string
 	assign map[string][]int
 	config *ConsumerConfig
 
@@ -13,21 +16,33 @@ type Consumer struct {
 	SimpleConsumers []*SimpleConsumer
 }
 
-func NewConsumer(topic string, config *ConsumerConfig) (*Consumer, error) {
-	var err error
-	c := &Consumer{
-		config: config,
-		topic:  topic,
-		assign: nil,
-	}
+func NewConsumer(config *ConsumerConfig, topics ...string) (*Consumer, error) {
 	brokerConfig := getBrokerConfigFromConsumerConfig(config)
-
-	c.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
 	if err != nil {
 		return nil, err
 	}
 
+	assign := make(map[string][]int)
+	for _, topic := range topics {
+		assign[topic] = nil
+	}
+
+	c := &Consumer{
+		config: config,
+		assign: assign,
+
+		brokers: brokers,
+	}
+
 	return c, nil
+}
+
+func (c *Consumer) Subscribe(topics ...string) {
+	c.assign = make(map[string][]int)
+	for _, topic := range topics {
+		c.assign[topic] = nil
+	}
 }
 
 func (c *Consumer) Assign(topicPartitons map[string][]int) {
@@ -35,35 +50,35 @@ func (c *Consumer) Assign(topicPartitons map[string][]int) {
 }
 
 func (c *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
-	// get partitions info
 	var (
 		metadataResponse *MetadataResponse = nil
 		err              error
+		topics           []string = make([]string, 0)
 	)
+	for topicName, _ := range c.assign {
+		topics = append(topics, topicName)
+	}
 
-	if c.assign == nil {
-		for {
-			if metadataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, []string{c.topic}); err != nil {
-				glog.Errorf("could not get metadata of topic %s: %s", c.topic, err)
-			} else {
-				break
-			}
+	for {
+		if metadataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, topics); err != nil {
+			glog.Errorf("could not get metadata of topics %v: %s", topics, err)
+			time.Sleep(time.Millisecond * 1000)
+		} else {
+			break
 		}
 	}
 
 	c.SimpleConsumers = make([]*SimpleConsumer, 0)
 
-	if c.assign == nil {
-		for _, topicMetadatas := range metadataResponse.TopicMetadatas {
-			topicName := topicMetadatas.TopicName
+	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
+		topicName := topicMetadatas.TopicName
+		if partitions, _ := c.assign[topicName]; partitions == nil { // consume all partitions
 			for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 				partitionID := partitionMetadataInfo.PartitionID
 				simpleConsumer := NewSimpleConsumerWithBrokers(topicName, partitionID, c.config, c.brokers)
 				c.SimpleConsumers = append(c.SimpleConsumers, simpleConsumer)
 			}
-		}
-	} else {
-		for topicName, partitions := range c.assign {
+		} else {
 			for _, p := range partitions {
 				simpleConsumer := NewSimpleConsumerWithBrokers(topicName, int32(p), c.config, c.brokers)
 				c.SimpleConsumers = append(c.SimpleConsumers, simpleConsumer)
