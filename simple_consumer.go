@@ -146,12 +146,22 @@ func (c *SimpleConsumer) getCommitedOffet() {
 		glog.Fatalf("invalid config: %s", invallidOffsetsStorageConfig)
 		//return messages, invallidOffsetsStorageConfig
 	}
-	r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.belongTO.config.GroupID)
+	r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.config.GroupID)
 	r.AddPartiton(c.topic, c.partitionID)
 
-	var res *OffsetFetchResponse
+	var (
+		res         *OffsetFetchResponse
+		coordinator *Broker
+	)
+
+	if c.belongTO != nil {
+		coordinator = c.belongTO.coordinator
+	} else {
+		coordinator = c.coordinator
+	}
+
 	for {
-		response, err := c.belongTO.coordinator.Request(r)
+		response, err := coordinator.Request(r)
 		if err != nil {
 			glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
 			time.Sleep(500 * time.Millisecond)
@@ -240,7 +250,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	c.stop = false
 	c.offset = offset
 
-	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
+	glog.V(5).Infof("[%s][%d] offset :%d (before fetch offset)", c.topic, c.partitionID, c.offset)
 
 	for !c.stop {
 		if err = c.getLeaderBroker(); err != nil {
@@ -254,7 +264,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		return messages, nil
 	}
 
-	if c.belongTO != nil && (c.offset == -1 || c.offset == -2) {
+	if c.config.GroupID != "" && (c.offset == -1 || c.offset == -2) {
 		c.getCommitedOffet()
 	}
 
