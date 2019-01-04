@@ -120,6 +120,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 }
 
 // TODO getCoordinator may executed in dead loop and create too many connections to kafka clusters
+// TODO put this to brokers?
 func (c *GroupConsumer) getCoordinator() error {
 	coordinatorResponse, err := c.brokers.FindCoordinator(c.config.ClientID, c.config.GroupID)
 	if err != nil {

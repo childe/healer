@@ -16,6 +16,7 @@ type SimpleConsumer struct {
 
 	brokers      *Brokers
 	leaderBroker *Broker
+	coordinator  *Broker
 
 	stop           bool
 	fromBeginning  bool
@@ -28,7 +29,7 @@ type SimpleConsumer struct {
 }
 
 func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *ConsumerConfig, brokers *Brokers) *SimpleConsumer {
-	return &SimpleConsumer{
+	c := &SimpleConsumer{
 		config:      config,
 		topic:       topic,
 		partitionID: partitionID,
@@ -36,27 +37,52 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 
 		wg: &sync.WaitGroup{},
 	}
+
+	if config.GroupID != "" {
+		var err error
+		for {
+			err = c.getCoordinator()
+			if err != nil {
+				glog.Errorf("get coordinator error: %s", err)
+				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+				continue
+			}
+			break
+		}
+	} else {
+		c.coordinator = nil
+	}
+
+	return c
 }
 
 func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) (*SimpleConsumer, error) {
 	var err error
 
-	c := &SimpleConsumer{
-		config:      config,
-		topic:       topic,
-		partitionID: partitionID,
-
-		wg: &sync.WaitGroup{},
-	}
-
 	brokerConfig := getBrokerConfigFromConsumerConfig(config)
 
-	c.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return c, nil
+	return NewSimpleConsumerWithBrokers(topic, partitionID, config, brokers), nil
+}
+
+func (c *SimpleConsumer) getCoordinator() error {
+	coordinatorResponse, err := c.brokers.FindCoordinator(c.config.ClientID, c.config.GroupID)
+	if err != nil {
+		return err
+	}
+
+	coordinatorBroker, err := c.brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+	if err != nil {
+		return err
+	}
+	glog.Infof("coordinator for group[%s]:%s", c.config.GroupID, coordinatorBroker.address)
+	c.coordinator = coordinatorBroker
+
+	return nil
 }
 
 var (
@@ -162,7 +188,7 @@ func (c *SimpleConsumer) Stop() {
 }
 
 // when NOT belong to GroupConsumer
-func (c *SimpleConsumer) commitOffset() {
+func (c *SimpleConsumer) commitOffset() bool {
 	var apiVersion uint16
 	if c.config.OffsetsStorage == 1 {
 		apiVersion = 2
@@ -180,13 +206,13 @@ func (c *SimpleConsumer) commitOffset() {
 	if err == nil {
 		_, err := NewOffsetCommitResponse(payload)
 		if err == nil {
-			glog.V(5).Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
+			glog.V(5).Infof("commit offset [%s][%d]:%d", c.topic, c.partitionID, c.offset)
 			return true
 		} else {
-			glog.Errorf("commit offset [%s][%d]:%d error: %s", topic, partitionID, offset, err)
+			glog.Errorf("commit offset [%s][%d]:%d error: %s", c.topic, c.partitionID, c.offset, err)
 		}
 	} else {
-		glog.Errorf("commit offset [%s][%d]:%d error: %s", topic, partitionID, offset, err)
+		glog.Errorf("commit offset [%s][%d]:%d error: %s", c.topic, c.partitionID, c.offset, err)
 	}
 	return false
 }
