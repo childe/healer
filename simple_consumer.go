@@ -169,7 +169,7 @@ func (c *SimpleConsumer) getCommitedOffet() {
 		}
 
 		res, err = NewOffsetFetchResponse(response)
-		if res == nil {
+		if err != nil {
 			glog.Errorf("decode offset fetch response error:%s", err)
 			time.Sleep(500 * time.Millisecond)
 		} else {
