@@ -17,13 +17,13 @@ import (
 var (
 	consumerConfig = healer.DefaultConsumerConfig()
 	topic          = flag.String("topic", "", "REQUIRED: The topic to consume from.")
-	fromBeginning  = flag.Bool("from-beginning", false, "")
 	maxMessages    = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume")
 )
 
 func init() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
+	flag.BoolVar(&consumerConfig.FromBeginning, "from-beginning", false, "")
 	flag.StringVar(&consumerConfig.BootstrapServers, "bootstrap.servers", "", "REQUIRED: The list of hostname and port of the server to connect to")
 	flag.StringVar(&consumerConfig.ClientID, "client.id", consumerConfig.ClientID, "The ID of this client.")
 	flag.StringVar(&consumerConfig.GroupID, "group.id", "", "REQUIRED")
@@ -67,7 +67,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	messages, err := c.Consume(*fromBeginning, nil)
+	messages, err := c.Consume(nil)
 	defer c.Close()
 	if err != nil {
 		glog.Fatalf("could not get messages channel:%s", err)

@@ -384,9 +384,7 @@ func (gc *GroupConsumer) AwaitClose(timeout time.Duration) {
 	}()
 }
 
-func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
-	c.fromBeginning = fromBeginning
-
+func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, error) {
 	if messages == nil {
 		messages = make(chan *FullMessage, 10)
 	}
@@ -401,7 +399,7 @@ func (c *GroupConsumer) Consume(fromBeginning bool, messages chan *FullMessage) 
 				glog.Errorf("failed to send heartbeat:%s", err)
 				c.stop()
 				c.joined = false
-				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+				c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
 			}
 		}
 	}()

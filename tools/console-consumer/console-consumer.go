@@ -18,15 +18,15 @@ import (
 var (
 	consumerConfig = healer.DefaultConsumerConfig()
 
-	topic         = flag.String("topic", "", "REQUIRED: The topic to consume from.")
-	partitions    = flag.String("partitions", "", "comma separated. consume all partitions if not set")
-	maxMessages   = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
-	fromBeginning = flag.Bool("from-beginning", false, "default false")
+	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	partitions  = flag.String("partitions", "", "comma separated. consume all partitions if not set")
+	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 )
 
 func init() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
+	flag.BoolVar(&consumerConfig.FromBeginning, "from-beginning", false, "default false")
 	flag.StringVar(&consumerConfig.BootstrapServers, "bootstrap.servers", "", "REQUIRED: The list of hostname and port of the server to connect to")
 	flag.StringVar(&consumerConfig.ClientID, "client.id", consumerConfig.ClientID, "The ID of this client.")
 	flag.StringVar(&consumerConfig.GroupID, "group.id", consumerConfig.GroupID, "group ID. would commit offset if group.id is set")
@@ -73,7 +73,7 @@ func main() {
 		os.Exit(5)
 	}
 
-	messages, err := consumer.Consume(*fromBeginning)
+	messages, err := consumer.Consume()
 	if err != nil {
 		glog.Fatal(err)
 	}

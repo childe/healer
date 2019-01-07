@@ -49,7 +49,7 @@ func (c *Consumer) Assign(topicPartitons map[string][]int) {
 	c.assign = topicPartitons
 }
 
-func (c *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
+func (c *Consumer) Consume() (chan *FullMessage, error) {
 	var (
 		metadataResponse *MetadataResponse = nil
 		err              error
@@ -87,7 +87,7 @@ func (c *Consumer) Consume(fromBeginning bool) (chan *FullMessage, error) {
 	}
 
 	var offset int64
-	if fromBeginning {
+	if c.config.FromBeginning {
 		offset = -2
 	} else {
 		offset = -1

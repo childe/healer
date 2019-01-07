@@ -234,6 +234,50 @@ func mainGroupGiven() {
 	}
 
 	for i, groupID := range groupIDs {
+		if *topic != "" {
+			var topicName = *topic
+			timestamp := time.Now().Unix()
+
+			offsets, err := getOffset(topicName)
+			if err != nil {
+				glog.Errorf("get offsets error: %s", err)
+				continue
+			}
+
+			partitions, err := getPartitions(topicName)
+			if err != nil {
+				glog.Errorf("get partitions of %s error: %s", topicName, err)
+				continue
+			}
+			committedOffsets, err := getCommittedOffset(topicName, partitions, groupID)
+			if err != nil {
+				glog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
+				continue
+			}
+
+			var (
+				offsetSum    int64 = 0
+				committedSum int64 = 0
+				pendingSum   int64 = 0
+			)
+
+			if *header {
+				fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag")
+			}
+
+			for _, partitionID := range partitions {
+				pending := offsets[partitionID] - committedOffsets[partitionID]
+				offsetSum += offsets[partitionID]
+				committedSum += committedOffsets[partitionID]
+				pendingSum += pending
+				fmt.Printf("%d  %s  %s  %d  %d  %d  %d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending)
+			}
+			if *total {
+				fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
+			}
+			continue
+		}
+
 		glog.V(5).Infof("%d/%d %s", i, len(groupIDs), groupID)
 		subscriptions, err := getSubscriptionsInGroup(groupID)
 		if err != nil {
