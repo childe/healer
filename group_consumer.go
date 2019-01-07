@@ -306,6 +306,10 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 		glog.V(5).Infof("do not commit offset [%s][%d]:%d because memberID is not available", topic, partitionID, offset)
 		return false
 	}
+	if offset < 0 {
+		glog.V(5).Infof("invalid offset %d", offset)
+		return false
+	}
 	var apiVersion uint16
 	if c.config.OffsetsStorage == 1 {
 		apiVersion = 2
