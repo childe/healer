@@ -53,7 +53,7 @@ type ConsumerConfig struct {
 	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms"`
 	FetchMaxBytes        int32  `json:"fetch.max.bytes"`
 	FetchMinBytes        int32  `json:"fetch.min.bytes"`
-	FromBeginning        bool   `json:"frombeginning"`
+	FromBeginning        bool   `json:"from.beginning"`
 	AutoCommit           bool   `json:"auto.commit"`
 	CommitAfterFetch     bool   `json:"commit.after.fetch"`
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`

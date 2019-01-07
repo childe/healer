@@ -26,7 +26,7 @@ var (
 func init() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
-	flag.BoolVar(&consumerConfig.FromBeginning, "from-beginning", false, "default false")
+	flag.BoolVar(&consumerConfig.FromBeginning, "from.beginning", false, "default false")
 	flag.StringVar(&consumerConfig.BootstrapServers, "bootstrap.servers", "", "REQUIRED: The list of hostname and port of the server to connect to")
 	flag.StringVar(&consumerConfig.ClientID, "client.id", consumerConfig.ClientID, "The ID of this client.")
 	flag.StringVar(&consumerConfig.GroupID, "group.id", consumerConfig.GroupID, "group ID. would commit offset if group.id is set")
