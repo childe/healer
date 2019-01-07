@@ -1,23 +1,29 @@
 package healer
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 )
 
 type BrokerConfig struct {
 	ConnectTimeoutMS          int   `json:"connect.timeout.ms"`
+	KeepAliveMS               int   `json:"keepalive.ms"`
 	TimeoutMS                 int   `json:"timeout.ms"`
 	TimeoutMSForEachAPI       []int `json:"timeout.ms.for.eachapi"`
 	MetadataRefreshIntervalMS int   `json:"metadata.refresh.interval.ms"`
+	TLSEnabled                bool  `json:"tls.enabled"`
+	TLSConfig                 *tls.Config
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
 		ConnectTimeoutMS:          60000,
+		KeepAliveMS:               7200000,
 		TimeoutMS:                 30000,
 		TimeoutMSForEachAPI:       make([]int, 0),
 		MetadataRefreshIntervalMS: 300 * 1000,
+		TLSEnabled:                false,
 	}
 }
 

@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -43,7 +44,21 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		dead:          true,
 	}
 
-	conn, err := net.DialTimeout("tcp4", address, time.Duration(config.ConnectTimeoutMS)*time.Millisecond)
+	dialer := net.Dialer{
+		Timeout:   time.Millisecond * time.Duration(config.ConnectTimeoutMS),
+		KeepAlive: time.Millisecond * time.Duration(config.KeepAliveMS),
+	}
+
+	var (
+		conn net.Conn
+		err  error
+	)
+	if config.TLSEnabled {
+		conn, err = tls.DialWithDialer(&dialer, "tcp", address, config.TLSConfig)
+	} else {
+		conn, err = dialer.Dial("tcp", address)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
