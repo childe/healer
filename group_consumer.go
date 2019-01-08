@@ -428,7 +428,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, 
 				b, _ := json.Marshal(metaDataResponse)
 				glog.Infof("topics[%s] metadata: %s", c.topics, b)
 			}
-			if !topicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
+			if !ifTopicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
 				c.stop()
 				c.joined = false
@@ -471,17 +471,17 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 }
 
 // return true if same
-func topicMetadatasSame(a []*TopicMetadata, b []*TopicMetadata) bool {
-	if a == nil && a == nil {
-		return false
+func ifTopicMetadatasSame(a []*TopicMetadata, b []*TopicMetadata) bool {
+	if a == nil && b == nil {
+		return true
 	}
 
 	if a == nil || b == nil {
-		return true
+		return false
 	}
 
 	if len(a) != len(b) {
-		return true
+		return false
 	}
 
 	for i, _ := range a {
