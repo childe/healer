@@ -19,6 +19,7 @@ var (
 	API_SyncGroup           uint16 = 14
 	API_DescribeGroups      uint16 = 15
 	API_ListGroups          uint16 = 16
+	API_SaslHandshake       uint16 = 17
 	API_ApiVersions         uint16 = 18
 )
 
