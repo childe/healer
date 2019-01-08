@@ -1,27 +1,39 @@
 package healer
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 )
 
+type TLSConfig struct {
+	Cert               string `json:"cert"`
+	Key                string `json:"key"`
+	CA                 string `json:"ca"`
+	InsecureSkipVerify bool   `json:"insecure.skip.verity"`
+}
+
+type NetConfig struct {
+	ConnectTimeoutMS    int   `json:"connect.timeout.ms"`
+	TimeoutMS           int   `json:"timeout.ms"`
+	TimeoutMSForEachAPI []int `json:"timeout.ms.for.eachapi"`
+	KeepAliveMS         int   `json:"keepalive.ms"`
+}
+
 type BrokerConfig struct {
-	ConnectTimeoutMS          int   `json:"connect.timeout.ms"`
-	KeepAliveMS               int   `json:"keepalive.ms"`
-	TimeoutMS                 int   `json:"timeout.ms"`
-	TimeoutMSForEachAPI       []int `json:"timeout.ms.for.eachapi"`
-	MetadataRefreshIntervalMS int   `json:"metadata.refresh.interval.ms"`
-	TLSEnabled                bool  `json:"tls.enabled"`
-	TLSConfig                 *tls.Config
+	NetConfig
+	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms"`
+	TLSEnabled                bool       `json:"tls.enabled"`
+	TLS                       *TLSConfig `json:"tls"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
-		ConnectTimeoutMS:          60000,
-		KeepAliveMS:               7200000,
-		TimeoutMS:                 30000,
-		TimeoutMSForEachAPI:       make([]int, 0),
+		NetConfig: NetConfig{
+			ConnectTimeoutMS:    60000,
+			TimeoutMS:           30000,
+			TimeoutMSForEachAPI: make([]int, 0),
+			KeepAliveMS:         7200000,
+		},
 		MetadataRefreshIntervalMS: 300 * 1000,
 		TLSEnabled:                false,
 	}
@@ -29,9 +41,9 @@ func DefaultBrokerConfig() *BrokerConfig {
 
 func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b := DefaultBrokerConfig()
-	b.ConnectTimeoutMS = c.ConnectTimeoutMS
-	b.TimeoutMS = c.TimeoutMS
-	b.TimeoutMSForEachAPI = c.TimeoutMSForEachAPI
+	b.NetConfig = c.NetConfig
+	b.TLSEnabled = c.TLSEnabled
+	b.TLS = c.TLS
 	return b
 }
 
@@ -44,6 +56,7 @@ func (c *BrokerConfig) checkValid() error {
 }
 
 type ConsumerConfig struct {
+	NetConfig
 	BootstrapServers     string `json:"bootstrap.servers"`
 	ClientID             string `json:"client.id"`
 	GroupID              string `json:"group.id"`
@@ -58,13 +71,19 @@ type ConsumerConfig struct {
 	CommitAfterFetch     bool   `json:"commit.after.fetch"`
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`
 	OffsetsStorage       int    `json:"offsets.storage"`
-	ConnectTimeoutMS     int    `json:"connect.timeout.ms"`
-	TimeoutMS            int    `json:"timeout.ms"`
-	TimeoutMSForEachAPI  []int  `json:"timeout.ms.for.eachapi"`
+
+	TLS        *TLSConfig `json:"tls"`
+	TLSEnabled bool       `json:"tls.enabled"`
 }
 
 func DefaultConsumerConfig() *ConsumerConfig {
 	c := &ConsumerConfig{
+		NetConfig: NetConfig{
+			ConnectTimeoutMS:    30000,
+			TimeoutMS:           30000,
+			TimeoutMSForEachAPI: make([]int, 0),
+			KeepAliveMS:         7200000,
+		},
 		ClientID:             "",
 		GroupID:              "",
 		SessionTimeoutMS:     30000,
@@ -78,8 +97,6 @@ func DefaultConsumerConfig() *ConsumerConfig {
 		CommitAfterFetch:     false,
 		AutoCommitIntervalMS: 5000,
 		OffsetsStorage:       1,
-		ConnectTimeoutMS:     30000,
-		TimeoutMS:            30000,
 	}
 
 	if c.TimeoutMSForEachAPI == nil {
@@ -150,6 +167,9 @@ type ProducerConfig struct {
 	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
 	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
 
+	TLSEnabled bool       `json:"tls.enabled"`
+	TLS        *TLSConfig `json:"tls"`
+
 	// TODO
 	Retries          int   `json:"retries"`
 	RequestTimeoutMS int32 `json:"request.timeout.ms"`
@@ -166,6 +186,8 @@ func DefaultProducerConfig() *ProducerConfig {
 		MetadataMaxAgeMS:         300000,
 		FetchTopicMetaDataRetrys: 3,
 		ConnectionsMaxIdleMS:     540000,
+
+		TLSEnabled: false,
 
 		Retries:          0,
 		RequestTimeoutMS: 30000,
