@@ -134,7 +134,7 @@ func (p *SimpleProducer) ensureOpen() bool {
 
 	p.leader, err = p.createLeader()
 	if err != nil {
-		glog.Error("create producer leader error: %s", err)
+		glog.Errorf("create producer leader error: %s", err)
 		return false
 	}
 

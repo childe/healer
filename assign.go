@@ -136,7 +136,7 @@ func (r *RangeAssignmentStrategy) Assign(
 		}
 	}
 
-	glog.V(10).Infof("memberAssignments:%s", memberAssignments)
+	glog.V(10).Infof("memberAssignments:%v", memberAssignments)
 
 	i := 0
 	for member, memberAssignment := range memberAssignments {

@@ -197,7 +197,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		if compression != COMPRESSION_NONE {
 			if _messageSet, err := DecodeToMessageSet(message.Value); err != nil {
 				// TODO go on to next message in the messageSet?
-				glog.Error("decode message from value error:%s", err)
+				glog.Errorf("decode message from value error:%s", err)
 				return messageSet, err
 			} else {
 				messageSet = append(messageSet, _messageSet...)
