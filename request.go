@@ -21,6 +21,7 @@ var (
 	API_ListGroups          uint16 = 16
 	API_SaslHandshake       uint16 = 17
 	API_ApiVersions         uint16 = 18
+	API_SaslAuthenticate    uint16 = 36
 )
 
 type RequestHeader struct {
