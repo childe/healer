@@ -2,9 +2,11 @@ package healer
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"sync"
 	"time"
@@ -31,6 +33,10 @@ type Broker struct {
 	dead bool
 }
 
+var (
+	tlsConfigError = errors.New("Cert & File & CA must be set")
+)
+
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
 func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, error) {
@@ -53,8 +59,16 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		conn net.Conn
 		err  error
 	)
+
 	if config.TLSEnabled {
-		conn, err = tls.DialWithDialer(&dialer, "tcp", address, config.TLSConfig)
+		if config.TLS == nil || config.TLS.Cert == "" || config.TLS.Key == "" || config.TLS.CA == "" {
+			return nil, tlsConfigError
+		}
+		if tlsConfig, err := createTLSConfig(config.TLS); err != nil {
+			return nil, err
+		} else {
+			conn, err = tls.DialWithDialer(&dialer, "tcp", address, tlsConfig)
+		}
 	} else {
 		conn, err = dialer.Dial("tcp", address)
 	}
@@ -73,6 +87,28 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 	//broker.apiVersions = apiVersionsResponse.ApiVersions
 
 	return broker, nil
+}
+
+func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(tlsConfig.Cert, tlsConfig.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	caCert, err := ioutil.ReadFile(tlsConfig.CA)
+	if err != nil {
+		return nil, err
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	t := &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
+	}
+	return t, nil
 }
 
 func (broker *Broker) GetAddress() string {
