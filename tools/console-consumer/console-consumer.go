@@ -16,25 +16,18 @@ import (
 )
 
 var (
-	consumerConfig = healer.DefaultConsumerConfig()
-
 	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partitions  = flag.String("partitions", "", "comma separated. consume all partitions if not set")
 	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
+
+	brokers        = flag.String("brokers", "", "REQUIRED: The list of hostname and port of the server to connect to")
+	config         = flag.String("config", "", "XX=YY,AA=ZZ")
+	consumerConfig = map[string]interface{}{"bootstrap.servers": brokers}
 )
 
 func init() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
-	flag.BoolVar(&consumerConfig.FromBeginning, "from.beginning", false, "default false")
-	flag.StringVar(&consumerConfig.BootstrapServers, "bootstrap.servers", "", "REQUIRED: The list of hostname and port of the server to connect to")
-	flag.StringVar(&consumerConfig.ClientID, "client.id", consumerConfig.ClientID, "The ID of this client.")
-	flag.StringVar(&consumerConfig.GroupID, "group.id", consumerConfig.GroupID, "group ID. would commit offset if group.id is set")
-	flag.Int32Var(&consumerConfig.FetchMinBytes, "fetch.min.bytes", consumerConfig.FetchMinBytes, "The minimum amount of data the server should return for a fetch request. If insufficient data is available the request will wait for that much data to accumulate before answering the request.")
-	flag.Int32Var(&consumerConfig.FetchMaxBytes, "fetch.max.bytes", consumerConfig.FetchMaxBytes, "The maximum bytes to include in the message set for this partition. This helps bound the size of the response")
-	flag.Int32Var(&consumerConfig.FetchMaxWaitMS, "fetch.max.wait.ms", consumerConfig.FetchMaxWaitMS, "The maximum amount of time the server will block before answering the fetch request if there isn't sufficient data to immediately satisfy fetch.min.bytes")
-	flag.IntVar(&consumerConfig.ConnectTimeoutMS, "connect.timeout.ms", consumerConfig.ConnectTimeoutMS, "connect timeout to broker")
-	flag.IntVar(&consumerConfig.TimeoutMS, "timeout.ms", consumerConfig.TimeoutMS, "read timeout from connection to broker")
 }
 
 func main() {
@@ -51,8 +44,21 @@ func main() {
 		err      error
 	)
 
+	for _, kv := range strings.Split(*config, ",") {
+		if strings.Trim(kv, " ") == "" {
+			continue
+		}
+		t := strings.SplitN(kv, "=", 2)
+		if len(t) != 2 {
+			glog.Errorf("invalid config : %s", kv)
+			os.Exit(4)
+		}
+		consumerConfig[t[0]] = t[1]
+	}
+	cConfig, err := healer.GetConsumerConfig(consumerConfig)
+
 	if *partitions == "" {
-		consumer, err = healer.NewConsumer(consumerConfig, *topic)
+		consumer, err = healer.NewConsumer(cConfig, *topic)
 	} else {
 		assign := make(map[string][]int)
 		assign[*topic] = make([]int, 0)
@@ -64,7 +70,7 @@ func main() {
 			}
 			assign[*topic] = append(assign[*topic], pid)
 		}
-		consumer, err = healer.NewConsumer(consumerConfig)
+		consumer, err = healer.NewConsumer(cConfig)
 		consumer.Assign(assign)
 	}
 
