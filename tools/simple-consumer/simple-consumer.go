@@ -43,7 +43,7 @@ func main() {
 	}
 
 	for _, kv := range strings.Split(*config, ",") {
-		if string.Trim(kv, " ") == "" {
+		if strings.Trim(kv, " ") == "" {
 			continue
 		}
 		t := strings.SplitN(kv, "=", 2)
