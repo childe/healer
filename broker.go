@@ -78,7 +78,7 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 	}
 	broker.conn = conn
 
-	if broker.config.Sasl != nil {
+	if broker.config.SaslConfig != nil {
 		if err := broker.sendSaslAuthenticate(); err != nil {
 			glog.Errorf("sasl authenticate error : %s", err)
 			return nil, err
@@ -121,10 +121,10 @@ func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 func (broker *Broker) sendSaslAuthenticate() error {
 	var clientID = ""
 	var (
-		saslConfig = broker.config.Sasl
-		mechanism  = saslConfig.Type
-		user       = saslConfig.User
-		password   = saslConfig.Password
+		saslConfig = broker.config.SaslConfig
+		mechanism  = saslConfig.SaslType
+		user       = saslConfig.SaslUser
+		password   = saslConfig.SaslPassword
 
 		payload []byte
 		err     error

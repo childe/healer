@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/binary"
+	"strings"
 
 	"github.com/golang/glog"
 )
@@ -29,7 +30,7 @@ type SaslAuthenticateRequest struct {
 
 func NewSaslAuthenticateRequest(clientID string, user, password, typ string) *SaslAuthenticateRequest {
 	var saslAuth SaslAuth
-	switch typ {
+	switch strings.ToLower(typ) {
 	case "plain":
 		saslAuth = NewPlainSasl(user, password)
 	default:

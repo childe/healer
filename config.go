@@ -20,17 +20,17 @@ type TLSConfig struct {
 }
 
 type SaslConfig struct {
-	Type     string `json:"type"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	SaslType     string `json:"sasl.type"`
+	SaslUser     string `json:"sasl.user"`
+	SaslPassword string `json:"sasl.password"`
 }
 
 type BrokerConfig struct {
 	NetConfig
-	MetadataRefreshIntervalMS int         `json:"metadata.refresh.interval.ms"`
-	TLSEnabled                bool        `json:"tls.enabled"`
-	TLS                       *TLSConfig  `json:"tls"`
-	Sasl                      *SaslConfig `json:"sasl"`
+	*SaslConfig
+	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms"`
+	TLSEnabled                bool       `json:"tls.enabled"`
+	TLS                       *TLSConfig `json:"tls"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
@@ -51,7 +51,7 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b.NetConfig = c.NetConfig
 	b.TLSEnabled = c.TLSEnabled
 	b.TLS = c.TLS
-	b.Sasl = c.Sasl
+	b.SaslConfig = c.SaslConfig
 	return b
 }
 
@@ -65,6 +65,7 @@ func (c *BrokerConfig) checkValid() error {
 
 type ConsumerConfig struct {
 	NetConfig
+	*SaslConfig
 	BootstrapServers     string `json:"bootstrap.servers"`
 	ClientID             string `json:"client.id"`
 	GroupID              string `json:"group.id"`
@@ -80,9 +81,8 @@ type ConsumerConfig struct {
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`
 	OffsetsStorage       int    `json:"offsets.storage"`
 
-	TLSEnabled bool        `json:"tls.enabled"`
-	TLS        *TLSConfig  `json:"tls"`
-	Sasl       *SaslConfig `json:"sasl"`
+	TLSEnabled bool       `json:"tls.enabled"`
+	TLS        *TLSConfig `json:"tls"`
 }
 
 func DefaultConsumerConfig() *ConsumerConfig {
@@ -165,6 +165,7 @@ func (config *ConsumerConfig) checkValid() error {
 }
 
 type ProducerConfig struct {
+	SaslConfig
 	BootstrapServers         string `json:"bootstrap.servers"`
 	ClientID                 string `json:"client.id"`
 	Acks                     int16  `json:"acks"`
@@ -176,9 +177,8 @@ type ProducerConfig struct {
 	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
 	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
 
-	TLSEnabled bool        `json:"tls.enabled"`
-	TLS        *TLSConfig  `json:"tls"`
-	Sasl       *SaslConfig `json:"sasl"`
+	TLSEnabled bool       `json:"tls.enabled"`
+	TLS        *TLSConfig `json:"tls"`
 
 	// TODO
 	Retries          int   `json:"retries"`
