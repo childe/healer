@@ -17,8 +17,6 @@ import (
 )
 
 var (
-	consumerConfig = map[string]interface{}{}
-
 	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition   = flag.Int("partition", 0, "The partition to consume from.")
 	offset      = flag.Int64("offset", -2, "The offset id to consume from, default to -2 which means from beginning; while value -1 means from end(default -2).")
@@ -27,7 +25,8 @@ var (
 
 	brokers = flag.String("brokers", "", "REQUIRED: The list of hostname and port of the server to connect to")
 
-	config = flag.String("config", "", "XX=YY,AA=ZZ")
+	config         = flag.String("config", "", "XX=YY,AA=ZZ")
+	consumerConfig = map[string]interface{}{"bootstrap.servers": brokers}
 )
 
 func init() {
@@ -43,9 +42,15 @@ func main() {
 		os.Exit(4)
 	}
 
-	consumerConfig["bootstrap.servers"] = *brokers
 	for _, kv := range strings.Split(*config, ",") {
+		if string.Trim(kv, " ") == "" {
+			continue
+		}
 		t := strings.SplitN(kv, "=", 2)
+		if len(t) != 2 {
+			glog.Errorf("invalid config : %s", kv)
+			os.Exit(4)
+		}
 		consumerConfig[t[0]] = t[1]
 	}
 	cConfig, err := healer.GetConsumerConfig(consumerConfig)
