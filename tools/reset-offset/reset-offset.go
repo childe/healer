@@ -19,6 +19,7 @@ var (
 	clientID       = flag.String("clientID", "healer", "The ID of this client. default healer")
 	groupID        = flag.String("groupID", "", "REQUIRED: The ID of this client.")
 	timestamp      = flag.Int64("timestamp", -3, "REQUIRED: -2 which means beginning; -1 means end.")
+	extraOffset    = flag.Int64("offset", 0, "if offset > 0 plus from beginning, else decrease from end")
 )
 
 func init() {
@@ -80,7 +81,7 @@ func main() {
 		}
 
 		// get offset
-		offsetsResponses, err := brokers.RequestOffsets(*clientID, *topic, int32(partitionID), *timestamp, 3)
+		offsetsResponses, err := brokers.RequestOffsets(*clientID, *topic, int32(partitionID), *timestamp, 1)
 		if err != nil {
 			glog.Fatalf("could not get offsets:%s", err)
 		}
@@ -183,18 +184,19 @@ func main() {
 	offsetComimtReq.SetGenerationID(generationID)
 	offsetComimtReq.SetRetentionTime(-1)
 	for partitionID, offset = range offsets {
-		offsetComimtReq.AddPartiton(*topic, partitionID, offset, "")
-		glog.Infof("commit offset [%s][%d]:%d", *topic, partitionID, offset)
+		var finalOffset = offset + *extraOffset
+		offsetComimtReq.AddPartiton(*topic, partitionID, finalOffset, "")
+		glog.Infof("commit offset [%s][%d]:%d", *topic, partitionID, finalOffset)
 	}
 
 	payload, err := coordinator.Request(offsetComimtReq)
 	if err != nil {
-		glog.Infof("commit offset [%s][%d]:%d error:%s", topic, partitionID, offset, err)
+		glog.Infof("commit offset error:%s", err)
 		return
 	}
 
 	_, err = healer.NewOffsetCommitResponse(payload)
 	if err != nil {
-		glog.Errorf("commit offset [%s][%d]:%d error:%s", *topic, partitionID, offset, err)
+		glog.Infof("commit offset error:%s", err)
 	}
 }
