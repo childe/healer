@@ -216,13 +216,13 @@ func (c *SimpleConsumer) commitOffset() bool {
 	if err == nil {
 		_, err := NewOffsetCommitResponse(payload)
 		if err == nil {
-			glog.V(5).Infof("commit offset [%s][%d]:%d", c.topic, c.partitionID, c.offset)
+			glog.V(5).Infof("commit offset %s [%s][%d]:%d", c.config.GroupID, c.topic, c.partitionID, c.offset)
 			return true
 		} else {
-			glog.Errorf("commit offset [%s][%d]:%d error: %s", c.topic, c.partitionID, c.offset, err)
+			glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
 		}
 	} else {
-		glog.Errorf("commit offset [%s][%d]:%d error: %s", c.topic, c.partitionID, c.offset, err)
+		glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
 	}
 	return false
 }
