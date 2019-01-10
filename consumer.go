@@ -49,7 +49,14 @@ func (c *Consumer) Assign(topicPartitons map[string][]int) {
 	c.assign = topicPartitons
 }
 
-func (c *Consumer) Consume() (chan *FullMessage, error) {
+func (c *Consumer) Consume(messageChan chan *FullMessage) (chan *FullMessage, error) {
+	var messages chan *FullMessage
+	if messageChan == nil {
+		messages = make(chan *FullMessage, 10)
+	} else {
+		messages = messageChan
+	}
+
 	var (
 		metadataResponse *MetadataResponse = nil
 		err              error
@@ -93,7 +100,6 @@ func (c *Consumer) Consume() (chan *FullMessage, error) {
 		offset = -1
 	}
 
-	messages := make(chan *FullMessage, 10)
 	for _, simpleConsumer := range c.SimpleConsumers {
 		simpleConsumer.Consume(offset, messages)
 	}

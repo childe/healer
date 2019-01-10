@@ -79,7 +79,7 @@ func main() {
 		os.Exit(5)
 	}
 
-	messages, err := consumer.Consume()
+	messages, err := consumer.Consume(nil)
 	if err != nil {
 		glog.Fatal(err)
 	}
