@@ -6,22 +6,21 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
 )
 
 var (
-	config = healer.DefaultProducerConfig()
-	topic  = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	topic   = flag.String("topic", "", "REQUIRED: The topic to consume from.")
+	brokers = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
+	config  = flag.String("config", "", "XX=YY,AA=ZZ")
+
+	producerConfig = map[string]interface{}{"bootstrap.servers": brokers}
 )
 
 func init() {
-	flag.StringVar(&config.BootstrapServers, "brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
-	flag.StringVar(&config.CompressionType, "compression.type", "none", "defalut:none")
-	flag.IntVar(&config.MessageMaxCount, "message.max.count", config.MessageMaxCount, "")
-	flag.IntVar(&config.FlushIntervalMS, "flush.interval.ms", config.FlushIntervalMS, "")
-	flag.IntVar(&config.MetadataMaxAgeMS, "metadata.max.age.ms", config.MetadataMaxAgeMS, "The period of time in milliseconds after which we force a refresh of metadata even if we haven't seen any partition leadership changes to proactively discover any new brokers or partitions.")
 }
 
 func main() {
@@ -32,7 +31,23 @@ func main() {
 		os.Exit(4)
 	}
 
-	producer := healer.NewProducer(*topic, config)
+	for _, kv := range strings.Split(*config, ",") {
+		if strings.Trim(kv, " ") == "" {
+			continue
+		}
+		t := strings.SplitN(kv, "=", 2)
+		if len(t) != 2 {
+			glog.Errorf("invalid config : %s", kv)
+			os.Exit(4)
+		}
+		producerConfig[t[0]] = t[1]
+	}
+	pConfig, err := healer.GetProducerConfig(producerConfig)
+	if err != nil {
+		glog.Errorf("config error : %s", err)
+		os.Exit(4)
+	}
+	producer := healer.NewProducer(*topic, pConfig)
 
 	if producer == nil {
 		fmt.Println("could not create producer")
@@ -43,7 +58,6 @@ func main() {
 		text     []byte = nil
 		line     []byte = nil
 		isPrefix bool   = true
-		err      error  = nil
 	)
 	reader := bufio.NewReader(os.Stdin)
 	for {
