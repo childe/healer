@@ -20,7 +20,7 @@ type TLSConfig struct {
 }
 
 type SaslConfig struct {
-	SaslType     string `json:"sasl.type"`
+	SaslMechanism     string `json:"sasl.mechanism"`
 	SaslUser     string `json:"sasl.user"`
 	SaslPassword string `json:"sasl.password"`
 }

@@ -122,7 +122,7 @@ func (broker *Broker) sendSaslAuthenticate() error {
 	var clientID = ""
 	var (
 		saslConfig = broker.config.SaslConfig
-		mechanism  = saslConfig.SaslType
+		mechanism  = saslConfig.SaslMechanism
 		user       = saslConfig.SaslUser
 		password   = saslConfig.SaslPassword
 
