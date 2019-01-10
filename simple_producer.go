@@ -30,7 +30,8 @@ type SimpleProducer struct {
 }
 
 func (p *SimpleProducer) createLeader() (*Broker, error) {
-	brokers, err := NewBrokers(p.config.BootstrapServers, p.config.ClientID, DefaultBrokerConfig())
+	brokerConfig := getBrokerConfigFromProducerConfig(p.config)
+	brokers, err := NewBrokers(p.config.BootstrapServers, p.config.ClientID, brokerConfig)
 	if err != nil {
 		glog.Errorf("init brokers error: %s", err)
 		return nil, err

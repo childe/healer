@@ -33,7 +33,8 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		simpleProducers: make(map[int32]*SimpleProducer),
 	}
 
-	p.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, DefaultBrokerConfig())
+	brokerConfig := getBrokerConfigFromProducerConfig(config)
+	p.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
 	if err != nil {
 		glog.Errorf("init brokers error: %s", err)
 		return nil

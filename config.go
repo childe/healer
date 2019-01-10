@@ -55,6 +55,15 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	return b
 }
 
+func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
+	b := DefaultBrokerConfig()
+	b.NetConfig = p.NetConfig
+	b.TLSEnabled = p.TLSEnabled
+	b.TLS = p.TLS
+	b.SaslConfig = p.SaslConfig
+	return b
+}
+
 var (
 	brokerAddressNotSet = errors.New("broker address not set in broker config")
 )
@@ -165,7 +174,8 @@ func (config *ConsumerConfig) checkValid() error {
 }
 
 type ProducerConfig struct {
-	SaslConfig
+	NetConfig
+	*SaslConfig
 	BootstrapServers         string `json:"bootstrap.servers"`
 	ClientID                 string `json:"client.id"`
 	Acks                     int16  `json:"acks"`
@@ -187,6 +197,12 @@ type ProducerConfig struct {
 
 func DefaultProducerConfig() *ProducerConfig {
 	return &ProducerConfig{
+		NetConfig: NetConfig{
+			ConnectTimeoutMS:    30000,
+			TimeoutMS:           30000,
+			TimeoutMSForEachAPI: make([]int, 0),
+			KeepAliveMS:         7200000,
+		},
 		ClientID:                 "healer",
 		Acks:                     1,
 		CompressionType:          "none",
@@ -202,6 +218,28 @@ func DefaultProducerConfig() *ProducerConfig {
 		Retries:          0,
 		RequestTimeoutMS: 30000,
 	}
+}
+
+func GetProducerConfig(config map[string]interface{}) (*ProducerConfig, error) {
+	b, err := json.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+
+	c := DefaultProducerConfig()
+	err = json.Unmarshal(b, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.TimeoutMSForEachAPI == nil {
+		c.TimeoutMSForEachAPI = make([]int, 38)
+		for i := range c.TimeoutMSForEachAPI {
+			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
+		}
+	}
+
+	return c, nil
 }
 
 var (
