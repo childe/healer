@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -50,7 +49,7 @@ func main() {
 	producer := healer.NewProducer(*topic, pConfig)
 
 	if producer == nil {
-		fmt.Println("could not create producer")
+		glog.Error("could not create producer")
 		os.Exit(5)
 	}
 
