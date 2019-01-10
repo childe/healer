@@ -77,6 +77,13 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
 	broker.conn = conn
+
+	if broker.config.Sasl != nil {
+		if err := broker.sendSaslAuthenticate(); err != nil {
+			glog.Errorf("sasl authenticate error : %s", err)
+			return nil, err
+		}
+	}
 	broker.dead = false
 
 	// TODO since ??
@@ -109,6 +116,44 @@ func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 		InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
 	}
 	return t, nil
+}
+
+func (broker *Broker) sendSaslAuthenticate() error {
+	var clientID = ""
+	var (
+		saslConfig = broker.config.Sasl
+		mechanism  = saslConfig.Type
+		user       = saslConfig.User
+		password   = saslConfig.Password
+
+		payload []byte
+		err     error
+	)
+	saslHandShakeRequest := NewSaslHandShakeRequest(clientID, mechanism)
+
+	payload = saslHandShakeRequest.Encode()
+
+	payload, err = broker.Request(saslHandShakeRequest)
+	if err != nil {
+		return err
+	}
+
+	_, err = NewSaslHandshakeResponse(payload)
+	if err != nil {
+		return err
+	}
+
+	// authenticate
+	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
+	payload, err = broker.Request(saslAuthenticateRequest)
+	if err != nil {
+		return err
+	}
+	_, err = NewSaslAuthenticateResponse(payload)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (broker *Broker) GetAddress() string {

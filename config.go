@@ -5,13 +5,6 @@ import (
 	"errors"
 )
 
-type TLSConfig struct {
-	Cert               string `json:"cert"`
-	Key                string `json:"key"`
-	CA                 string `json:"ca"`
-	InsecureSkipVerify bool   `json:"insecure.skip.verity"`
-}
-
 type NetConfig struct {
 	ConnectTimeoutMS    int   `json:"connect.timeout.ms"`
 	TimeoutMS           int   `json:"timeout.ms"`
@@ -19,11 +12,25 @@ type NetConfig struct {
 	KeepAliveMS         int   `json:"keepalive.ms"`
 }
 
+type TLSConfig struct {
+	Cert               string `json:"cert"`
+	Key                string `json:"key"`
+	CA                 string `json:"ca"`
+	InsecureSkipVerify bool   `json:"insecure.skip.verity"`
+}
+
+type SaslConfig struct {
+	Type     string `json:"type"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+}
+
 type BrokerConfig struct {
 	NetConfig
-	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms"`
-	TLSEnabled                bool       `json:"tls.enabled"`
-	TLS                       *TLSConfig `json:"tls"`
+	MetadataRefreshIntervalMS int         `json:"metadata.refresh.interval.ms"`
+	TLSEnabled                bool        `json:"tls.enabled"`
+	TLS                       *TLSConfig  `json:"tls"`
+	Sasl                      *SaslConfig `json:"sasl"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
@@ -44,6 +51,7 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b.NetConfig = c.NetConfig
 	b.TLSEnabled = c.TLSEnabled
 	b.TLS = c.TLS
+	b.Sasl = c.Sasl
 	return b
 }
 
@@ -72,8 +80,9 @@ type ConsumerConfig struct {
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`
 	OffsetsStorage       int    `json:"offsets.storage"`
 
-	TLS        *TLSConfig `json:"tls"`
-	TLSEnabled bool       `json:"tls.enabled"`
+	TLSEnabled bool        `json:"tls.enabled"`
+	TLS        *TLSConfig  `json:"tls"`
+	Sasl       *SaslConfig `json:"sasl"`
 }
 
 func DefaultConsumerConfig() *ConsumerConfig {
@@ -167,8 +176,9 @@ type ProducerConfig struct {
 	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
 	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
 
-	TLSEnabled bool       `json:"tls.enabled"`
-	TLS        *TLSConfig `json:"tls"`
+	TLSEnabled bool        `json:"tls.enabled"`
+	TLS        *TLSConfig  `json:"tls"`
+	Sasl       *SaslConfig `json:"sasl"`
 
 	// TODO
 	Retries          int   `json:"retries"`

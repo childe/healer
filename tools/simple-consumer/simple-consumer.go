@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	consumerConfig = healer.DefaultConsumerConfig()
+	consumerConfig = map[string]interface{}{}
 
 	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition   = flag.Int("partition", 0, "The partition to consume from.")
