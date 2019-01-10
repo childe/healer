@@ -68,8 +68,6 @@ func (r *SaslAuthenticateRequest) Encode() []byte {
 
 	copy(payload[offset:], r.SaslAuthBytes)
 
-	glog.Info(payload)
-	glog.Info(len(payload))
 	return payload
 }
 
