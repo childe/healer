@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -13,7 +14,8 @@ type Consumer struct {
 
 	brokers *Brokers
 
-	SimpleConsumers []*SimpleConsumer
+	simpleConsumers []*SimpleConsumer
+	wg              sync.WaitGroup // wg is used to tell if all consumer has already stopped
 }
 
 func NewConsumer(config *ConsumerConfig, topics ...string) (*Consumer, error) {
@@ -75,20 +77,32 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (chan *FullMessage, er
 		}
 	}
 
-	c.SimpleConsumers = make([]*SimpleConsumer, 0)
+	c.simpleConsumers = make([]*SimpleConsumer, 0)
 
 	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
 		topicName := topicMetadatas.TopicName
 		if partitions, _ := c.assign[topicName]; partitions == nil { // consume all partitions
 			for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 				partitionID := partitionMetadataInfo.PartitionID
-				simpleConsumer := NewSimpleConsumerWithBrokers(topicName, partitionID, c.config, c.brokers)
-				c.SimpleConsumers = append(c.SimpleConsumers, simpleConsumer)
+				simpleConsumer := &SimpleConsumer{
+					topic:       topicName,
+					partitionID: partitionID,
+					config:      c.config,
+					brokers:     c.brokers,
+					wg:          &c.wg,
+				}
+				c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 			}
 		} else {
 			for _, p := range partitions {
-				simpleConsumer := NewSimpleConsumerWithBrokers(topicName, int32(p), c.config, c.brokers)
-				c.SimpleConsumers = append(c.SimpleConsumers, simpleConsumer)
+				simpleConsumer := &SimpleConsumer{
+					topic:       topicName,
+					partitionID: int32(p),
+					config:      c.config,
+					brokers:     c.brokers,
+					wg:          &c.wg,
+				}
+				c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 			}
 		}
 	}
@@ -100,9 +114,38 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (chan *FullMessage, er
 		offset = -1
 	}
 
-	for _, simpleConsumer := range c.SimpleConsumers {
+	for _, simpleConsumer := range c.simpleConsumers {
 		simpleConsumer.Consume(offset, messages)
 	}
 
 	return messages, nil
+}
+
+func (c *Consumer) stop() {
+	if c.simpleConsumers != nil {
+		for _, simpleConsumer := range c.simpleConsumers {
+			simpleConsumer.Stop()
+		}
+	}
+}
+
+func (consumer *Consumer) AwaitClose(timeout time.Duration) {
+	c := make(chan bool)
+	defer func() {
+		select {
+		case <-c:
+			glog.Info("all simple consumers stopped. return")
+			return
+		case <-time.After(timeout):
+			glog.Info("consumer await timeout. return")
+			return
+		}
+	}()
+
+	consumer.stop()
+
+	go func() {
+		consumer.wg.Wait()
+		c <- true
+	}()
 }
