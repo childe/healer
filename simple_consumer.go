@@ -307,7 +307,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		c.wg.Add(1)
 
 		defer func() {
-			glog.V(10).Infof("simple consumer (%s) stop consuming", c.config.ClientID)
+			glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
 			if c.belongTO != nil && c.offset != c.offsetCommited {
 				c.CommitOffset()
 			}
