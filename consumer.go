@@ -81,29 +81,34 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (chan *FullMessage, er
 
 	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
 		topicName := topicMetadatas.TopicName
-		if partitions, _ := c.assign[topicName]; partitions == nil { // consume all partitions
+		var partitions = make([]int, 0)
+		if pids, _ := c.assign[topicName]; pids == nil { // consume all partitions
 			for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
-				partitionID := partitionMetadataInfo.PartitionID
-				simpleConsumer := &SimpleConsumer{
-					topic:       topicName,
-					partitionID: partitionID,
-					config:      c.config,
-					brokers:     c.brokers,
-					wg:          &c.wg,
-				}
-				c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
+				partitions = append(partitions, int(partitionMetadataInfo.PartitionID))
 			}
 		} else {
-			for _, p := range partitions {
-				simpleConsumer := &SimpleConsumer{
-					topic:       topicName,
-					partitionID: int32(p),
-					config:      c.config,
-					brokers:     c.brokers,
-					wg:          &c.wg,
-				}
-				c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
+			partitions = pids
+		}
+
+		for _, p := range partitions {
+			simpleConsumer := &SimpleConsumer{
+				topic:       topicName,
+				partitionID: int32(p),
+				config:      c.config,
+				brokers:     c.brokers,
+				wg:          &c.wg,
 			}
+
+			for {
+				err := simpleConsumer.getCoordinator()
+				if err != nil {
+					glog.Errorf("get coordinator error: %s", err)
+					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+					continue
+				}
+				break
+			}
+			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 		}
 	}
 

@@ -444,6 +444,8 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 	c.consumeWithoutHeartBeatMutex.Lock()
 	defer c.consumeWithoutHeartBeatMutex.Unlock()
 
+	c.wg.Wait()
+
 	var err error
 	for {
 		err = c.joinAndSync()
