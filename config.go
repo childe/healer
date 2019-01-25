@@ -20,9 +20,9 @@ type TLSConfig struct {
 }
 
 type SaslConfig struct {
-	SaslMechanism     string `json:"sasl.mechanism"`
-	SaslUser     string `json:"sasl.user"`
-	SaslPassword string `json:"sasl.password"`
+	SaslMechanism string `json:"sasl.mechanism"`
+	SaslUser      string `json:"sasl.user"`
+	SaslPassword  string `json:"sasl.password"`
 }
 
 type BrokerConfig struct {
