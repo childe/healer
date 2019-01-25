@@ -142,7 +142,7 @@ func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
 		return nil, err
 	}
 
-	if c.TimeoutMSForEachAPI == nil {
+	if len(c.TimeoutMSForEachAPI) == 0 {
 		c.TimeoutMSForEachAPI = make([]int, 38)
 		for i := range c.TimeoutMSForEachAPI {
 			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
@@ -232,12 +232,12 @@ func GetProducerConfig(config map[string]interface{}) (*ProducerConfig, error) {
 		return nil, err
 	}
 
-	if c.TimeoutMSForEachAPI == nil {
-		c.TimeoutMSForEachAPI = make([]int, 38)
-		for i := range c.TimeoutMSForEachAPI {
-			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
-		}
-	}
+	//if len(c.TimeoutMSForEachAPI) == 0 {
+	//c.TimeoutMSForEachAPI = make([]int, 38)
+	//for i := range c.TimeoutMSForEachAPI {
+	//c.TimeoutMSForEachAPI[i] = c.TimeoutMS
+	//}
+	//}
 
 	return c, nil
 }
