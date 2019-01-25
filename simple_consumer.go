@@ -143,7 +143,7 @@ func (c *SimpleConsumer) getCommitedOffet() {
 		apiVersion = 1
 	} else {
 		// TODO return error to caller
-		panic("invalid config: %s", invallidOffsetsStorageConfig)
+		panic("invalid offsetStorage config")
 		//return messages, invallidOffsetsStorageConfig
 	}
 	r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.config.GroupID)
