@@ -143,7 +143,7 @@ func (c *SimpleConsumer) getCommitedOffet() {
 		apiVersion = 1
 	} else {
 		// TODO return error to caller
-		glog.Fatalf("invalid config: %s", invallidOffsetsStorageConfig)
+		panic("invalid config: %s", invallidOffsetsStorageConfig)
 		//return messages, invallidOffsetsStorageConfig
 	}
 	r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.config.GroupID)
@@ -363,7 +363,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 					if buffer, ok := <-buffers; ok {
 						//glog.Info(buffer)
 						glog.Info(len(buffer))
-						glog.Fatal("buffers still open??")
+						panic("buffers still open??")
 					}
 					glog.V(10).Info("NO more message")
 					break
