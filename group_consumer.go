@@ -343,6 +343,7 @@ func (c *GroupConsumer) stop() {
 			simpleConsumer.Stop()
 		}
 	}
+	c.leave()
 }
 
 func (c *GroupConsumer) leave() {
