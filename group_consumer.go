@@ -430,6 +430,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, 
 				glog.Infof("topics[%s] metadata: %s", c.topics, b)
 			}
 			if !ifTopicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
+				glog.Info("metadata changed, restart simple consumers")
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
 				c.stop()
 				c.joined = false
