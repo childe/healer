@@ -468,6 +468,9 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 		} else {
 			offset = -1
 		}
+
+		c.wg.Add(1)
+
 		go simpleConsumer.Consume(offset, messages)
 	}
 

@@ -261,6 +261,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	}
 
 	if c.stop {
+		c.wg.Done()
 		return messages, nil
 	}
 
@@ -304,8 +305,6 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 	}
 
 	go func(messages chan *FullMessage) {
-		c.wg.Add(1)
-
 		defer func() {
 			glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
 			if c.belongTO != nil && c.offset != c.offsetCommited {
