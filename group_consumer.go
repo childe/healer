@@ -45,19 +45,16 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 	if err := config.checkValid(); err != nil {
 		return nil, err
 	}
-	var clientID string
 	if config.ClientID == "" {
-		clientID = config.GroupID
+		ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
+		hostname, err := os.Hostname()
+		if err != nil {
+			glog.Infof("could not get hostname for clientID: %s", err)
+			config.ClientID = fmt.Sprintf("%s-%s", config.GroupID, ts)
+		} else {
+			config.ClientID = fmt.Sprintf("%s-%s-%s", config.GroupID, ts, hostname)
+		}
 	}
-	ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
-	hostname, err := os.Hostname()
-	if err != nil {
-		glog.Infof("could not get hostname for clientID:%s", err)
-		clientID = fmt.Sprintf("%s-%s", clientID, ts)
-	} else {
-		clientID = fmt.Sprintf("%s-%s-%s", clientID, ts, hostname)
-	}
-	config.ClientID = clientID
 
 	brokerConfig := getBrokerConfigFromConsumerConfig(config)
 
