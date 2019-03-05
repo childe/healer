@@ -171,7 +171,7 @@ func (broker *Broker) IsDead() bool {
 
 func (broker *Broker) ensureOpen() error {
 	if broker.dead {
-		glog.Infof("broker %s dead, reopen it", broker.address)
+		glog.Infof("broker %s dead, (re)open it", broker.address)
 		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.config.ConnectTimeoutMS)*time.Millisecond)
 		if err != nil {
 			glog.Errorf("could not conn to %s: %s", broker.address, err)
@@ -264,12 +264,14 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 	defer close(buffers)
 
 	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
-	n, err := broker.conn.Write(payload)
-	if err != nil {
-		glog.Error(err)
-	}
-	if n != len(payload) {
-		glog.Errorf("write only partial data. api: %d CorrelationID: %d", binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
+
+	for len(payload) > 0 {
+		n, err := broker.conn.Write(payload)
+		if err != nil {
+			glog.Error(err)
+			return err
+		}
+		payload = payload[n:]
 	}
 
 	l := 0
@@ -308,7 +310,6 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 			return err
 		}
 
-		glog.V(100).Infof("%v", buf[:length])
 		glog.V(15).Infof("read %d bytes response", length)
 		buffers <- buf[:length]
 
