@@ -111,7 +111,7 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 		c.leaderBroker, err = c.brokers.NewBroker(leaderID)
 		if err != nil {
 			// TODO refresh metadata?
-			glog.Errorf("could not create broker %d. maybe should refresh metadata.", leaderID)
+			glog.Errorf("could not create broker %d[%s]. maybe should refresh metadata.", leaderID, c.brokers.brokers[leaderID].address)
 		} else {
 			glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
 			return nil
