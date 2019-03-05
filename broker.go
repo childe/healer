@@ -263,12 +263,13 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, timeout int) error {
 	defer close(buffers)
 
-	glog.V(10).Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
+	if glog.V(10) {
+		glog.Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
+	}
 
 	for len(payload) > 0 {
 		n, err := broker.conn.Write(payload)
 		if err != nil {
-			glog.Error(err)
 			return err
 		}
 		payload = payload[n:]
@@ -286,7 +287,6 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 			return err
 		}
 
-		glog.V(20).Infof("%v", responseLengthBuf[l:length])
 		buffers <- responseLengthBuf[l:length]
 
 		if length+l == 4 {
@@ -296,7 +296,9 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	glog.V(10).Infof("total response length should be %d", 4+responseLength)
+	if glog.V(10) {
+		glog.Infof("total response length should be %d", 4+responseLength)
+	}
 
 	readLength := 0
 	for {
@@ -310,16 +312,22 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 			return err
 		}
 
-		glog.V(15).Infof("read %d bytes response", length)
+		if glog.V(15) {
+			glog.Infof("read %d bytes response", length)
+		}
 		buffers <- buf[:length]
 
 		readLength += length
-		glog.V(15).Infof("totally send %d/%d bytes to fetch response payload", readLength+4, responseLength+4)
+		if glog.V(15) {
+			glog.Infof("totally send %d/%d bytes to fetch response payload", readLength+4, responseLength+4)
+		}
 		if readLength > responseLength {
 			return errors.New("fetch more data than needed while read fetch response")
 		}
 		if readLength == responseLength {
-			glog.V(15).Info("read enough data, return")
+			if glog.V(15) {
+				glog.Info("read enough data, return")
+			}
 			return nil
 		}
 	}
