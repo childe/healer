@@ -416,11 +416,18 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 	return findCoordinatorResponse, nil
 }
 
-func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) error {
+func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) (err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
-	if err := broker.ensureOpen(); err != nil {
+	defer func() {
+		if err != nil {
+			time.Sleep(time.Second)
+			close(buffers)
+		}
+	}()
+
+	if err = broker.ensureOpen(); err != nil {
 		return err
 	}
 
