@@ -420,7 +420,9 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
-	broker.ensureOpen()
+	if err := broker.ensureOpen(); err != nil {
+		return err
+	}
 
 	broker.correlationID++
 	fetchRequest.SetCorrelationID(broker.correlationID)
