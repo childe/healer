@@ -3,8 +3,9 @@ package main
 import (
 	"bufio"
 	"flag"
-	"io"
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/childe/healer"
@@ -17,17 +18,38 @@ var (
 	config  = flag.String("config", "", "XX=YY,AA=ZZ")
 
 	producerConfig = map[string]interface{}{"bootstrap.servers": brokers}
+
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	memprofile = flag.String("memprofile", "", "write mem profile to `file`")
 )
 
-func init() {
-}
+func _main() int {
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			glog.Fatalf("could not create CPU profile: %s", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			glog.Fatalf("could not start CPU profile: %s", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
-func main() {
-	flag.Parse()
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			glog.Fatalf("could not create memory profile: %s", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			glog.Fatalf("could not write memory profile: %s", err)
+		}
+		f.Close()
+	}
 
 	if *topic == "" {
 		flag.PrintDefaults()
-		os.Exit(4)
+		return 4
 	}
 
 	for _, kv := range strings.Split(*config, ",") {
@@ -37,43 +59,41 @@ func main() {
 		t := strings.SplitN(kv, "=", 2)
 		if len(t) != 2 {
 			glog.Errorf("invalid config : %s", kv)
-			os.Exit(4)
+			return 4
 		}
 		producerConfig[t[0]] = t[1]
 	}
 	pConfig, err := healer.GetProducerConfig(producerConfig)
 	if err != nil {
 		glog.Errorf("config error : %s", err)
-		os.Exit(4)
+		return 4
 	}
 	producer := healer.NewProducer(*topic, pConfig)
 
 	if producer == nil {
 		glog.Error("could not create producer")
-		os.Exit(5)
+		return 5
 	}
 
-	var (
-		text     []byte = nil
-		line     []byte = nil
-		isPrefix bool   = true
-	)
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		text = nil
-		isPrefix = true
-		for isPrefix {
-			line, isPrefix, err = reader.ReadLine()
-			if err != nil {
-				if err == io.EOF {
-					producer.Close()
-					os.Exit(0)
-				}
-				glog.Errorf("readline error:%s", err)
-				os.Exit(5)
-			}
-			text = append(text, line...)
-		}
-		producer.AddMessage(nil, text)
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for scanner.Scan() {
+		t := scanner.Bytes()
+		msg := make([]byte, len(t))
+		copy(msg, t)
+		producer.AddMessage(nil, msg)
 	}
+	producer.Close()
+
+	if err := scanner.Err(); err != nil {
+		glog.Errorf("%s", err)
+		return 5
+	}
+
+	return 0
+}
+
+func main() {
+	flag.Parse()
+	os.Exit(_main())
 }
