@@ -103,7 +103,7 @@ func (p *Producer) refreshCurrentProducer() {
 }
 
 func (p *Producer) AddMessage(key []byte, value []byte) error {
-	if key == nil || len(key) == 0 {
+	if len(key) == 0 {
 		return p.currentProducer.AddMessage(key, value)
 	}
 	partitionID := int32(murmur.MurmurHash2(key, 0)) % int32(len(p.topicMeta.PartitionMetadatas))
