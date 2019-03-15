@@ -120,6 +120,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (chan *FullMessage, er
 	}
 
 	for _, simpleConsumer := range c.simpleConsumers {
+		c.wg.Add(1)
 		simpleConsumer.Consume(offset, messages)
 	}
 
