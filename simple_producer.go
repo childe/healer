@@ -36,6 +36,7 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 		glog.Errorf("init brokers error: %s", err)
 		return nil, err
 	}
+	defer brokers.Close()
 
 	leaderID, err := brokers.findLeader(p.config.ClientID, p.topic, p.partition)
 	if err != nil {
@@ -52,8 +53,6 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 	} else {
 		glog.V(5).Infof("leader broker %s", leader.GetAddress())
 	}
-
-	brokers.Close()
 
 	return leader, err
 }
