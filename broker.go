@@ -171,8 +171,8 @@ func (broker *Broker) IsDead() bool {
 
 func (broker *Broker) ensureOpen() error {
 	if broker.dead {
-		time.Sleep(time.Millisecond * 200)
 		glog.Infof("broker %s is dead, (re)open it after sleep 200ms", broker.address)
+		time.Sleep(time.Millisecond * 200)
 		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.config.ConnectTimeoutMS)*time.Millisecond)
 		if err != nil {
 			glog.Errorf("could not conn to %s: %s", broker.address, err)
