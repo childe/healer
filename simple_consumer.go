@@ -314,7 +314,6 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (c
 		}()
 
 		for c.stop == false {
-			// TODO set CorrelationID to 0 firstly and then set by broker
 			fetchRequest := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 			fetchRequest.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
