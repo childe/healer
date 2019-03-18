@@ -171,7 +171,8 @@ func (broker *Broker) IsDead() bool {
 
 func (broker *Broker) ensureOpen() error {
 	if broker.dead {
-		glog.Infof("broker %s dead, (re)open it", broker.address)
+		time.Sleep(time.Millisecond * 200)
+		glog.Infof("broker %s is dead, (re)open it after sleep 200ms", broker.address)
 		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.config.ConnectTimeoutMS)*time.Millisecond)
 		if err != nil {
 			glog.Errorf("could not conn to %s: %s", broker.address, err)
@@ -261,8 +262,6 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 }
 
 func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, timeout int) error {
-	defer close(buffers)
-
 	if glog.V(10) {
 		glog.Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
 	}
@@ -419,10 +418,9 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) (err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
+	defer close(buffers)
 
 	if err = broker.ensureOpen(); err != nil {
-		time.Sleep(time.Millisecond * 200)
-		close(buffers)
 		return err
 	}
 
