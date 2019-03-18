@@ -121,54 +121,56 @@ func main() {
 	glog.Infof("coordinator for group[%s]:%s", *groupID, coordinator.GetAddress())
 
 	// 2. join
-	var (
-		protocolType   string = "consumer"
-		memberID       string = ""
-		generationID   int32
-		sessionTimeout int32 = 30000
-	)
+	/*
+		var (
+			protocolType   string = "consumer"
+			memberID       string = ""
+			generationID   int32
+			sessionTimeout int32 = 30000
+		)
 
-	protocolMetadata := &healer.ProtocolMetadata{
-		Version:      0,
-		Subscription: []string{*topic},
-		UserData:     nil,
-	}
+		protocolMetadata := &healer.ProtocolMetadata{
+			Version:      0,
+			Subscription: []string{*topic},
+			UserData:     nil,
+		}
 
-	gps := []*healer.GroupProtocol{&healer.GroupProtocol{"range", protocolMetadata.Encode()}}
-	joinGroupRequest := healer.NewJoinGroupRequest(*clientID, *groupID, sessionTimeout, memberID, protocolType)
-	for _, gp := range gps {
-		joinGroupRequest.AddGroupProtocal(gp)
-	}
+		gps := []*healer.GroupProtocol{&healer.GroupProtocol{"range", protocolMetadata.Encode()}}
+		joinGroupRequest := healer.NewJoinGroupRequest(*clientID, *groupID, sessionTimeout, memberID, protocolType)
+		for _, gp := range gps {
+			joinGroupRequest.AddGroupProtocal(gp)
+		}
 
-	glog.Info("join...")
-	responseBytes, err := coordinator.Request(joinGroupRequest)
-	if err != nil {
-		glog.Fatalf("request joingroup error:%s", err)
-	}
+		glog.Info("join...")
+		responseBytes, err := coordinator.Request(joinGroupRequest)
+		if err != nil {
+			glog.Fatalf("request joingroup error:%s", err)
+		}
 
-	joinGroupResponse, err := healer.NewJoinGroupResponse(responseBytes)
-	if err != nil {
-		glog.Fatalf("get join group response error:%s", err)
-	}
+		joinGroupResponse, err := healer.NewJoinGroupResponse(responseBytes)
+		if err != nil {
+			glog.Fatalf("get join group response error:%s", err)
+		}
 
-	generationID = joinGroupResponse.GenerationID
-	memberID = joinGroupResponse.MemberID
-	glog.Infof("generationID:%d memberID:%s", generationID, memberID)
+		generationID = joinGroupResponse.GenerationID
+		memberID = joinGroupResponse.MemberID
+		glog.Infof("generationID:%d memberID:%s", generationID, memberID)
 
-	// 3. sync
-	var groupAssignment healer.GroupAssignment = nil
-	syncGroupRequest := healer.NewSyncGroupRequest(*clientID, *groupID, generationID, memberID, groupAssignment)
+		// 3. sync
+		var groupAssignment healer.GroupAssignment = nil
+		syncGroupRequest := healer.NewSyncGroupRequest(*clientID, *groupID, generationID, memberID, groupAssignment)
 
-	responseBytes, err = coordinator.Request(syncGroupRequest)
-	if err != nil {
-		glog.Fatalf("request sync api error:%s", err)
-	}
+		responseBytes, err = coordinator.Request(syncGroupRequest)
+		if err != nil {
+			glog.Fatalf("request sync api error:%s", err)
+		}
 
-	_, err = healer.NewSyncGroupResponse(responseBytes)
+		_, err = healer.NewSyncGroupResponse(responseBytes)
 
-	if err != nil {
-		glog.Fatalf("decode sync response error:%s", err)
-	}
+		if err != nil {
+			glog.Fatalf("decode sync response error:%s", err)
+		}
+	*/
 
 	// 4. commit
 	var (
@@ -180,8 +182,8 @@ func main() {
 		apiVersion = 2
 	}
 	offsetComimtReq := healer.NewOffsetCommitRequest(apiVersion, *clientID, *groupID)
-	offsetComimtReq.SetMemberID(memberID)
-	offsetComimtReq.SetGenerationID(generationID)
+	offsetComimtReq.SetMemberID("")
+	offsetComimtReq.SetGenerationID(-1)
 	offsetComimtReq.SetRetentionTime(-1)
 	for partitionID, offset = range offsets {
 		var finalOffset = offset + *extraOffset
