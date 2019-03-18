@@ -127,12 +127,12 @@ func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	} else {
 		time = -1
 	}
-	offsetsResponses, err := c.brokers.RequestOffsets(c.config.ClientID, c.topic, c.partitionID, time, 1)
+
+	offsetsResponse, err := c.leaderBroker.requestOffsets(c.config.ClientID, c.topic, []int32{c.partitionID}, time, 1)
 	if err != nil {
 		return -1, err
 	}
-
-	return int64(offsetsResponses[0].TopicPartitionOffsets[c.topic][0].Offsets[0]), nil
+	return int64(offsetsResponse.TopicPartitionOffsets[c.topic][0].Offsets[0]), nil
 }
 
 func (c *SimpleConsumer) getCommitedOffet() {
