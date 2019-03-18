@@ -420,14 +420,9 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
-	defer func() {
-		if err != nil {
-			time.Sleep(time.Second)
-			close(buffers)
-		}
-	}()
-
 	if err = broker.ensureOpen(); err != nil {
+		time.Sleep(time.Millisecond * 200)
+		close(buffers)
 		return err
 	}
 
