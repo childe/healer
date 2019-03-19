@@ -219,7 +219,6 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
 	var (
 		metadataResponse *MetadataResponse
-		err              error
 	)
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeId)
@@ -230,7 +229,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 		metadataResponse, err = broker.requestMetaData(clientID, topics)
 
 		if err == nil {
-			return metadataResponse, err
+			return metadataResponse, nil
 		}
 
 		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
@@ -241,7 +240,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 		time.Sleep(time.Millisecond * 200)
 	}
 
-	return metadataResponse, err
+	return metadataResponse, &noAvaliableBrokers
 }
 
 // RequestOffsets return the offset values array. return all partitions if partitionID < 0

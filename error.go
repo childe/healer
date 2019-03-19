@@ -10,6 +10,8 @@ func (healerError *HealerError) Error() string {
 		return "NO partitionResponse?"
 	case 3:
 		return "payload to decode is empty"
+	case 4:
+		return "no avaliable brokers"
 	}
 	return ""
 }
@@ -18,4 +20,5 @@ var (
 	maxBytesTooSmall    HealerError = 1
 	noPartitionResponse HealerError = 2
 	emptyPayload        HealerError = 3
+	noAvaliableBrokers  HealerError = 4
 )
