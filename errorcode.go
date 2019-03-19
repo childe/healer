@@ -460,5 +460,100 @@ func init() {
 		ErrorDesc: "A partition reassignment is in progress",
 		Retriable: false,
 	}
-
+	AllError[61] = &Error{
+		ErrorMsg:  "DELEGATION_TOKEN_AUTH_DISABLED",
+		Errorcode: 61,
+		ErrorDesc: "Delegation Token feature is not enabled.",
+		Retriable: false,
+	}
+	AllError[62] = &Error{
+		ErrorMsg:  "DELEGATION_TOKEN_NOT_FOUND",
+		Errorcode: 62,
+		ErrorDesc: "Delegation Token is not found on server.",
+		Retriable: false,
+	}
+	AllError[63] = &Error{
+		ErrorMsg:  "DELEGATION_TOKEN_OWNER_MISMATCH",
+		Errorcode: 63,
+		ErrorDesc: "Specified Principal is not valid Owner/Renewer.",
+		Retriable: false,
+	}
+	AllError[64] = &Error{
+		ErrorMsg:  "DELEGATION_TOKEN_REQUEST_NOT_ALLOWED",
+		Errorcode: 64,
+		ErrorDesc: "Delegation Token requests are not allowed on PLAINTEXT/1-way SSL channels and on delegation token authenticated channels.",
+		Retriable: false,
+	}
+	AllError[65] = &Error{
+		ErrorMsg:  "DELEGATION_TOKEN_AUTHORIZATION_FAILED",
+		Errorcode: 65,
+		ErrorDesc: "Delegation Token authorization failed",
+		Retriable: false,
+	}
+	AllError[66] = &Error{
+		ErrorMsg:  "DELEGATION_TOKEN_EXPIRED",
+		Errorcode: 66,
+		ErrorDesc: "Delegation Token is expired.",
+		Retriable: false,
+	}
+	AllError[67] = &Error{
+		ErrorMsg:  "INVALID_PRINCIPAL_TYPE",
+		Errorcode: 67,
+		ErrorDesc: "Supplied principalType is not supported.",
+		Retriable: false,
+	}
+	AllError[68] = &Error{
+		ErrorMsg:  "NON_EMPTY_GROUP",
+		Errorcode: 68,
+		ErrorDesc: "The group is not empty.",
+		Retriable: false,
+	}
+	AllError[69] = &Error{
+		ErrorMsg:  "GROUP_ID_NOT_FOUND",
+		Errorcode: 69,
+		ErrorDesc: "The group id does not exist.",
+		Retriable: false,
+	}
+	AllError[70] = &Error{
+		ErrorMsg:  "FETCH_SESSION_ID_NOT_FOUND",
+		Errorcode: 70,
+		ErrorDesc: "The fetch session ID was not found.",
+		Retriable: true,
+	}
+	AllError[71] = &Error{
+		ErrorMsg:  "INVALID_FETCH_SESSION_EPOCH",
+		Errorcode: 71,
+		ErrorDesc: "The fetch session epoch is invalid.",
+		Retriable: true,
+	}
+	AllError[72] = &Error{
+		ErrorMsg:  "LISTENER_NOT_FOUND",
+		Errorcode: 72,
+		ErrorDesc: "There is no listener on the leader broker that matches the listener on which metadata request was processed.",
+		Retriable: true,
+	}
+	AllError[73] = &Error{
+		ErrorMsg:  "TOPIC_DELETION_DISABLED",
+		Errorcode: 73,
+		ErrorDesc: "Topic deletion is disabled.",
+		Retriable: false,
+	}
+	AllError[74] = &Error{
+		ErrorMsg:  "FENCED_LEADER_EPOCH",
+		Errorcode: 74,
+		ErrorDesc: "The leader epoch in the request is older than the epoch on the broker",
+		Retriable: true,
+	}
+	AllError[75] = &Error{
+		ErrorMsg:  "UNKNOWN_LEADER_EPOCH",
+		Errorcode: 75,
+		ErrorDesc: "The leader epoch in the request is newer than the epoch on the broker",
+		Retriable: true,
+	}
+	AllError[76] = &Error{
+		ErrorMsg:  "UNSUPPORTED_COMPRESSION_TYPE",
+		Errorcode: 76,
+		ErrorDesc: "The requesting client does not support the compression type of given partition.",
+		Retriable: false,
+	}
 }
