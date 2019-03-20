@@ -340,6 +340,9 @@ func (c *GroupConsumer) stop() {
 			simpleConsumer.Stop()
 		}
 	}
+
+	// need wait all simple consumers stops, or commit will fail
+	c.wg.Wait()
 	c.leave()
 }
 
