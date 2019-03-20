@@ -344,7 +344,7 @@ func (c *GroupConsumer) stop() {
 }
 
 func (c *GroupConsumer) leave() {
-	glog.Infof("%s try to leave %s", c.memberID, c.config.GroupID)
+	glog.Infof("leave %s from %s", c.memberID, c.config.GroupID)
 	leaveReq := NewLeaveGroupRequest(c.config.ClientID, c.config.GroupID, c.memberID)
 	payload, err := c.coordinator.Request(leaveReq)
 	if err != nil {
@@ -398,7 +398,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, 
 		for range ticker.C {
 			err := c.heartbeat()
 			if err != nil {
-				glog.Errorf("failed to send heartbeat:%s", err)
+				glog.Errorf("failed to send heartbeat: %s", err)
 				c.stop()
 				c.joined = false
 				c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
