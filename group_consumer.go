@@ -29,7 +29,6 @@ type GroupConsumer struct {
 	joined               bool
 	coordinatorAvailable bool
 	topics               []string
-	fromBeginning        bool
 	partitionAssignments []*PartitionAssignment
 	simpleConsumers      []*SimpleConsumer
 
@@ -433,12 +432,12 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, 
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
 				c.stop()
 				c.joined = false
-				c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+				c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
 			}
 		}
 	}()
 
-	return c.consumeWithoutHeartBeat(c.fromBeginning, c.messages)
+	return c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
 }
 
 func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
