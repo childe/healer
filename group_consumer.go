@@ -364,11 +364,11 @@ func (c *GroupConsumer) Close() {
 	c.AwaitClose(time.Second * 30)
 }
 
-func (gc *GroupConsumer) AwaitClose(timeout time.Duration) {
-	c := make(chan bool)
+func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
+	done := make(chan bool)
 	defer func() {
 		select {
-		case <-c:
+		case <-done:
 			glog.Info("all simple consumers stopped. return")
 			return
 		case <-time.After(timeout):
@@ -377,11 +377,11 @@ func (gc *GroupConsumer) AwaitClose(timeout time.Duration) {
 		}
 	}()
 
-	gc.stop()
+	c.stop()
 
 	go func() {
-		gc.wg.Wait()
-		c <- true
+		c.wg.Wait()
+		done <- true
 	}()
 }
 
