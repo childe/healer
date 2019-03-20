@@ -340,9 +340,9 @@ func (c *GroupConsumer) stop() {
 		}
 	}
 
-	// need wait all simple consumers stops, or commit will fail
-	c.wg.Wait()
-	c.leave()
+	// should not call leave
+	//c.wg.Wait()
+	//c.leave()
 }
 
 func (c *GroupConsumer) leave() {
