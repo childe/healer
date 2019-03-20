@@ -361,8 +361,7 @@ func (c *GroupConsumer) leave() {
 }
 
 func (c *GroupConsumer) Close() {
-	c.stop()
-	c.leave()
+	c.AwaitClose(time.Second * 30)
 }
 
 func (gc *GroupConsumer) AwaitClose(timeout time.Duration) {
