@@ -27,6 +27,7 @@ type GroupConsumer struct {
 	topicMetadatas       []*TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
+	stopped              bool
 	coordinatorAvailable bool
 	topics               []string
 	partitionAssignments []*PartitionAssignment
@@ -247,7 +248,7 @@ func (c *GroupConsumer) sync() error {
 
 func (c *GroupConsumer) joinAndSync() error {
 	var err error
-	for {
+	for !c.stopped {
 		if !c.coordinatorAvailable {
 			err = c.getCoordinator()
 			if err != nil {
@@ -258,7 +259,16 @@ func (c *GroupConsumer) joinAndSync() error {
 		}
 		c.coordinatorAvailable = true
 
+		if c.stopped {
+			return nil
+		}
+
 		err = c.join()
+
+		if c.stopped {
+			return nil
+		}
+
 		if err == nil {
 			err = c.sync()
 		}
@@ -276,6 +286,7 @@ func (c *GroupConsumer) joinAndSync() error {
 		}
 		return err
 	}
+	return nil
 }
 
 func (c *GroupConsumer) heartbeat() error {
@@ -346,6 +357,10 @@ func (c *GroupConsumer) stop() {
 }
 
 func (c *GroupConsumer) leave() {
+	if !c.joined {
+		glog.Infof("not joined yet, leave directly")
+		return
+	}
 	glog.Infof("leave %s from %s", c.memberID, c.config.GroupID)
 	leaveReq := NewLeaveGroupRequest(c.config.ClientID, c.config.GroupID, c.memberID)
 	payload, err := c.coordinator.Request(leaveReq)
@@ -360,9 +375,11 @@ func (c *GroupConsumer) leave() {
 	}
 
 	c.memberID = ""
+	c.joined = false
 }
 
 func (c *GroupConsumer) Close() {
+	c.stopped = true
 	c.AwaitClose(time.Second * 30)
 }
 
@@ -371,7 +388,8 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	defer func() {
 		select {
 		case <-done:
-			glog.Info("all simple consumers stopped. return")
+			glog.Info("all simple consumers stopped. leave and return")
+			c.leave()
 			return
 		case <-time.After(timeout):
 			glog.Info("group consumer await timeout. return")
@@ -388,6 +406,8 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 }
 
 func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, error) {
+	c.stopped = false
+
 	if messages == nil {
 		messages = make(chan *FullMessage, 10)
 	}
@@ -447,7 +467,7 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 	c.wg.Wait()
 
 	var err error
-	for {
+	for !c.stopped {
 		err = c.joinAndSync()
 		if err == nil {
 			break
