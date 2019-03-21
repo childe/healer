@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"os/signal"
-	"time"
 
 	goflag "flag"
 
@@ -60,21 +59,37 @@ func main() {
 
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt)
+
+	done := make(chan bool, 1)
+	doneBySignal := make(chan bool, 1)
+
 	go func() {
 		<-signalC
 		signal.Stop(signalC)
-		c.AwaitClose(time.Second * 10)
-		os.Exit(0)
+		glog.Info("closing group consumer...")
+		c.Close()
+		doneBySignal <- true
 	}()
 
 	messages, err := c.Consume(nil)
-	defer c.Close()
+
 	if err != nil {
-		glog.Fatalf("could not get messages channel:%s", err)
+		glog.Fatalf("failed to consume: %s", err)
 	}
 
-	for i := 0; i < *maxMessages; i++ {
-		message := <-messages
-		fmt.Printf("%s:%d:%d:%s\n", message.TopicName, message.PartitionID, message.Message.Offset, message.Message.Value)
+	go func() {
+		for i := 0; i < *maxMessages; i++ {
+			message := <-messages
+			fmt.Printf("%s:%d:%d:%s\n", message.TopicName, message.PartitionID, message.Message.Offset, message.Message.Value)
+		}
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		c.Close()
+		return
+	case <-doneBySignal:
+		return
 	}
 }
