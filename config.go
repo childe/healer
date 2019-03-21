@@ -6,17 +6,17 @@ import (
 )
 
 type NetConfig struct {
-	ConnectTimeoutMS    int   `json:"connect.timeout.ms"`
-	TimeoutMS           int   `json:"timeout.ms"`
+	ConnectTimeoutMS    int   `json:"connect.timeout.ms,string"`
+	TimeoutMS           int   `json:"timeout.ms,string"`
 	TimeoutMSForEachAPI []int `json:"timeout.ms.for.eachapi"`
-	KeepAliveMS         int   `json:"keepalive.ms"`
+	KeepAliveMS         int   `json:"keepalive.ms,string"`
 }
 
 type TLSConfig struct {
 	Cert               string `json:"cert"`
 	Key                string `json:"key"`
 	CA                 string `json:"ca"`
-	InsecureSkipVerify bool   `json:"insecure.skip.verity"`
+	InsecureSkipVerify bool   `json:"insecure.skip.verity,string"`
 }
 
 type SaslConfig struct {
@@ -28,8 +28,8 @@ type SaslConfig struct {
 type BrokerConfig struct {
 	NetConfig
 	*SaslConfig
-	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms"`
-	TLSEnabled                bool       `json:"tls.enabled"`
+	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string"`
+	TLSEnabled                bool       `json:"tls.enabled,string"`
 	TLS                       *TLSConfig `json:"tls"`
 }
 
@@ -78,17 +78,17 @@ type ConsumerConfig struct {
 	BootstrapServers     string `json:"bootstrap.servers"`
 	ClientID             string `json:"client.id"`
 	GroupID              string `json:"group.id"`
-	RetryBackOffMS       int    `json:"retry.backoff.ms"`
-	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms"`
-	SessionTimeoutMS     int32  `json:"session.timeout.ms"`
-	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms"`
-	FetchMaxBytes        int32  `json:"fetch.max.bytes"`
-	FetchMinBytes        int32  `json:"fetch.min.bytes"`
-	FromBeginning        bool   `json:"from.beginning"`
-	AutoCommit           bool   `json:"auto.commit"`
-	CommitAfterFetch     bool   `json:"commit.after.fetch"`
-	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms"`
-	OffsetsStorage       int    `json:"offsets.storage"`
+	RetryBackOffMS       int    `json:"retry.backoff.ms,string"`
+	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms,string"`
+	SessionTimeoutMS     int32  `json:"session.timeout.ms,string"`
+	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms,string"`
+	FetchMaxBytes        int32  `json:"fetch.max.bytes,string"`
+	FetchMinBytes        int32  `json:"fetch.min.bytes,string"`
+	FromBeginning        bool   `json:"from.beginning,string"`
+	AutoCommit           bool   `json:"auto.commit,string"`
+	CommitAfterFetch     bool   `json:"commit.after.fetch,string"`
+	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
+	OffsetsStorage       int    `json:"offsets.storage,string"`
 
 	TLSEnabled bool       `json:"tls.enabled"`
 	TLS        *TLSConfig `json:"tls"`
@@ -178,21 +178,21 @@ type ProducerConfig struct {
 	*SaslConfig
 	BootstrapServers         string `json:"bootstrap.servers"`
 	ClientID                 string `json:"client.id"`
-	Acks                     int16  `json:"acks"`
+	Acks                     int16  `json:"acks,string"`
 	CompressionType          string `json:"compress.type"`
-	BatchSize                int    `json:"batch.size"`
-	MessageMaxCount          int    `json:"message.max.count"`
-	FlushIntervalMS          int    `json:"flush.interval.ms"`
-	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms"`
-	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys"`
-	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms"`
+	BatchSize                int    `json:"batch.size,string"`
+	MessageMaxCount          int    `json:"message.max.count,string"`
+	FlushIntervalMS          int    `json:"flush.interval.ms,string"`
+	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms,string"`
+	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys,string"`
+	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms,string"`
 
-	TLSEnabled bool       `json:"tls.enabled"`
+	TLSEnabled bool       `json:"tls.enabled,string"`
 	TLS        *TLSConfig `json:"tls"`
 
 	// TODO
-	Retries          int   `json:"retries"`
-	RequestTimeoutMS int32 `json:"request.timeout.ms"`
+	Retries          int   `json:"retries,string"`
+	RequestTimeoutMS int32 `json:"request.timeout.ms,string"`
 }
 
 func DefaultProducerConfig() *ProducerConfig {
