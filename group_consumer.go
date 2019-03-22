@@ -379,11 +379,11 @@ func (c *GroupConsumer) leave() {
 }
 
 func (c *GroupConsumer) Close() {
-	c.stopped = true
 	c.AwaitClose(time.Second * 30)
 }
 
 func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
+	c.stopped = true
 	done := make(chan bool)
 	defer func() {
 		select {
