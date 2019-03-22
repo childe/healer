@@ -405,7 +405,7 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	}()
 }
 
-func (c *GroupConsumer) Consume(messages chan *FullMessage) (chan *FullMessage, error) {
+func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage, error) {
 	c.stopped = false
 
 	if messages == nil {

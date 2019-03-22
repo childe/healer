@@ -237,7 +237,7 @@ func (c *SimpleConsumer) CommitOffset() {
 	}
 }
 
-func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (chan *FullMessage, error) {
+func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<-chan *FullMessage, error) {
 	var messages chan *FullMessage
 	if messageChan == nil {
 		messages = make(chan *FullMessage, 10)
