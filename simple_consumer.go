@@ -23,6 +23,8 @@ type SimpleConsumer struct {
 	offset         int64
 	offsetCommited int64
 
+	messages chan *FullMessage
+
 	belongTO *GroupConsumer
 
 	wg *sync.WaitGroup // call wg.Done in defer when Consume return
@@ -194,6 +196,14 @@ func (c *SimpleConsumer) getCommitedOffet() {
 
 func (c *SimpleConsumer) Stop() {
 	c.stop = true
+	select {
+	case message, more := <-c.messages:
+		// if there is still FullMessages in messages chan. should commit write offset
+		if more {
+			c.offset = message.Message.Offset
+		}
+	case <-time.After(time.Second):
+	}
 	c.CommitOffset()
 }
 
@@ -228,12 +238,21 @@ func (c *SimpleConsumer) commitOffset() bool {
 }
 
 func (c *SimpleConsumer) CommitOffset() {
+	if c.offset == c.offsetCommited {
+		if glog.V(5) {
+			glog.Infof("current offset[%d] is same as commited offset, skip committing", c.offset)
+		}
+		return
+	}
+	offset := c.offset
 	if c.belongTO != nil {
-		if c.belongTO.commitOffset(c.topic, c.partitionID, c.offset) {
-			c.offsetCommited = c.offset
+		if c.belongTO.commitOffset(c.topic, c.partitionID, offset) {
+			c.offsetCommited = offset
 		}
 	} else if c.config.GroupID != "" {
-		c.commitOffset()
+		if c.commitOffset() {
+			c.offsetCommited = offset
+		}
 	}
 }
 
@@ -244,6 +263,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	} else {
 		messages = messageChan
 	}
+
+	c.messages = messages
 
 	var err error
 
@@ -307,9 +328,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	go func(messages chan *FullMessage) {
 		defer func() {
 			glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
-			if c.belongTO != nil && c.offset != c.offsetCommited {
-				c.CommitOffset()
-			}
+			c.CommitOffset()
 			c.wg.Done()
 		}()
 
