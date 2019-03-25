@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
@@ -41,28 +41,23 @@ func main() {
 		os.Exit(5)
 	}
 
-	s, err := json.MarshalIndent(offsetsResponse, "", "  ")
-	if err != nil {
-		glog.Errorf("failed to marshal offsets response:%s", err)
-		os.Exit(5)
+	rst := make([]*healer.PartitionOffset, 0)
+
+	for _, x := range offsetsResponse {
+		for _, partitionOffsetsList := range x.TopicPartitionOffsets {
+			rst = append(rst, partitionOffsetsList...)
+		}
 	}
 
-	if *format == "original" {
-		fmt.Println(string(s))
-	} else {
-		for _, x := range offsetsResponse {
-			for topic, partitionOffsetsList := range x.TopicPartitionOffsets {
-				for _, partitionOffsets := range partitionOffsetsList {
-					fmt.Printf("%s:%d:", topic, partitionOffsets.Partition)
-					for i, offset := range partitionOffsets.Offsets {
-						if i != 0 {
-							fmt.Print(",")
-						}
-						fmt.Printf("%d", offset)
-					}
-					fmt.Println()
-				}
+	sort.Slice(rst, func(i, j int) bool { return rst[i].Partition < rst[j].Partition })
+	for _, partitionOffset := range rst {
+		fmt.Printf("%s:%d:", *topic, partitionOffset.Partition)
+		for i, offset := range partitionOffset.Offsets {
+			if i != 0 {
+				fmt.Print(",")
 			}
+			fmt.Printf("%d", offset)
 		}
+		fmt.Println()
 	}
 }
