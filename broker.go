@@ -299,7 +299,7 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	if glog.V(10) {
+	if glog.V(15) {
 		glog.Infof("total response length should be %d", 4+responseLength)
 	}
 
@@ -422,7 +422,10 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) (err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
-	defer close(buffers)
+	//defer close(buffers)
+	defer func() {
+		buffers <- nil
+	}()
 
 	if err = broker.ensureOpen(); err != nil {
 		return err
