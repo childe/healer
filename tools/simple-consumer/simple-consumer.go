@@ -83,4 +83,5 @@ func main() {
 			fmt.Printf("%s\n", message.Message.Value)
 		}
 	}
+	glog.Flush()
 }
