@@ -27,7 +27,8 @@ type GroupConsumer struct {
 	topicMetadatas       []*TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
-	stopped              bool
+	closed               bool
+	closeChan            chan bool
 	coordinatorAvailable bool
 	topics               []string
 	partitionAssignments []*PartitionAssignment
@@ -75,6 +76,8 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 
 		joined:               false,
 		coordinatorAvailable: false,
+
+		closeChan: make(chan bool, 1),
 	}
 
 	return c, nil
@@ -248,7 +251,7 @@ func (c *GroupConsumer) sync() error {
 
 func (c *GroupConsumer) joinAndSync() error {
 	var err error
-	for !c.stopped {
+	for !c.closed {
 		if !c.coordinatorAvailable {
 			err = c.getCoordinator()
 			if err != nil {
@@ -259,13 +262,13 @@ func (c *GroupConsumer) joinAndSync() error {
 		}
 		c.coordinatorAvailable = true
 
-		if c.stopped {
+		if c.closed {
 			return nil
 		}
 
 		err = c.join()
 
-		if c.stopped {
+		if c.closed {
 			return nil
 		}
 
@@ -358,7 +361,7 @@ func (c *GroupConsumer) stop() {
 
 func (c *GroupConsumer) leave() {
 	if !c.joined {
-		glog.Infof("not joined yet, leave directly")
+		glog.Info("not joined yet, leave directly")
 		return
 	}
 	glog.Infof("leave %s from %s", c.memberID, c.config.GroupID)
@@ -383,7 +386,8 @@ func (c *GroupConsumer) Close() {
 }
 
 func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
-	c.stopped = true
+	c.closed = true
+	c.closeChan <- true
 	done := make(chan bool)
 	defer func() {
 		select {
@@ -406,7 +410,7 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 }
 
 func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage, error) {
-	c.stopped = false
+	c.closed = false
 
 	if messages == nil {
 		messages = make(chan *FullMessage, 10)
@@ -464,16 +468,28 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 	c.consumeWithoutHeartBeatMutex.Lock()
 	defer c.consumeWithoutHeartBeatMutex.Unlock()
 
+	/* if groupconsumer restarts,
+	it should wait all simple consumers stoped */
 	c.wg.Wait()
 
 	var err error
-	for !c.stopped {
-		err = c.joinAndSync()
-		if err == nil {
-			break
-		} else {
-			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+	joined := make(chan bool, 1)
+	go func() {
+		for !c.closed {
+			err = c.joinAndSync()
+			if err == nil {
+				break
+			} else {
+				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+			}
 		}
+		joined <- true
+	}()
+
+	select {
+	case <-c.closeChan:
+		return messages, nil
+	case <-joined:
 	}
 
 	c.joined = true
