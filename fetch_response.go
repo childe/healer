@@ -2,6 +2,8 @@ package healer
 
 import (
 	"encoding/binary"
+	"errors"
+	"io"
 
 	"github.com/golang/glog"
 )
@@ -43,10 +45,10 @@ type FetchResponse struct {
 type FetchResponseStreamDecoder struct {
 	depositBuffer []byte
 	totalLength   int
-	length        int
-	buffers       chan []byte
-	messages      chan *FullMessage
-	more          bool
+	//length        int
+	buffers  chan []byte
+	messages chan *FullMessage
+	more     bool
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) readAll() (length int) {
@@ -66,7 +68,51 @@ func (streamDecoder *FetchResponseStreamDecoder) readAll() (length int) {
 	}
 }
 
+var errShortRead = errors.New("short read")
+
+func (streamDecoder *FetchResponseStreamDecoder) readToBuf(p []byte) (n int, err error) {
+	var (
+		l      int
+		length int = len(p)
+		i      int
+	)
+	if len(streamDecoder.depositBuffer) >= length {
+		l = copy(p, streamDecoder.depositBuffer)
+		if l != length {
+			return l, errShortRead
+		}
+
+		streamDecoder.depositBuffer = streamDecoder.depositBuffer[length:]
+		return l, nil
+	}
+
+	l = copy(p, streamDecoder.depositBuffer)
+
+	var buffer []byte
+	for l < length {
+		buffer = <-streamDecoder.buffers
+		if buffer != nil {
+			streamDecoder.more = true
+			i = copy(p[l:], buffer)
+			l += i
+			//streamDecoder.length += len(buffer)
+		} else {
+			streamDecoder.more = false
+			return l, io.EOF
+		}
+	}
+	streamDecoder.depositBuffer = buffer[i:]
+
+	return length, nil
+}
+
 func (streamDecoder *FetchResponseStreamDecoder) read(n int) ([]byte, int) {
+	if len(streamDecoder.depositBuffer) >= n {
+		rst := streamDecoder.depositBuffer[:n]
+		streamDecoder.depositBuffer = streamDecoder.depositBuffer[n:]
+		return rst, n
+	}
+
 	var (
 		rst    []byte = make([]byte, n)
 		length int    = 0
@@ -74,11 +120,7 @@ func (streamDecoder *FetchResponseStreamDecoder) read(n int) ([]byte, int) {
 		buffer []byte
 		i      int
 	)
-	if len(streamDecoder.depositBuffer) >= n {
-		length = copy(rst, streamDecoder.depositBuffer)
-		streamDecoder.depositBuffer = streamDecoder.depositBuffer[length:]
-		return rst, length
-	}
+
 	length = copy(rst, streamDecoder.depositBuffer)
 
 	for length < n {
@@ -87,7 +129,7 @@ func (streamDecoder *FetchResponseStreamDecoder) read(n int) ([]byte, int) {
 			streamDecoder.more = true
 			i = copy(rst[length:], buffer)
 			length += i
-			streamDecoder.length += len(buffer)
+			//streamDecoder.length += len(buffer)
 		} else {
 			streamDecoder.more = false
 			return rst, length
@@ -102,10 +144,8 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 	var (
 		//messageOffset int64
 		messageSize int32
-
-		buffer []byte
-		n      int
-		offset int32 = 0
+		n           int
+		offset      int32 = 0
 	)
 
 	hasAtLeastOneMessage := false
@@ -113,34 +153,34 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		if offset == messageSetSizeBytes {
 			return nil
 		}
-		value := make([]byte, 12)
-		buffer, n = streamDecoder.read(8)
+		buf := make([]byte, 12)
+		n, _ = streamDecoder.readToBuf(buf[:8])
 		if n < 8 {
 			if !hasAtLeastOneMessage {
 				return &maxBytesTooSmall
 			}
 			return nil
 		}
-		copy(value, buffer)
 
 		//messageOffset = int64(binary.BigEndian.Uint64(buffer))
 		offset += 8
 
-		buffer, n = streamDecoder.read(4)
+		n, _ = streamDecoder.readToBuf(buf[8:])
 		if n < 4 {
 			if !hasAtLeastOneMessage {
 				return &maxBytesTooSmall
 			}
 			return nil
 		}
-		copy(value[8:], buffer)
-		messageSize = int32(binary.BigEndian.Uint32(buffer))
+		messageSize = int32(binary.BigEndian.Uint32(buf[8:12]))
 		if messageSize <= 0 {
 			return nil
 		}
 		offset += 4
 
-		buffer, n = streamDecoder.read(int(messageSize))
+		value := make([]byte, 12+int(messageSize))
+		copy(value, buf)
+		n, _ = streamDecoder.readToBuf(value[12:])
 
 		if n < int(messageSize) {
 			if !hasAtLeastOneMessage {
@@ -148,8 +188,6 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 			}
 			return nil
 		}
-		// TODO remove memory copy
-		value = append(value, buffer...)
 
 		offset += messageSize
 
