@@ -339,7 +339,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 		go func() {
 			// call fetch api
-			for {
+			for !c.stop {
 				wg.Add(2)
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
@@ -347,6 +347,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				err := c.leaderBroker.requestFetchStreamingly(r, buffers)
 				if err != nil {
 					glog.Errorf("fetch error:%s", err)
+					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 				}
 
 				wg.Wait()
@@ -357,9 +358,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
 				buffers:  buffers,
 				messages: innerMessages,
-				more:     true,
 			}
-			for {
+			for !c.stop {
 				// decode
 				fetchResponseStreamDecoder.consumeFetchResponse()
 				wg.Done()
