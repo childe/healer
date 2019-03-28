@@ -420,7 +420,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			}
 
 			// is this really needed ?
-			if c.belongTO != nil && c.config.CommitAfterFetch && c.offset != c.offsetCommited {
+			if c.config.CommitAfterFetch {
 				c.CommitOffset()
 			}
 		}
