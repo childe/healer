@@ -274,6 +274,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
 func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() bool {
 	defer func() {
 		//close(streamDecoder.messages)
+		streamDecoder.messages <- nil
 	}()
 
 	streamDecoder.depositBuffer = make([]byte, 0)

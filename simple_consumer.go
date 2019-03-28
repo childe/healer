@@ -332,62 +332,44 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			c.wg.Done()
 		}()
 
-		for c.stop == false {
+		buffers := make(chan []byte, 10)
+		innerMessages := make(chan *FullMessage, 10)
 
-			buffers := make(chan []byte, 10)
-			innerMessages := make(chan *FullMessage, 10)
+		wg := &sync.WaitGroup{}
 
-			l := &sync.Mutex{}
-			l.Lock()
-			go func() {
-				// call fetch api
-				for {
-					r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
-					r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
+		go func() {
+			// call fetch api
+			for {
+				wg.Add(2)
+				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
+				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
-					err := c.leaderBroker.requestFetchStreamingly(r, buffers)
-					if err != nil {
-						glog.Errorf("fetch error:%s", err)
-					}
-
-					l.Lock()
+				err := c.leaderBroker.requestFetchStreamingly(r, buffers)
+				if err != nil {
+					glog.Errorf("fetch error:%s", err)
 				}
-			}()
 
-			go func() {
-				fetchResponseStreamDecoder := FetchResponseStreamDecoder{
-					buffers:  buffers,
-					messages: innerMessages,
-					more:     true,
-				}
-				for {
-					// decode
-					fetchResponseStreamDecoder.consumeFetchResponse()
-					l.Unlock()
-				}
-			}()
+				wg.Wait()
+			}
+		}()
 
-			//fetchRequest := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
-			//fetchRequest.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
+		go func() {
+			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
+				buffers:  buffers,
+				messages: innerMessages,
+				more:     true,
+			}
+			for {
+				// decode
+				fetchResponseStreamDecoder.consumeFetchResponse()
+				wg.Done()
+			}
+		}()
 
-			//go func() {
-			//err := c.leaderBroker.requestFetchStreamingly(fetchRequest, buffers)
-			//if err != nil {
-			//glog.Errorf("fetch error:%s", err)
-			//}
-			//}()
-
-			//fetchResponseStreamDecoder := FetchResponseStreamDecoder{
-			//totalLength: 0,
-			//length:      0,
-			//buffers:     buffers,
-			//messages:    innerMessages,
-			//more:        true,
-			//}
-			//go fetchResponseStreamDecoder.consumeFetchResponse()
-			for c.stop == false {
-				message, more := <-innerMessages
-				if more {
+		for c.stop == false { //dead loop until stop
+			for c.stop == false { // consume all messages from one fetch response
+				message := <-innerMessages
+				if message != nil {
 					if message.Error != nil {
 						glog.Infof("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
 						if message.Error == AllError[1] {
@@ -409,12 +391,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 						messages <- message
 					}
 				} else {
-					//if buffer, ok := <-buffers; ok {
-					////glog.Info(buffer)
-					//glog.Info(len(buffer))
-					//panic("buffers still open??")
-					//}
-					glog.V(10).Info("NO more message")
+					glog.V(15).Info("consume all messages from one fetch response. current offset: %d", c.offset)
 					break
 				}
 			}
@@ -423,6 +400,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			if c.config.CommitAfterFetch {
 				c.CommitOffset()
 			}
+			wg.Done()
 		}
 		c.leaderBroker.Close()
 	}(messages)
