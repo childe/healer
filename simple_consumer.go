@@ -9,6 +9,7 @@ import (
 )
 
 // SimpleConsumer instance is built to consume messages from kafka broker
+// TODO make messages have direction
 type SimpleConsumer struct {
 	topic       string
 	partitionID int32
