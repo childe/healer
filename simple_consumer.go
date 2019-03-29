@@ -196,14 +196,6 @@ func (c *SimpleConsumer) getCommitedOffet() {
 
 func (c *SimpleConsumer) Stop() {
 	c.stop = true
-	select {
-	case message, more := <-c.messages:
-		// if there is still FullMessages in messages chan. should commit write offset
-		if more {
-			c.offset = message.Message.Offset
-		}
-	case <-time.After(time.Second):
-	}
 	c.CommitOffset()
 }
 
