@@ -388,25 +388,43 @@ func (c *GroupConsumer) Close() {
 func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	c.closed = true
 	c.closeChan <- true
-	done := make(chan bool)
-	defer func() {
-		select {
-		case <-done:
-			glog.Info("all simple consumers stopped. leave and return")
-			c.leave()
-			return
-		case <-time.After(timeout):
-			glog.Info("group consumer await timeout. return")
-			return
-		}
-	}()
 
 	c.stop()
 
+	done := make(chan bool)
 	go func() {
 		c.wg.Wait()
 		done <- true
 	}()
+
+	select {
+	case <-done:
+		glog.Info("all simple consumers stopped. leave and return")
+	case <-time.After(timeout):
+		glog.Info("group consumer await timeout. return")
+		return
+	}
+
+	// if there is still FullMessages in messages chan. should commit write offset
+	type tp struct {
+		topic string
+		pid   int32
+	}
+	offsets := make(map[tp]int64)
+	for {
+		select {
+		case m := <-c.messages:
+			_tp := tp{m.TopicName, m.PartitionID}
+			if _, ok := offsets[_tp]; !ok {
+				offsets[_tp] = m.Message.Offset
+			}
+		case <-time.After(time.Millisecond * 200):
+		}
+	}
+	for tp, offset := range offsets {
+		c.commitOffset(tp.topic, tp.pid, offset)
+	}
+	c.leave()
 }
 
 func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage, error) {
