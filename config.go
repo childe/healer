@@ -16,7 +16,7 @@ type TLSConfig struct {
 	Cert               string `json:"cert"`
 	Key                string `json:"key"`
 	CA                 string `json:"ca"`
-	InsecureSkipVerify bool   `json:"insecure.skip.verity,string"`
+	InsecureSkipVerify bool   `json:"insecure.skip.verify,string"`
 	ServerName         string `json:"servername"`
 }
 
