@@ -91,7 +91,7 @@ type ConsumerConfig struct {
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
 	OffsetsStorage       int    `json:"offsets.storage,string"`
 
-	TLSEnabled bool       `json:"tls.enabled"`
+	TLSEnabled bool       `json:"tls.enabled,string"`
 	TLS        *TLSConfig `json:"tls"`
 }
 
