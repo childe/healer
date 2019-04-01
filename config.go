@@ -17,6 +17,7 @@ type TLSConfig struct {
 	Key                string `json:"key"`
 	CA                 string `json:"ca"`
 	InsecureSkipVerify bool   `json:"insecure.skip.verity,string"`
+	ServerName         string `json:"servername"`
 }
 
 type SaslConfig struct {

@@ -115,6 +115,11 @@ func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 		RootCAs:            caCertPool,
 		InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
 	}
+
+	if tlsConfig.ServerName != "" {
+		t.ServerName = tlsConfig.ServerName
+	}
+
 	return t, nil
 }
 
