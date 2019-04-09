@@ -108,17 +108,6 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
 		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
-			p.mutex.Lock()
-			if len(p.messageSet) == 0 {
-				p.mutex.Unlock()
-				continue
-			}
-
-			messageSet := p.messageSet
-			p.messageSet = make([]*Message, config.MessageMaxCount)
-			p.messageSet = p.messageSet[:0]
-			p.mutex.Unlock()
-
 			p.Flush()
 		}
 	}()
