@@ -186,7 +186,9 @@ func (p *SimpleProducer) Flush() error {
 }
 
 func (p *SimpleProducer) flush(messageSet MessageSet) error {
-	glog.V(5).Infof("produce %d messsages", len(messageSet))
+	if glog.V(5) {
+		glog.Infof("produce %d messsages", len(messageSet))
+	}
 
 	produceRequest := &ProduceRequest{
 		RequiredAcks: p.config.Acks,
