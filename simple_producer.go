@@ -164,23 +164,20 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 }
 
 func (p *SimpleProducer) Flush() error {
-	p.mutex.Lock()
-
 	if len(p.messageSet) == 0 {
-		p.mutex.Unlock()
 		return nil
 	}
 
+	p.mutex.Lock()
 	messageSet := p.messageSet
 	p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
+	p.mutex.Unlock()
 
 	// TODO should below code put between lock & unlock
 	if !p.timer.Stop() {
 		<-p.timer.C
 	}
 	p.timer.Reset(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
-
-	p.mutex.Unlock()
 
 	return p.flush(messageSet)
 }
