@@ -237,12 +237,16 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 
 	responseBuf, err := p.leader.Request(produceRequest)
 	if err != nil {
+		glog.Errorf("produce request error: %s", err)
 		return err
 	}
 	response, err := NewProduceResponse(responseBuf)
 	if glog.V(10) {
 		b, _ := json.Marshal(response)
 		glog.Infof("produces response: %s", b)
+	}
+	if err != nil {
+		glog.Errorf("decode produce response error: %s", err)
 	}
 	return err
 }
