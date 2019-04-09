@@ -106,7 +106,7 @@ func (p *Producer) AddMessage(key []byte, value []byte) error {
 	if len(key) == 0 {
 		return p.currentProducer.AddMessage(key, value)
 	}
-	partitionID := int32(murmur.MurmurHash2(key, 0)) % int32(len(p.topicMeta.PartitionMetadatas))
+	partitionID := int32(murmur.MurmurHash2(key, 0) % uint32(len(p.topicMeta.PartitionMetadatas)))
 	if s, ok := p.simpleProducers[partitionID]; ok {
 		return s.AddMessage(key, value)
 	} else {
