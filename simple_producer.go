@@ -172,8 +172,7 @@ func (p *SimpleProducer) Flush() error {
 	}
 
 	messageSet := p.messageSet
-	p.messageSet = make([]*Message, p.config.MessageMaxCount)
-	p.messageSet = p.messageSet[:0]
+	p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
 
 	// TODO should below code put between lock & unlock
 	if !p.timer.Stop() {
