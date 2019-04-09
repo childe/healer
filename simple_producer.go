@@ -183,6 +183,10 @@ func (p *SimpleProducer) Flush() error {
 }
 
 func (p *SimpleProducer) flush(messageSet MessageSet) error {
+	if len(p.messageSet) == 0 {
+		return nil
+	}
+
 	if glog.V(5) {
 		glog.Infof("produce %d messsages", len(messageSet))
 	}
