@@ -119,7 +119,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 			p.messageSet = p.messageSet[:0]
 			p.mutex.Unlock()
 
-			p.flush(messageSet)
+			p.Flush()
 		}
 	}()
 
