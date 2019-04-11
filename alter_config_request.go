@@ -23,8 +23,7 @@ func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.ResourceName)))
 	offset += 2
 
-	copy(payload[offset:], r.ResourceName)
-	offset += len(r.ResourceName)
+	offset += copy(payload[offset:], r.ResourceName)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.ConfigEntries)))
 	offset += 4
@@ -45,14 +44,12 @@ func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(c.ConfigName)))
 	offset += 2
 
-	copy(payload[offset:], c.ConfigName)
-	offset += len(c.ConfigName)
+	offset += copy(payload[offset:], c.ConfigName)
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(c.ConfigValue)))
 	offset += 2
 
-	copy(payload[offset:], c.ConfigValue)
-	offset += len(c.ConfigValue)
+	offset += copy(payload[offset:], c.ConfigValue)
 
 	return
 }
