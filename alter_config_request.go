@@ -13,7 +13,7 @@ type AlterConfigsRequest struct {
 type AlterConfigsRequestResource struct {
 	ResourceType  uint8
 	ResourceName  string
-	ConfigEntries []*ConfigEntry
+	ConfigEntries []*AlterConfigsRequestConfigEntry
 }
 
 func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
@@ -36,12 +36,12 @@ func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
 	return
 }
 
-type ConfigEntry struct {
+type AlterConfigsRequestConfigEntry struct {
 	ConfigName  string
 	ConfigValue string
 }
 
-func (c *ConfigEntry) encode(payload []byte) (offset int) {
+func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(c.ConfigName)))
 	offset += 2
 

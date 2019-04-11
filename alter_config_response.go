@@ -63,7 +63,11 @@ func NewAlterConfigsResponse(payload []byte) (*AlterConfigsResponse, error) {
 
 	r.Resources = make([]*AlterConfigsResponseResource, count)
 	for _, r := range r.Resources {
+		r = &AlterConfigsResponseResource{}
 		offset += r.decode(payload[offset:])
+		if err == nil && r.ErrorCode != 0 {
+			err = getErrorFromErrorCode(r.ErrorCode)
+		}
 	}
 
 	return r, err
