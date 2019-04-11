@@ -1,8 +1,6 @@
 package healer
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
 // version0
 type DescribeConfigsRequest struct {
@@ -23,6 +21,8 @@ func (r *DescribeConfigsRequestResource) encode(payload []byte) (offset int) {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.ResourceName)))
 	offset += 2
 
+	offset += copy(payload[offset:], r.ResourceName)
+
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.ConfigNames)))
 	offset += 4
 
@@ -30,8 +30,7 @@ func (r *DescribeConfigsRequestResource) encode(payload []byte) (offset int) {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(configName)))
 		offset += 2
 
-		copy(payload[offset:], configName)
-		offset += len(configName)
+		offset += copy(payload[offset:], configName)
 	}
 
 	return

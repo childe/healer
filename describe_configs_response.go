@@ -3,8 +3,6 @@ package healer
 import (
 	"encoding/binary"
 	"fmt"
-
-	"github.com/golang/glog"
 )
 
 // version 0
@@ -30,18 +28,26 @@ func (r *DescribeConfigsResponseResource) decode(payload []byte) (offset int) {
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
-	l = int(binary.BigEndian.Uint16(payload[offset:]))
-	offset += 2
-	r.ErrorMessage = string(payload[offset : offset+l])
-	offset += l
+	if r.ErrorCode != 0 {
+		l = int(int16(binary.BigEndian.Uint16(payload[offset:])))
+		offset += 2
+		if l > 0 {
+			r.ErrorMessage = string(payload[offset : offset+l])
+			offset += l
+		}
+	} else {
+		offset += 2
+	}
 
 	r.ResourceType = uint8(payload[offset])
 	offset += 1
 
-	l = int(binary.BigEndian.Uint16(payload[offset:]))
+	l = int(int16(binary.BigEndian.Uint16(payload[offset:])))
 	offset += 2
-	r.ResourceName = string(payload[offset : offset+l])
-	offset += l
+	if l >= 0 {
+		r.ResourceName = string(payload[offset : offset+l])
+		offset += l
+	}
 
 	l = int(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 4
@@ -104,15 +110,12 @@ func NewDescribeConfigsResponse(payload []byte) (*DescribeConfigsResponse, error
 	offset += 4
 
 	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
-	glog.Info(r.CorrelationID)
 	offset += 4
 
 	r.ThrottleTimeMS = binary.BigEndian.Uint32(payload[offset:])
-	glog.Info(r.ThrottleTimeMS)
 	offset += 4
 
 	count := binary.BigEndian.Uint32(payload[offset:])
-	glog.Info(count)
 	offset += 4
 
 	r.Resources = make([]*DescribeConfigsResponseResource, count)
