@@ -13,6 +13,7 @@ all:
 	go build -o tools/bin/transplant-offset tools/transplant-offset/transplant-offset.go
 	go build -o tools/bin/get-pending tools/get-pending/get-pending.go
 	go build -o tools/bin/alter-topic tools/alter-topic/alter-topic.go
+	go build -o tools/bin/describe-topic tools/describe-topic/describe-topic.go
 
 test:
 	go test -v -args -brokers 127.0.0.1:9092 -broker 127.0.0.1:9092 -logtostderr --broker 127.0.0.1:9092
