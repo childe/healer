@@ -7,16 +7,16 @@ import (
 // version0
 type AlterConfigsRequest struct {
 	RequestHeader *RequestHeader
-	Resources     []*Resource
+	Resources     []*AlterConfigsRequestResource
 }
 
-type Resource struct {
+type AlterConfigsRequestResource struct {
 	ResourceType  uint8
 	ResourceName  string
 	ConfigEntries []*ConfigEntry
 }
 
-func (r *Resource) encode(payload []byte) (offset int) {
+func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
 	payload[0] = r.ResourceType
 	offset += 1
 
@@ -57,7 +57,7 @@ func (c *ConfigEntry) encode(payload []byte) (offset int) {
 	return
 }
 
-func NewAlterConfigsRequest(clientID string, resources []*Resource) *AlterConfigsRequest {
+func NewAlterConfigsRequest(clientID string, resources []*AlterConfigsRequestResource) *AlterConfigsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:     API_AlterConfigs,
 		ApiVersion: 0,
