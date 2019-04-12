@@ -1,3 +1,5 @@
+.PHONY: all test
+
 all:
 	go build -o tools/bin/getmetadata tools/getmetadata/getmetadata.go
 	go build -o tools/bin/getoffsets tools/getoffset/getoffset.go
