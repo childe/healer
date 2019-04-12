@@ -102,8 +102,7 @@ func (r *OffsetFetchRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2
-	copy(payload[offset:], r.GroupID)
-	offset += len(r.GroupID)
+	offset += copy(payload[offset:], r.GroupID)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Topics)))
 	offset += 4
@@ -112,8 +111,7 @@ func (r *OffsetFetchRequest) Encode() []byte {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(t.Topic)))
 		offset += 2
 
-		copy(payload[offset:], t.Topic)
-		offset += len(t.Topic)
+		offset += copy(payload[offset:], t.Topic)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(t.Partitions)))
 		offset += 4

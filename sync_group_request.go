@@ -85,29 +85,25 @@ func (r *SyncGroupRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2
-	copy(payload[offset:], r.GroupID)
-	offset += len(r.GroupID)
+	offset += copy(payload[offset:], r.GroupID)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.GenerationID))
 	offset += 4
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.MemberID)))
 	offset += 2
-	copy(payload[offset:], r.MemberID)
-	offset += len(r.MemberID)
+	offset += copy(payload[offset:], r.MemberID)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.GroupAssignment)))
 	offset += 4
 	for _, x := range r.GroupAssignment {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(x.MemberID)))
 		offset += 2
-		copy(payload[offset:], x.MemberID)
-		offset += len(x.MemberID)
+		offset += copy(payload[offset:], x.MemberID)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(x.MemberAssignment)))
 		offset += 4
-		copy(payload[offset:], x.MemberAssignment)
-		offset += len(x.MemberAssignment)
+		offset += copy(payload[offset:], x.MemberAssignment)
 	}
 
 	return payload

@@ -52,13 +52,11 @@ func (r *LeaveGroupRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2
-	copy(payload[offset:], r.GroupID)
-	offset += len(r.GroupID)
+	offset += copy(payload[offset:], r.GroupID)
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.MemberID)))
 	offset += 2
-	copy(payload[offset:], r.MemberID)
-	offset += len(r.MemberID)
+	offset += copy(payload[offset:], r.MemberID)
 
 	return payload
 }

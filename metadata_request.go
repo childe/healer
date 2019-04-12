@@ -52,8 +52,7 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 	for _, topicname := range metadataRequest.Topics {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicname)))
 		offset += 2
-		copy(payload[offset:], topicname)
-		offset += len(topicname)
+		offset += copy(payload[offset:], topicname)
 	}
 	return payload
 }

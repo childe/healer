@@ -111,8 +111,7 @@ func (fetchRequest *FetchRequest) Encode() []byte {
 	for topicname, partitionBlocks := range fetchRequest.Topics {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicname)))
 		offset += 2
-		copy(payload[offset:], topicname)
-		offset += len(topicname)
+		offset += copy(payload[offset:], topicname)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitionBlocks)))
 		offset += 4

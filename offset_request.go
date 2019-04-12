@@ -85,8 +85,7 @@ func (offsetR *OffsetsRequest) Encode() []byte {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicName)))
 		offset += 2
 
-		copy(payload[offset:], topicName)
-		offset += len(topicName)
+		offset += copy(payload[offset:], topicName)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitionOffsetRequestInfos)))
 		offset += 4

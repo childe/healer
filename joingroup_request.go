@@ -82,21 +82,18 @@ func (r *JoinGroupRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2
-	copy(payload[offset:], r.GroupID)
-	offset += len(r.GroupID)
+	offset += copy(payload[offset:], r.GroupID)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.SessionTimeout))
 	offset += 4
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.MemberID)))
 	offset += 2
-	copy(payload[offset:], r.MemberID)
-	offset += len(r.MemberID)
+	offset += copy(payload[offset:], r.MemberID)
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.ProtocolType)))
 	offset += 2
-	copy(payload[offset:], r.ProtocolType)
-	offset += len(r.ProtocolType)
+	offset += copy(payload[offset:], r.ProtocolType)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.GroupProtocols)))
 	offset += 4
@@ -104,13 +101,11 @@ func (r *JoinGroupRequest) Encode() []byte {
 	for _, gp := range r.GroupProtocols {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(gp.ProtocolName)))
 		offset += 2
-		copy(payload[offset:], gp.ProtocolName)
-		offset += len(gp.ProtocolName)
+		offset += copy(payload[offset:], gp.ProtocolName)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(gp.ProtocolMetadata)))
 		offset += 4
-		copy(payload[offset:], gp.ProtocolMetadata)
-		offset += len(gp.ProtocolMetadata)
+		offset += copy(payload[offset:], gp.ProtocolMetadata)
 	}
 	return payload
 }

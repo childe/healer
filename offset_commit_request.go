@@ -166,8 +166,7 @@ func (r *OffsetCommitRequest) Encode() []byte {
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2
-	copy(payload[offset:], r.GroupID)
-	offset += len(r.GroupID)
+	offset += copy(payload[offset:], r.GroupID)
 
 	if r.APIVersion() == 2 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(r.GenerationID))
@@ -175,8 +174,7 @@ func (r *OffsetCommitRequest) Encode() []byte {
 
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.MemberID)))
 		offset += 2
-		copy(payload[offset:], r.MemberID)
-		offset += len(r.MemberID)
+		offset += copy(payload[offset:], r.MemberID)
 
 		binary.BigEndian.PutUint64(payload[offset:], uint64(r.RetentionTime))
 		offset += 8
@@ -189,8 +187,7 @@ func (r *OffsetCommitRequest) Encode() []byte {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(t.Topic)))
 		offset += 2
 
-		copy(payload[offset:], t.Topic)
-		offset += len(t.Topic)
+		offset += copy(payload[offset:], t.Topic)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(t.Partitions)))
 		offset += 4
@@ -202,8 +199,7 @@ func (r *OffsetCommitRequest) Encode() []byte {
 			offset += 8
 			binary.BigEndian.PutUint16(payload[offset:], uint16(len(p.Metadata)))
 			offset += 2
-			copy(payload[offset:], p.Metadata)
-			offset += len(p.Metadata)
+			offset += copy(payload[offset:], p.Metadata)
 		}
 	}
 

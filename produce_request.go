@@ -70,8 +70,7 @@ func (produceRequest *ProduceRequest) Encode() []byte {
 	for _, topicBlock := range produceRequest.TopicBlocks {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicBlock.TopicName)))
 		offset += 2
-		copy(payload[offset:], topicBlock.TopicName)
-		offset += len(topicBlock.TopicName)
+		offset += copy(payload[offset:], topicBlock.TopicName)
 
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(topicBlock.PartitonBlocks)))
 		offset += 4
