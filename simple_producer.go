@@ -183,7 +183,7 @@ func (p *SimpleProducer) Flush() error {
 }
 
 func (p *SimpleProducer) flush(messageSet MessageSet) error {
-	if len(p.messageSet) == 0 {
+	if len(messageSet) == 0 {
 		return nil
 	}
 
