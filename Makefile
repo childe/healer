@@ -16,4 +16,4 @@ all:
 	go build -o tools/bin/get-pending tools/get-pending/get-pending.go
 
 test:
-	go test -v -args -brokers 127.0.0.1:9092 -broker 127.0.0.1:9092 -logtostderr --broker 127.0.0.1:9092
+	go test -v -args -brokers 127.0.0.1:9092 -broker 127.0.0.1:9092 -logtostderr
