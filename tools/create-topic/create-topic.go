@@ -47,6 +47,12 @@ func main() {
 		os.Exit(5)
 	}
 
+	controller, err := brokers.GetBroker(brokers.Controller())
+	if err != nil {
+		glog.Errorf("create broker error: %s", err)
+		os.Exit(5)
+	}
+
 	r := healer.NewCreateTopicsRequest(*clientID, int32(*timeout))
 
 	replicas := make(map[int32][]int32)
@@ -81,7 +87,7 @@ func main() {
 		r.AddReplicaAssignment(*topic, pid, nodes)
 	}
 
-	payload, err := brokers.Request(r)
+	payload, err := controller.Request(r)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(5)

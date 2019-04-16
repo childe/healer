@@ -16,45 +16,11 @@ type Brokers struct {
 	config           *BrokerConfig
 	bootstrapServers string
 
-	brokersInfo map[int32]*BrokerInfo
-	brokers     map[int32]*Broker
+	brokersInfo  map[int32]*BrokerInfo
+	brokers      map[int32]*Broker
+	controllerID int32
 
 	mutex sync.Locker
-}
-
-// get all brokers meda info from MetaData api
-// it DON'T create connection to each broker
-func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*Brokers, error) {
-	brokers := &Brokers{
-		config:      config,
-		brokersInfo: make(map[int32]*BrokerInfo),
-		brokers:     make(map[int32]*Broker),
-		mutex:       &sync.Mutex{},
-	}
-
-	// TODO set topics to [""] ?
-	metadataResponse, err := broker.requestMetaData(clientID, []string{""})
-	if metadataResponse == nil || metadataResponse.Brokers == nil {
-		return nil, err
-	}
-
-	brokers.mutex.Lock()
-	defer brokers.mutex.Unlock()
-	for _, brokerInfo := range metadataResponse.Brokers {
-		brokers.brokersInfo[brokerInfo.NodeId] = brokerInfo
-		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
-			brokers.brokers[brokerInfo.NodeId] = broker
-		}
-	}
-
-	glog.Infof("got %d brokers", len(brokers.brokersInfo))
-	if glog.V(2) {
-		for nodeID, broker := range brokers.brokersInfo {
-			glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
-		}
-	}
-
-	return brokers, nil
 }
 
 func NewBrokers(bootstrapServers string, clientID string, config *BrokerConfig) (*Brokers, error) {
@@ -82,7 +48,45 @@ func NewBrokers(bootstrapServers string, clientID string, config *BrokerConfig) 
 		}
 	}
 	return nil, fmt.Errorf("could not get any available broker from %s", bootstrapServers)
+}
 
+// get all brokers meda info from MetaData api
+// it DON'T create connection to each broker
+func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*Brokers, error) {
+	brokers := &Brokers{
+		config:      config,
+		brokersInfo: make(map[int32]*BrokerInfo),
+		brokers:     make(map[int32]*Broker),
+		mutex:       &sync.Mutex{},
+	}
+
+	metadataResponse, err := broker.requestMetaData(clientID, []string{""})
+	if metadataResponse == nil || metadataResponse.Brokers == nil {
+		return nil, err
+	}
+
+	brokers.mutex.Lock()
+	defer brokers.mutex.Unlock()
+	brokers.controllerID = metadataResponse.ControllerID
+	for _, brokerInfo := range metadataResponse.Brokers {
+		brokers.brokersInfo[brokerInfo.NodeId] = brokerInfo
+		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
+			brokers.brokers[brokerInfo.NodeId] = broker
+		}
+	}
+
+	glog.Infof("got %d brokers", len(brokers.brokersInfo))
+	if glog.V(2) {
+		for nodeID, broker := range brokers.brokersInfo {
+			glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
+		}
+	}
+
+	return brokers, nil
+}
+
+func (brokers *Brokers) Controller() int32 {
+	return brokers.controllerID
 }
 
 func (brokers *Brokers) refreshMetadata() bool {
