@@ -374,14 +374,8 @@ func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, e
 }
 
 func (broker *Broker) requestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
-	metadataRequest := &MetadataRequest{
-		Topics: topics,
-	}
-	metadataRequest.RequestHeader = &RequestHeader{
-		ApiKey:     API_MetadataRequest,
-		ApiVersion: 0,
-		ClientId:   clientID,
-	}
+	var version uint16 = 1
+	metadataRequest := NewMetadataRequest(clientID, version, topics)
 
 	responseBuf, err := broker.Request(metadataRequest)
 	if err != nil {
