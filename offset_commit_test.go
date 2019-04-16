@@ -4,11 +4,11 @@ import "testing"
 
 func TestOffsetCommitRequest(t *testing.T) {
 	var (
-		partitionID int32  = 0
-		clientID    string = "healer"
-		offset      int64  = 0
-		topic       string = "test"
-		groupID     string = "hangout"
+		partitionID int32
+		clientID    = "healer"
+		offset      int64
+		topic       = "test"
+		groupID     = "hangout"
 	)
 	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
 

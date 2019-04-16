@@ -7,13 +7,13 @@ import (
 
 func TestGroup(t *testing.T) {
 	var (
-		clientID       string   = "healer"
-		groupID        string   = "hangout.test"
-		groups         []string = []string{"hangout", "hangout.test"}
+		clientID       = "healer"
+		groupID        = "hangout.test"
+		groups         = []string{"hangout", "hangout.test"}
 		generationID   int32
-		memberID       string = ""
-		sessionTimeout int32  = 30000
-		protocolType   string = "consumer"
+		memberID             = ""
+		sessionTimeout int32 = 30000
+		protocolType         = "consumer"
 	)
 
 	// join group
