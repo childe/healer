@@ -2,6 +2,8 @@ package healer
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"testing"
 )
 
@@ -9,14 +11,47 @@ var (
 	brokerConfig = DefaultBrokerConfig()
 
 	brokerAddress = flag.String("broker", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
-	brokers       = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
+	brokersList   = flag.String("brokers", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
 	topic         = flag.String("topic", "test", "topic name")
 	groupID       = flag.String("group", "healer", "groupid")
 	clientID      = flag.String("client", "healer", "groupid")
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	flag.Parse()
+
+	if err := createTopics(); err != nil {
+		fmt.Println(err)
+	} else {
+		os.Exit(m.Run())
+	}
+}
+
+func createTopics() error {
+	brokers, err := NewBrokers(*brokersList, *clientID, DefaultBrokerConfig())
+	if err != nil {
+		return err
+	}
+
+	controller, err := brokers.GetBroker(brokers.Controller())
+	if err != nil {
+		return err
+	}
+
+	timeout := int32(30000)
+	r := NewCreateTopicsRequest(*clientID, timeout)
+
+	partitions := int32(4)
+	replicationFactor := int16(2)
+	r.AddTopic(*topic, partitions, replicationFactor)
+
+	payload, err := controller.Request(r)
+	if err != nil {
+		return err
+	}
+
+	NewCreateTopicsResponse(payload)
+	return nil
 }
 
 func TestNewBroker(t *testing.T) {
