@@ -20,7 +20,7 @@ type Consumer struct {
 
 func NewConsumer(config *ConsumerConfig, topics ...string) (*Consumer, error) {
 	brokerConfig := getBrokerConfigFromConsumerConfig(config)
-	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	brokers, err := NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
 	if err != nil {
 		return nil, err
 	}

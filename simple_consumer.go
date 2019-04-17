@@ -64,7 +64,7 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 
 	brokerConfig := getBrokerConfigFromConsumerConfig(config)
 
-	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	brokers, err := NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
 	if err != nil {
 		return nil, err
 	}

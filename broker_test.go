@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 }
 
 func createTopics() error {
-	brokers, err := NewBrokers(*brokersList, *clientID, DefaultBrokerConfig())
+	brokers, err := NewBrokers(*brokersList)
 	if err != nil {
 		return err
 	}

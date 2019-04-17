@@ -14,8 +14,6 @@ import (
 )
 
 var (
-	brokerConfig = healer.DefaultBrokerConfig()
-
 	bootstrapServers = flag.String("bootstrap.servers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic            = flag.String("topic", "", "if topic is left blank: 1.get topics under the groupID if groupID if given. 2.get all topic in the cluster if groupID is not given")
 	groupID          = flag.String("group.id", "", "if groupID is left blank: 1.get all groupID consuming the topic if topic is given. 2.get all groupID in the cluster")
@@ -34,11 +32,6 @@ var (
 	err     error
 	helper  *healer.Helper
 )
-
-func init() {
-	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
-	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
-}
 
 type By []int32
 
@@ -461,7 +454,7 @@ func mainGroupNotGiven() {
 func main() {
 	flag.Parse()
 
-	brokers, err = healer.NewBrokers(*bootstrapServers, *clientID, brokerConfig)
+	brokers, err = healer.NewBrokers(*bootstrapServers)
 	if err != nil {
 		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)

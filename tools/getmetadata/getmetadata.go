@@ -19,7 +19,7 @@ var (
 func main() {
 	flag.Parse()
 
-	brokers, err := healer.NewBrokers(*brokerList, *clientID, healer.DefaultBrokerConfig())
+	brokers, err := healer.NewBrokers(*brokerList)
 	if err != nil {
 		glog.Errorf("create brokers error:%s", err)
 		os.Exit(5)

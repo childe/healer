@@ -34,7 +34,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 	}
 
 	brokerConfig := getBrokerConfigFromProducerConfig(config)
-	p.brokers, err = NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	p.brokers, err = NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
 	if err != nil {
 		glog.Errorf("init brokers error: %s", err)
 		return nil

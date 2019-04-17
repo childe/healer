@@ -4,23 +4,16 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 )
 
 var (
-	brokerConfig = healer.DefaultBrokerConfig()
-
 	brokers  = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic    = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	groupID  = flag.String("groupID", "", "REQUIRED")
 	clientID = flag.String("clientID", "healer", "The ID of this client.")
 )
-
-func init() {
-	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
-	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
-}
 
 func main() {
 	flag.Parse()
@@ -37,7 +30,7 @@ func main() {
 		return
 	}
 
-	brokers, err := healer.NewBrokers(*brokers, *clientID, brokerConfig)
+	brokers, err := healer.NewBrokers(*brokers)
 	if err != nil {
 		glog.Fatalf("could not create brokers from %s:%s", *brokers, err)
 	}

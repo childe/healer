@@ -57,9 +57,7 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 		}
 	}
 
-	brokerConfig := getBrokerConfigFromConsumerConfig(config)
-
-	brokers, err := NewBrokers(config.BootstrapServers, config.ClientID, brokerConfig)
+	brokers, err := NewBrokers(config.BootstrapServers)
 	if err != nil {
 		return nil, err
 	}

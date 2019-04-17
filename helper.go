@@ -32,7 +32,7 @@ func NewHelper(brokerList, clientID string, config *BrokerConfig) (*Helper, erro
 		clientID: clientID,
 	}
 
-	h.brokers, err = NewBrokers(brokerList, h.clientID, config)
+	h.brokers, err = NewBrokersWithConfig(brokerList, config)
 	h.metaInfo = &MetaInfo{}
 	if err != nil {
 		return nil, err

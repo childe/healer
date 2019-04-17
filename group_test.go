@@ -16,7 +16,7 @@ func TestGroup(t *testing.T) {
 		protocolType         = "consumer"
 	)
 
-	brokers, err := NewBrokers(*brokersList, clientID, DefaultBrokerConfig())
+	brokers, err := NewBrokers(*brokersList)
 	if err != nil {
 		t.Errorf("new brokers from %s error: %s", *brokersList, err)
 	}

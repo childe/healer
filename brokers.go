@@ -23,7 +23,8 @@ type Brokers struct {
 	mutex sync.Locker
 }
 
-func NewBrokers(bootstrapServers string, clientID string, config *BrokerConfig) (*Brokers, error) {
+func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Brokers, error) {
+	clientID := "healer-newbrokers"
 	for _, brokerAddr := range strings.Split(bootstrapServers, ",") {
 		broker, err := NewBroker(brokerAddr, -1, config)
 
@@ -48,6 +49,10 @@ func NewBrokers(bootstrapServers string, clientID string, config *BrokerConfig) 
 		}
 	}
 	return nil, fmt.Errorf("could not get any available broker from %s", bootstrapServers)
+}
+
+func NewBrokers(bootstrapServers string) (*Brokers, error) {
+	return NewBrokersWithConfig(bootstrapServers, DefaultBrokerConfig())
 }
 
 // get all brokers meda info from MetaData api

@@ -11,8 +11,6 @@ import (
 )
 
 var (
-	brokerConfig = healer.DefaultBrokerConfig()
-
 	brokersList    = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to(defautl: 127.0.0.1:9092).")
 	topic          = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	offsetsStorage = flag.String("offsets.storage", "kafka", "default kafka. Select where offsets should be stored (zookeeper or kafka).")
@@ -21,11 +19,6 @@ var (
 	timestamp      = flag.Int64("timestamp", -3, "REQUIRED: -2 which means beginning; -1 means end.")
 	extraOffset    = flag.Int64("offset", 0, "if offset > 0 plus from beginning, else decrease from end")
 )
-
-func init() {
-	flag.IntVar(&brokerConfig.ConnectTimeoutMS, "connect-timeout", brokerConfig.ConnectTimeoutMS, fmt.Sprintf("connect timeout to broker. default %d", brokerConfig.ConnectTimeoutMS))
-	flag.IntVar(&brokerConfig.TimeoutMS, "timeout", brokerConfig.TimeoutMS, fmt.Sprintf("read timeout from connection to broker. default %d", brokerConfig.TimeoutMS))
-}
 
 func main() {
 	flag.Parse()
@@ -52,7 +45,7 @@ func main() {
 		err     error
 		brokers *healer.Brokers
 	)
-	brokers, err = healer.NewBrokers(*brokersList, *clientID, brokerConfig)
+	brokers, err = healer.NewBrokers(*brokersList)
 	if err != nil {
 		glog.Fatalf("failed to create brokers:%s", err)
 	}

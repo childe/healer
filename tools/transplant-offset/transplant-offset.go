@@ -11,8 +11,6 @@ import (
 )
 
 var (
-	brokerConfig = healer.DefaultBrokerConfig()
-
 	brokersList    = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
 	topic          = flag.String("topic", "", "REQUIRED")
 	offsetsStorage = flag.String("offsets.storage", "kafka", "Select where offsets should be stored (zookeeper or kafka).")
@@ -88,7 +86,7 @@ func main() {
 		os.Exit(4)
 	}
 
-	brokers, err = healer.NewBrokers(*brokersList, *clientID, brokerConfig)
+	brokers, err = healer.NewBrokers(*brokersList)
 	if err != nil {
 		glog.Errorf("failed to create brokers: %s", err)
 		os.Exit(5)

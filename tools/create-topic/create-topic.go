@@ -12,8 +12,6 @@ import (
 )
 
 var (
-	brokerConfig = healer.DefaultBrokerConfig()
-
 	brokerList        = flag.String("brokers", "127.0.0.1:9092", "The list of hostname and port of the server to connect to.")
 	clientID          = flag.String("client.id", "healer.createtopic", "The ID of this client.")
 	topic             = flag.String("topic", "", "topic name")
@@ -41,11 +39,7 @@ func main() {
 		os.Exit(4)
 	}
 
-	brokers, err := healer.NewBrokers(*brokerList, *clientID, brokerConfig)
-	if err != nil {
-		glog.Errorf("create brokers error: %s", err)
-		os.Exit(5)
-	}
+	brokers, err := healer.NewBrokers(*brokerList)
 
 	controller, err := brokers.GetBroker(brokers.Controller())
 	if err != nil {
