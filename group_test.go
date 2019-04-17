@@ -16,18 +16,26 @@ func TestGroup(t *testing.T) {
 		protocolType         = "consumer"
 	)
 
+	brokers, err := NewBrokers(*brokersList, clientID, DefaultBrokerConfig())
+	if err != nil {
+		t.Errorf("new brokers from %s error: %s", *brokersList, err)
+	}
+
+	coordinatorResponse, err := brokers.FindCoordinator(clientID, groupID)
+	if err != nil {
+		t.Error(err)
+	}
+
+	coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+	if err != nil {
+		t.Error(err)
+	}
+
 	// join group
 	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeout, memberID, protocolType)
 	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 
-	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
-	if err != nil {
-		t.Errorf("new broker from %s error:%s", *brokerAddress, err)
-	} else {
-		t.Logf("got new broker from %s %s %d", *brokerAddress, "healer", -1)
-	}
-
-	responseBytes, err := broker.Request(joinGroupRequest)
+	responseBytes, err := coordinator.Request(joinGroupRequest)
 	if err != nil {
 		t.Errorf("send join_group request error:%s", err)
 	} else {
@@ -47,7 +55,7 @@ func TestGroup(t *testing.T) {
 	memberID = joinGroupResponse.MemberID
 	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, nil)
 
-	responseBytes, err = broker.Request(syncGroupRequest)
+	responseBytes, err = coordinator.Request(syncGroupRequest)
 	if err != nil {
 		t.Errorf("send sync_group request error:%s", err)
 	} else {
@@ -65,7 +73,7 @@ func TestGroup(t *testing.T) {
 	// leave group
 	leaveGroupRequest := NewLeaveGroupRequest(clientID, groupID, memberID)
 
-	responseBytes, err = broker.Request(leaveGroupRequest)
+	responseBytes, err = coordinator.Request(leaveGroupRequest)
 
 	leaveGroupResponse, err := NewLeaveGroupResponse(responseBytes)
 	if err != nil {
@@ -78,7 +86,7 @@ func TestGroup(t *testing.T) {
 	// describe group
 	describeGroupRequest := NewDescribeGroupsRequest(clientID, groups)
 
-	responseBytes, err = broker.Request(describeGroupRequest)
+	responseBytes, err = coordinator.Request(describeGroupRequest)
 
 	describeGroupResponse, err := NewDescribeGroupsResponse(responseBytes)
 	if err != nil {
@@ -91,7 +99,7 @@ func TestGroup(t *testing.T) {
 	// heartbeat
 	heartbeatRequest := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
-	responseBytes, err = broker.Request(heartbeatRequest)
+	responseBytes, err = coordinator.Request(heartbeatRequest)
 	if err != nil {
 		t.Errorf("failed to send heartbeat request:%s", err)
 	}
