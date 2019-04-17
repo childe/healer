@@ -185,6 +185,7 @@ func (broker *Broker) ensureOpen() error {
 		}
 		broker.conn = conn
 		broker.dead = false
+		broker.correlationID = 0
 	}
 	return nil
 }
