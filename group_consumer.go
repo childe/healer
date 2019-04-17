@@ -409,7 +409,8 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 		pid   int32
 	}
 	offsets := make(map[tp]int64)
-	for {
+	timeoutBreak := true
+	for timeoutBreak {
 		select {
 		case m := <-c.messages:
 			_tp := tp{m.TopicName, m.PartitionID}
@@ -417,7 +418,12 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 				offsets[_tp] = m.Message.Offset
 			}
 		case <-time.After(time.Millisecond * 200):
+			timeoutBreak = false
 		}
+	}
+
+	if len(offsets) > 0 {
+		glog.Infof("commit correct offset: %v", offsets)
 	}
 	for tp, offset := range offsets {
 		c.commitOffset(tp.topic, tp.pid, offset)
