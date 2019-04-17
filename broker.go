@@ -50,29 +50,7 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		dead:          true,
 	}
 
-	dialer := net.Dialer{
-		Timeout:   time.Millisecond * time.Duration(config.ConnectTimeoutMS),
-		KeepAlive: time.Millisecond * time.Duration(config.KeepAliveMS),
-	}
-
-	var (
-		conn net.Conn
-		err  error
-	)
-
-	if config.TLSEnabled {
-		if config.TLS == nil || config.TLS.Cert == "" || config.TLS.Key == "" || config.TLS.CA == "" {
-			return nil, tlsConfigError
-		}
-		if tlsConfig, err := createTLSConfig(config.TLS); err != nil {
-			return nil, err
-		} else {
-			conn, err = tls.DialWithDialer(&dialer, "tcp", address, tlsConfig)
-		}
-	} else {
-		conn, err = dialer.Dial("tcp", address)
-	}
-
+	conn, err := newConn(address, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
@@ -94,6 +72,26 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 	//broker.apiVersions = apiVersionsResponse.ApiVersions
 
 	return broker, nil
+}
+
+func newConn(address string, config *BrokerConfig) (net.Conn, error) {
+	dialer := net.Dialer{
+		Timeout:   time.Millisecond * time.Duration(config.ConnectTimeoutMS),
+		KeepAlive: time.Millisecond * time.Duration(config.KeepAliveMS),
+	}
+
+	if config.TLSEnabled {
+		if config.TLS == nil || config.TLS.Cert == "" || config.TLS.Key == "" || config.TLS.CA == "" {
+			return nil, tlsConfigError
+		}
+		if tlsConfig, err := createTLSConfig(config.TLS); err != nil {
+			return nil, err
+		} else {
+			return tls.DialWithDialer(&dialer, "tcp", address, tlsConfig)
+		}
+	} else {
+		return dialer.Dial("tcp", address)
+	}
 }
 
 func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
@@ -178,7 +176,7 @@ func (broker *Broker) ensureOpen() error {
 	if broker.dead {
 		glog.Infof("broker %s is dead, (re)open it after sleep 200ms", broker.address)
 		time.Sleep(time.Millisecond * 200)
-		conn, err := net.DialTimeout("tcp4", broker.address, time.Duration(broker.config.ConnectTimeoutMS)*time.Millisecond)
+		conn, err := newConn(broker.address, broker.config)
 		if err != nil {
 			glog.Errorf("could not conn to %s: %s", broker.address, err)
 			return err
