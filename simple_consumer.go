@@ -233,7 +233,7 @@ func (c *SimpleConsumer) commitOffset() bool {
 func (c *SimpleConsumer) CommitOffset() {
 	if c.offset == c.offsetCommited {
 		if glog.V(5) {
-			glog.Infof("current offset[%d] is same as commited offset, skip committing", c.offset)
+			glog.Infof("current offset[%d] of %s[%d] does not change, skip committing", c.offset, c.topic, c.partitionID)
 		}
 		return
 	}
@@ -252,7 +252,7 @@ func (c *SimpleConsumer) CommitOffset() {
 func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<-chan *FullMessage, error) {
 	var messages chan *FullMessage
 	if messageChan == nil {
-		messages = make(chan *FullMessage, 10)
+		messages = make(chan *FullMessage, 100)
 	} else {
 		messages = messageChan
 	}
@@ -324,8 +324,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			c.wg.Done()
 		}()
 
-		buffers := make(chan []byte, 10)
-		innerMessages := make(chan *FullMessage, 10)
+		buffers := make(chan []byte, 100)
+		innerMessages := make(chan *FullMessage, 100)
 
 		wg := &sync.WaitGroup{}
 

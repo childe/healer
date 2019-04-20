@@ -54,7 +54,7 @@ func (c *Consumer) Assign(topicPartitons map[string][]int) {
 func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, error) {
 	var messages chan *FullMessage
 	if messageChan == nil {
-		messages = make(chan *FullMessage, 10)
+		messages = make(chan *FullMessage, 100)
 	} else {
 		messages = messageChan
 	}
