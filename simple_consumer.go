@@ -296,6 +296,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		for !c.stop {
 			if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
 				glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
+				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 			} else {
 				glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
 				break
@@ -311,9 +312,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				if c.stop {
 					return
 				}
-				if c.offset != c.offsetCommited {
-					c.CommitOffset()
-				}
+				c.CommitOffset()
 			}
 		}()
 	}
