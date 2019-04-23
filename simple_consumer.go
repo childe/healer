@@ -329,10 +329,13 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 		wg := &sync.WaitGroup{}
 
+		fetchStarted := make(chan bool, 1)
+
+		// call fetch api
 		go func() {
-			// call fetch api
-			for !c.stop {
-				wg.Add(2)
+			fetchStarted <- true
+			for {
+				wg.Add(1)
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
@@ -341,24 +344,29 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 					glog.Errorf("fetch error:%s", err)
 					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 				}
-
 				wg.Wait()
+				if c.stop {
+					return
+				}
 			}
 		}()
 
+		// decode
 		go func() {
 			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
 				buffers:  buffers,
 				messages: innerMessages,
 			}
-			for !c.stop {
-				// decode
+			for {
 				fetchResponseStreamDecoder.consumeFetchResponse()
-				wg.Done()
+				if c.stop {
+					return
+				}
 			}
 		}()
 
-		for c.stop == false { //dead loop until stop
+		<-fetchStarted
+		for {
 			for c.stop == false { // consume all messages from one fetch response
 				message := <-innerMessages
 				if message != nil {
@@ -393,6 +401,10 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				c.CommitOffset()
 			}
 			wg.Done()
+
+			if c.stop {
+				break
+			}
 		}
 		c.leaderBroker.Close()
 	}(messages)
