@@ -299,7 +299,7 @@ func (c *GroupConsumer) heartbeat() error {
 		return nil
 	}
 
-	glog.V(10).Infof("heartbeat generationID:%d memberID:%s", c.generationID, c.memberID)
+	glog.V(5).Infof("heartbeat generationID:%d memberID:%s", c.generationID, c.memberID)
 	_, err := c.coordinator.requestHeartbeat(c.config.ClientID, c.config.GroupID, c.generationID, c.memberID)
 	return err
 }
