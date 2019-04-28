@@ -111,11 +111,12 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 
 	var retry = 3
 	for i := 0; i < retry; i++ {
-		c.leaderBroker, err = c.brokers.NewBroker(leaderID)
+		leaderBroker, err := c.brokers.NewBroker(leaderID)
 		if err != nil {
 			// TODO refresh metadata?
 			glog.Errorf("could not create broker %d[%s]. maybe should refresh metadata.", leaderID, c.brokers.brokers[leaderID].address)
 		} else {
+			c.leaderBroker = leaderBroker
 			glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
 			return nil
 		}
@@ -275,6 +276,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	}
 
 	if c.stop {
+		if c.leaderBroker != nil {
+			c.leaderBroker.Close()
+		}
 		c.wg.Done()
 		return messages, nil
 	}
@@ -378,6 +382,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 								glog.Errorf("could not get %s[%d] offset:%s", c.topic, c.partitionID, message.Error)
 							}
 						} else if message.Error == AllError[6] {
+							c.leaderBroker.Close()
+							c.leaderBroker = nil
 							for !c.stop {
 								if err = c.getLeaderBroker(); err != nil {
 									glog.Errorf("get leader broker of [%s/%d] error: %s", c.topic, c.partitionID, err)
@@ -406,7 +412,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				break
 			}
 		}
-		c.leaderBroker.Close()
+		if c.leaderBroker != nil {
+			c.leaderBroker.Close()
+		}
 	}(messages)
 
 	return messages, nil
