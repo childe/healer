@@ -95,8 +95,9 @@ var (
 // TOOD put retry in Request
 func (c *SimpleConsumer) getLeaderBroker() error {
 	var (
-		err      error
-		leaderID int32
+		err          error
+		leaderID     int32
+		leaderBroker *Broker
 	)
 
 	leaderID, err = c.brokers.findLeader(c.config.ClientID, c.topic, c.partitionID)
@@ -109,19 +110,16 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 		return invalidLeaderIDError
 	}
 
-	var retry = 3
-	for i := 0; i < retry; i++ {
-		leaderBroker, err := c.brokers.NewBroker(leaderID)
-		if err != nil {
-			// TODO refresh metadata?
-			glog.Errorf("could not create broker %d[%s]. maybe should refresh metadata.", leaderID, c.brokers.brokers[leaderID].address)
-		} else {
-			c.leaderBroker = leaderBroker
-			glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
-			return nil
-		}
+	leaderBroker, err = c.brokers.NewBroker(leaderID)
+	if err != nil {
+		// TODO refresh metadata?
+		glog.Errorf("could not create broker %d[%s]. maybe should refresh metadata.", leaderID, c.brokers.brokers[leaderID].address)
+		return err
 	}
-	return err
+
+	c.leaderBroker = leaderBroker
+	glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
+	return nil
 }
 
 func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
