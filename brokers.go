@@ -161,7 +161,6 @@ func (brokers *Brokers) refreshMetadata() bool {
 }
 
 // TODO merge with GetBroker
-// TODO retry to get metadata if `could not get broker info from nodeID`
 func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	if nodeID == -1 {
 		for nodeID, brokerInfo := range brokers.brokersInfo {
@@ -169,10 +168,26 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 			if err == nil {
 				return broker, nil
 			}
+			glog.Errorf("create broker %s:%d, error: %s", brokerInfo.Host, brokerInfo.Port, err)
 		}
 		return nil, fmt.Errorf("could not get broker from nodeID[%d]", nodeID)
 	}
 
+	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
+		if err == nil {
+			return broker, nil
+		} else {
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d), error: :%s", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+		}
+	} else {
+		glog.Infof("could not get broker info with nodeID[%d], referesh medadata", nodeID)
+		if !brokers.refreshMetadata() {
+			glog.Error("refresh metadata error")
+		}
+	}
+
+	// try again after refereshing metadata
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
 		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
 		if err == nil {
