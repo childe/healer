@@ -18,7 +18,6 @@ type Brokers struct {
 
 	brokersInfo  map[int32]*BrokerInfo
 	brokers      map[int32]*Broker
-	controllerID int32
 
 	mutex sync.Locker
 }
@@ -72,7 +71,6 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 
 	brokers.mutex.Lock()
 	defer brokers.mutex.Unlock()
-	brokers.controllerID = metadataResponse.ControllerID
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokers.brokersInfo[brokerInfo.NodeId] = brokerInfo
 		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
@@ -88,10 +86,6 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	}
 
 	return brokers, nil
-}
-
-func (brokers *Brokers) Controller() int32 {
-	return brokers.controllerID
 }
 
 func (brokers *Brokers) refreshMetadata() bool {
