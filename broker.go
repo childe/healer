@@ -373,7 +373,7 @@ func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, e
 }
 
 func (broker *Broker) requestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
-	var version uint16 = 1
+	var version uint16 = 0
 	metadataRequest := NewMetadataRequest(clientID, version, topics)
 
 	responseBuf, err := broker.Request(metadataRequest)
