@@ -108,7 +108,7 @@ func DefaultConsumerConfig() *ConsumerConfig {
 		SessionTimeoutMS:     30000,
 		RetryBackOffMS:       100,
 		MetadataMaxAgeMS:     300000,
-		FetchMaxWaitMS:       100,
+		FetchMaxWaitMS:       500,
 		FetchMaxBytes:        10 * 1024 * 1024,
 		FetchMinBytes:        1,
 		FromBeginning:        false,
