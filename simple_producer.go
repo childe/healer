@@ -171,7 +171,8 @@ func (p *SimpleProducer) Flush() error {
 	p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
 	p.mutex.Unlock()
 
-	// TODO should below code put between lock & unlock
+	// TODO should below code put between lock & unlock?
+	// TODO reading from channel will take too long?
 	if !p.timer.Stop() {
 		<-p.timer.C
 	}
