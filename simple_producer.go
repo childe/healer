@@ -129,8 +129,6 @@ func (p *SimpleProducer) ensureOpen() bool {
 
 	p.closed = false
 
-	// TODO: 应该可以推迟Timer的触发时间, flush 之后再过ConnectionsMaxIdleMS才关闭
-	// TODO: should delay timer when flush is called
 	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
 	go func() {
 		<-p.timer.C
