@@ -395,7 +395,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 						messages <- message
 					}
 				} else {
-					glog.V(15).Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
+					if glog.V(15) {
+						glog.Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
+					}
 					break
 				}
 			}
