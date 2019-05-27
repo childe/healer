@@ -22,8 +22,9 @@ type SimpleProducer struct {
 
 	messageSet MessageSet
 
-	mutex sync.Locker
-	timer *time.Timer
+	messageSetMutex sync.Locker
+	flushMutex      sync.Locker
+	timer           *time.Timer
 
 	compressionValue int8
 	compressor       Compressor
@@ -70,7 +71,8 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		partition: partition,
 		closed:    false,
 
-		mutex: &sync.Mutex{},
+		messageSetMutex: &sync.Mutex{},
+		flushMutex:      &sync.Mutex{},
 	}
 
 	switch config.CompressionType {
@@ -108,7 +110,12 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
 		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
+			p.flushMutex.Lock()
+			if p.closed {
+				return
+			}
 			p.Flush()
+			p.flushMutex.Unlock()
 		}
 	}()
 
@@ -152,9 +159,9 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 		Key:        key,
 		Value:      value,
 	}
-	p.mutex.Lock()
+	p.messageSetMutex.Lock()
 	p.messageSet = append(p.messageSet, message)
-	p.mutex.Unlock()
+	p.messageSetMutex.Unlock()
 	if len(p.messageSet) >= p.config.MessageMaxCount {
 		p.Flush()
 	}
@@ -166,10 +173,10 @@ func (p *SimpleProducer) Flush() error {
 		return nil
 	}
 
-	p.mutex.Lock()
+	p.messageSetMutex.Lock()
 	messageSet := p.messageSet
 	p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-	p.mutex.Unlock()
+	p.messageSetMutex.Unlock()
 
 	// TODO should below code put between lock & unlock?
 	// TODO reading from channel will take too long?
@@ -255,6 +262,9 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 }
 
 func (p *SimpleProducer) Close() {
+	p.flushMutex.Lock()
+	defer p.flushMutex.Unlock()
+
 	glog.Info("flush before SimpleProducer is closed")
 	p.Flush()
 	glog.Info("SimpleProducer closing")
