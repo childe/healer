@@ -137,6 +137,7 @@ func (p *SimpleProducer) ensureOpen() bool {
 }
 
 func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
+	// TODO put ensureOpen between lock
 	if p.ensureOpen() == false {
 		return SimpleProducerClosedError
 	}
