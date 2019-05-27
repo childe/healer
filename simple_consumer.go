@@ -285,7 +285,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		c.getCommitedOffet()
 	}
 
-	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
+	glog.V(5).Infof("[%s][%d] offset: %d", c.topic, c.partitionID, c.offset)
 
 	// offset not fetched from OffsetFetchRequest
 	if c.offset < 0 {
