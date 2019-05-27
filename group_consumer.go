@@ -404,7 +404,7 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 		return
 	}
 
-	// if there is still FullMessages in messages chan. should commit write offset
+	// if there is still FullMessages in messages chan. should commit correct offset
 	type tp struct {
 		topic string
 		pid   int32
