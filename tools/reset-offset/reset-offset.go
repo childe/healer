@@ -192,6 +192,6 @@ func main() {
 
 	_, err = healer.NewOffsetCommitResponse(payload)
 	if err != nil {
-		glog.Infof("commit offset error:%s", err)
+		glog.Errorf("commit offset error:%s", err)
 	}
 }
