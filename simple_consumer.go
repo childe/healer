@@ -391,8 +391,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 							}
 						}
 					} else {
-						c.offset = message.Message.Offset + 1
 						messages <- message
+						c.offset = message.Message.Offset + 1
 					}
 				} else {
 					if glog.V(15) {
