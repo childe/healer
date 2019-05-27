@@ -69,7 +69,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		config:    config,
 		topic:     topic,
 		partition: partition,
-		closed:    false,
+		closed:    true,
 
 		messageSetMutex: &sync.Mutex{},
 		flushMutex:      &sync.Mutex{},
@@ -95,29 +95,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	p.messageSet = make([]*Message, config.MessageMaxCount)
 	p.messageSet = p.messageSet[:0]
 
-	p.leader, err = p.createLeader()
-	if err != nil {
-		glog.Errorf("create producer leader error: %s", err)
-		return nil
-	}
-
-	p.timer = time.NewTimer(time.Duration(config.ConnectionsMaxIdleMS) * time.Millisecond)
-	go func() {
-		<-p.timer.C
-		p.Close()
-	}()
-
-	// TODO wait to the next ticker to see if messageSet changes
-	go func() {
-		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
-			p.flushMutex.Lock()
-			if p.closed {
-				return
-			}
-			p.Flush()
-			p.flushMutex.Unlock()
-		}
-	}()
+	p.ensureOpen()
 
 	return p
 }
@@ -140,6 +118,19 @@ func (p *SimpleProducer) ensureOpen() bool {
 	go func() {
 		<-p.timer.C
 		p.Close()
+	}()
+
+	// TODO wait to the next ticker to see if messageSet changes
+	go func() {
+		for range time.NewTicker(time.Duration(p.config.FlushIntervalMS) * time.Millisecond).C {
+			p.flushMutex.Lock()
+			if p.closed {
+				p.flushMutex.Unlock()
+				return
+			}
+			p.Flush()
+			p.flushMutex.Unlock()
+		}
 	}()
 
 	return true
