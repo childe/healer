@@ -410,16 +410,17 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 		pid   int32
 	}
 	offsets := make(map[tp]int64)
-	timeoutBreak := true
-	for timeoutBreak {
+
+NoMoreMessage:
+	for {
 		select {
 		case m := <-c.messages:
 			_tp := tp{m.TopicName, m.PartitionID}
 			if _, ok := offsets[_tp]; !ok {
 				offsets[_tp] = m.Message.Offset
 			}
-		case <-time.After(time.Millisecond * 200):
-			timeoutBreak = false
+		default:
+			break NoMoreMessage
 		}
 	}
 
