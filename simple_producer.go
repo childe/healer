@@ -12,19 +12,26 @@ import (
 
 var SimpleProducerClosedError = errors.New("simple producer has been closed and failed to open")
 
+const (
+	_state_init = iota
+	_state_open
+	_state_closed
+)
+
 type SimpleProducer struct {
 	config *ProducerConfig
 
 	leader    *Broker
 	topic     string
 	partition int32
-	closed    bool
+	state     int
 
 	messageSet MessageSet
 
 	messageSetMutex sync.Locker
 	flushMutex      sync.Locker
 	timer           *time.Timer
+	closeChan       chan bool
 
 	compressionValue int8
 	compressor       Compressor
@@ -69,7 +76,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		config:    config,
 		topic:     topic,
 		partition: partition,
-		closed:    true,
+		state:     _state_init,
 
 		messageSetMutex: &sync.Mutex{},
 		flushMutex:      &sync.Mutex{},
@@ -102,7 +109,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 func (p *SimpleProducer) ensureOpen() bool {
 	var err error
-	if p.closed == false {
+	if p.state == _state_open {
 		return true
 	}
 
@@ -112,7 +119,7 @@ func (p *SimpleProducer) ensureOpen() bool {
 		return false
 	}
 
-	p.closed = false
+	p.state = _state_open
 
 	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
 	go func() {
@@ -122,14 +129,16 @@ func (p *SimpleProducer) ensureOpen() bool {
 
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
-		for range time.NewTicker(time.Duration(p.config.FlushIntervalMS) * time.Millisecond).C {
-			p.flushMutex.Lock()
-			if p.closed {
+		ticker := time.NewTicker(time.Duration(p.config.FlushIntervalMS) * time.Millisecond).C
+		for {
+			select {
+			case <-ticker:
+				p.flushMutex.Lock()
+				p.Flush()
 				p.flushMutex.Unlock()
+			case <-p.closeChan:
 				return
 			}
-			p.Flush()
-			p.flushMutex.Unlock()
 		}
 	}()
 
@@ -161,7 +170,7 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 }
 
 func (p *SimpleProducer) Flush() error {
-	if len(p.messageSet) == 0 {
+	if len(p.messageSet) == 0 || p.state == _state_closed {
 		return nil
 	}
 
@@ -257,9 +266,10 @@ func (p *SimpleProducer) Close() {
 	p.flushMutex.Lock()
 	defer p.flushMutex.Unlock()
 
+	p.closeChan <- true
 	glog.Info("flush before SimpleProducer is closed")
 	p.Flush()
 	glog.Info("SimpleProducer closing")
-	p.closed = true
+	p.state = _state_closed
 	p.leader.Close()
 }
