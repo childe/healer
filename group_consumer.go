@@ -150,14 +150,9 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 
 	for _, partitionAssignment := range c.partitionAssignments {
 		for _, partitionID := range partitionAssignment.Partitions {
-			simpleConsumer := &SimpleConsumer{
-				topic:       c.topic,
-				partitionID: partitionID,
-				config:      c.config,
-				brokers:     c.brokers,
-				belongTO:    c,
-				wg:          &c.wg,
-			}
+			simpleConsumer := NewSimpleConsumerWithBrokers(c.topic, partitionID, c.config, c.brokers)
+			simpleConsumer.belongTO = c
+			simpleConsumer.wg = &c.wg
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 		}
 	}
