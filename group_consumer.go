@@ -437,6 +437,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 	c.messages = messages
 
 	// go heartbeat
+	// FIXME goroutine never return
 	ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.SessionTimeoutMS) / 10)
 	go func() {
 		for range ticker.C {
