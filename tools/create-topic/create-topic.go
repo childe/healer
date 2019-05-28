@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 )
 
 var (
@@ -43,7 +42,7 @@ func main() {
 
 	controller, err := brokers.GetBroker(brokers.Controller())
 	if err != nil {
-		glog.Errorf("create broker error: %s", err)
+		fmt.Printf("create broker error: %s", err)
 		os.Exit(5)
 	}
 
@@ -87,10 +86,9 @@ func main() {
 		os.Exit(5)
 	}
 
-	rsp, err := healer.NewCreateTopicsResponse(payload)
+	_, err = healer.NewCreateTopicsResponse(payload)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(5)
 	}
-	fmt.Printf("%#v", rsp)
 }
