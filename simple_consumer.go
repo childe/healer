@@ -20,6 +20,7 @@ type SimpleConsumer struct {
 	coordinator  *Broker
 
 	stop           bool
+	stopChan       chan bool
 	fromBeginning  bool
 	offset         int64
 	offsetCommited int64
@@ -37,8 +38,6 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		topic:       topic,
 		partitionID: partitionID,
 		brokers:     brokers,
-
-		wg: &sync.WaitGroup{},
 	}
 
 	if config.GroupID != "" {
@@ -277,7 +276,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		if c.leaderBroker != nil {
 			c.leaderBroker.Close()
 		}
-		c.wg.Done()
+		if c.wg != nil {
+			c.wg.Done()
+		}
 		return messages, nil
 	}
 
@@ -323,7 +324,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		defer func() {
 			glog.V(5).Infof("simple consumer stop consuming %s[%d]",
 				c.topic, c.partitionID)
-			c.wg.Done()
+			if c.wg != nil {
+				c.wg.Done()
+			}
 		}()
 
 		buffers := make(chan []byte, 100)
