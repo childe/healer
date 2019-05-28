@@ -91,13 +91,8 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 		}
 
 		for _, p := range partitions {
-			simpleConsumer := &SimpleConsumer{
-				topic:       topicName,
-				partitionID: int32(p),
-				config:      c.config,
-				brokers:     c.brokers,
-				wg:          &c.wg,
-			}
+			simpleConsumer := NewSimpleConsumerWithBrokers(topicName, int32(p), c.config, c.brokers)
+			simpleConsumer.wg = &c.wg
 
 			for {
 				err := simpleConsumer.getCoordinator()
