@@ -457,6 +457,9 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 			ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
 		)
 		for range ticker.C {
+			if c.closed {
+				return
+			}
 			if !c.ifLeader {
 				continue
 			}
