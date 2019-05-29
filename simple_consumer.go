@@ -20,7 +20,6 @@ type SimpleConsumer struct {
 	coordinator  *Broker
 
 	stop           bool
-	stopChan       chan bool
 	fromBeginning  bool
 	offset         int64
 	offsetCommited int64
