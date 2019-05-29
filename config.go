@@ -87,7 +87,6 @@ type ConsumerConfig struct {
 	FetchMinBytes        int32  `json:"fetch.min.bytes,string"`
 	FromBeginning        bool   `json:"from.beginning,string"`
 	AutoCommit           bool   `json:"auto.commit,string"`
-	CommitAfterFetch     bool   `json:"commit.after.fetch,string"`
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
 	OffsetsStorage       int    `json:"offsets.storage,string"`
 
@@ -113,7 +112,6 @@ func DefaultConsumerConfig() *ConsumerConfig {
 		FetchMinBytes:        1,
 		FromBeginning:        false,
 		AutoCommit:           true,
-		CommitAfterFetch:     false,
 		AutoCommitIntervalMS: 5000,
 		OffsetsStorage:       1,
 	}

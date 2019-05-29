@@ -404,10 +404,6 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				}
 			}
 
-			// is this really needed ?
-			if c.config.CommitAfterFetch {
-				c.CommitOffset()
-			}
 			wg.Done()
 
 			if c.stop {
