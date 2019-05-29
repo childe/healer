@@ -321,8 +321,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 	go func(messages chan *FullMessage) {
 		defer func() {
-			glog.V(5).Infof("simple consumer stop consuming %s[%d]",
-				c.topic, c.partitionID)
+			glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
 			if c.wg != nil {
 				c.wg.Done()
 			}
