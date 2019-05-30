@@ -24,6 +24,8 @@ type SimpleConsumer struct {
 	offset         int64
 	offsetCommited int64
 
+	stopChanForCommit chan bool
+
 	messages chan *FullMessage
 
 	belongTO *GroupConsumer
@@ -37,6 +39,8 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		topic:       topic,
 		partitionID: partitionID,
 		brokers:     brokers,
+
+		stopChanForCommit: make(chan bool, 1),
 	}
 
 	if config.GroupID != "" {
@@ -309,18 +313,21 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	if c.config.AutoCommit && c.config.GroupID != "" {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
 		go func() {
-			for range ticker.C {
-				// one messages maybe consumed twice
-				if c.stop {
+			for {
+				select {
+				case <-ticker.C:
+					c.CommitOffset()
+				case <-c.stopChanForCommit:
+					c.CommitOffset()
 					return
 				}
-				c.CommitOffset()
 			}
 		}()
 	}
 
 	go func(messages chan *FullMessage) {
 		defer func() {
+			c.stopChanForCommit <- true
 			glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
 			if c.wg != nil {
 				c.wg.Done()
