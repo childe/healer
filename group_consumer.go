@@ -399,32 +399,6 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 		return
 	}
 
-	// if there is still FullMessages in messages chan. should commit correct offset
-	type tp struct {
-		topic string
-		pid   int32
-	}
-	offsets := make(map[tp]int64)
-
-NoMoreMessage:
-	for {
-		select {
-		case m := <-c.messages:
-			_tp := tp{m.TopicName, m.PartitionID}
-			if _, ok := offsets[_tp]; !ok {
-				offsets[_tp] = m.Message.Offset
-			}
-		default:
-			break NoMoreMessage
-		}
-	}
-
-	if len(offsets) > 0 {
-		glog.Infof("commit correct offset: %v", offsets)
-	}
-	for tp, offset := range offsets {
-		c.commitOffset(tp.topic, tp.pid, offset)
-	}
 	c.leave()
 }
 
