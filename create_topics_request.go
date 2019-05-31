@@ -113,6 +113,9 @@ func (r *CreateTopicRequest) encode(payload []byte) (offset int) {
 		}
 	}
 
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.ConfigEntries)))
+	offset += 4
+
 	for _, c := range r.ConfigEntries {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(c.ConfigName)))
 		offset += 2
@@ -148,6 +151,7 @@ func NewCreateTopicsRequest(clientID string, timeout int32) *CreateTopicsRequest
 	return &CreateTopicsRequest{
 		RequestHeader:       requestHeader,
 		CreateTopicRequests: []*CreateTopicRequest{},
+		Timeout:             timeout,
 	}
 }
 

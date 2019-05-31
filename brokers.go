@@ -20,6 +20,8 @@ type Brokers struct {
 	brokers      map[int32]*Broker
 
 	mutex sync.Locker
+
+	closeChan chan bool
 }
 
 func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Brokers, error) {
@@ -36,9 +38,15 @@ func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Broke
 				glog.Infof("could not get broker list from %s:%s", broker.GetAddress(), err)
 			} else {
 				go func() {
-					for range time.NewTicker(time.Duration(config.MetadataRefreshIntervalMS) * time.Millisecond).C {
-						if !brokers.refreshMetadata() {
-							glog.Error("refresh metadata error")
+					ticker := time.NewTicker(time.Duration(config.MetadataRefreshIntervalMS) * time.Millisecond).C
+					for {
+						select {
+						case <-ticker:
+							if !brokers.refreshMetadata() {
+								glog.Error("refresh metadata error")
+							}
+						case <-brokers.closeChan:
+							return
 						}
 					}
 				}()
@@ -62,6 +70,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		brokersInfo: make(map[int32]*BrokerInfo),
 		brokers:     make(map[int32]*Broker),
 		mutex:       &sync.Mutex{},
+		closeChan:   make(chan bool, 1),
 	}
 
 	metadataResponse, err := broker.requestMetaData(clientID, []string{""})
@@ -404,6 +413,7 @@ func (brokers *Brokers) Request(req Request) ([]byte, error) {
 }
 
 func (brokers *Brokers) Close() {
+	brokers.closeChan <- true
 	for _, broker := range brokers.brokers {
 		broker.Close()
 	}

@@ -150,14 +150,9 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 
 	for _, partitionAssignment := range c.partitionAssignments {
 		for _, partitionID := range partitionAssignment.Partitions {
-			simpleConsumer := &SimpleConsumer{
-				topic:       c.topic,
-				partitionID: partitionID,
-				config:      c.config,
-				brokers:     c.brokers,
-				belongTO:    c,
-				wg:          &c.wg,
-			}
+			simpleConsumer := NewSimpleConsumerWithBrokers(c.topic, partitionID, c.config, c.brokers)
+			simpleConsumer.belongTO = c
+			simpleConsumer.wg = &c.wg
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 		}
 	}
@@ -404,31 +399,6 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 		return
 	}
 
-	// if there is still FullMessages in messages chan. should commit write offset
-	type tp struct {
-		topic string
-		pid   int32
-	}
-	offsets := make(map[tp]int64)
-	timeoutBreak := true
-	for timeoutBreak {
-		select {
-		case m := <-c.messages:
-			_tp := tp{m.TopicName, m.PartitionID}
-			if _, ok := offsets[_tp]; !ok {
-				offsets[_tp] = m.Message.Offset
-			}
-		case <-time.After(time.Millisecond * 200):
-			timeoutBreak = false
-		}
-	}
-
-	if len(offsets) > 0 {
-		glog.Infof("commit correct offset: %v", offsets)
-	}
-	for tp, offset := range offsets {
-		c.commitOffset(tp.topic, tp.pid, offset)
-	}
 	c.leave()
 }
 
@@ -441,6 +411,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 	c.messages = messages
 
 	// go heartbeat
+	// FIXME goroutine never return
 	ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.SessionTimeoutMS) / 10)
 	go func() {
 		for range ticker.C {
@@ -460,6 +431,9 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 			ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
 		)
 		for range ticker.C {
+			if c.closed {
+				return
+			}
 			if !c.ifLeader {
 				continue
 			}

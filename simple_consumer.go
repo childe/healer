@@ -24,6 +24,8 @@ type SimpleConsumer struct {
 	offset         int64
 	offsetCommited int64
 
+	stopChanForCommit chan bool
+
 	messages chan *FullMessage
 
 	belongTO *GroupConsumer
@@ -38,7 +40,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		partitionID: partitionID,
 		brokers:     brokers,
 
-		wg: &sync.WaitGroup{},
+		stopChanForCommit: make(chan bool, 1),
 	}
 
 	if config.GroupID != "" {
@@ -277,7 +279,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		if c.leaderBroker != nil {
 			c.leaderBroker.Close()
 		}
-		c.wg.Done()
+		if c.wg != nil {
+			c.wg.Done()
+		}
 		return messages, nil
 	}
 
@@ -285,7 +289,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		c.getCommitedOffet()
 	}
 
-	glog.V(5).Infof("[%s][%d] offset :%d", c.topic, c.partitionID, c.offset)
+	glog.V(5).Infof("[%s][%d] offset: %d", c.topic, c.partitionID, c.offset)
 
 	// offset not fetched from OffsetFetchRequest
 	if c.offset < 0 {
@@ -309,21 +313,25 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	if c.config.AutoCommit && c.config.GroupID != "" {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
 		go func() {
-			for range ticker.C {
-				// one messages maybe consumed twice
-				if c.stop {
+			for {
+				select {
+				case <-ticker.C:
+					c.CommitOffset()
+				case <-c.stopChanForCommit:
+					c.CommitOffset()
 					return
 				}
-				c.CommitOffset()
 			}
 		}()
 	}
 
 	go func(messages chan *FullMessage) {
 		defer func() {
-			glog.V(5).Infof("simple consumer stop consuming %s[%d]",
-				c.topic, c.partitionID)
-			c.wg.Done()
+			c.stopChanForCommit <- true
+			glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
+			if c.wg != nil {
+				c.wg.Done()
+			}
 		}()
 
 		buffers := make(chan []byte, 100)
@@ -391,19 +399,17 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 							}
 						}
 					} else {
-						c.offset = message.Message.Offset + 1
 						messages <- message
+						c.offset = message.Message.Offset + 1
 					}
 				} else {
-					glog.V(15).Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
+					if glog.V(15) {
+						glog.Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
+					}
 					break
 				}
 			}
 
-			// is this really needed ?
-			if c.config.CommitAfterFetch {
-				c.CommitOffset()
-			}
 			wg.Done()
 
 			if c.stop {

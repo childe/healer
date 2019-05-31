@@ -12,18 +12,26 @@ import (
 
 var SimpleProducerClosedError = errors.New("simple producer has been closed and failed to open")
 
+const (
+	_state_init = iota
+	_state_open
+	_state_closed
+)
+
 type SimpleProducer struct {
 	config *ProducerConfig
 
 	leader    *Broker
 	topic     string
 	partition int32
-	closed    bool
+	state     int
 
 	messageSet MessageSet
 
-	mutex sync.Locker
-	timer *time.Timer
+	messageSetMutex sync.Locker
+	flushMutex      sync.Locker
+	timer           *time.Timer
+	closeChan       chan bool
 
 	compressionValue int8
 	compressor       Compressor
@@ -68,9 +76,11 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		config:    config,
 		topic:     topic,
 		partition: partition,
-		closed:    false,
+		state:     _state_init,
 
-		mutex: &sync.Mutex{},
+		messageSetMutex: &sync.Mutex{},
+		flushMutex:      &sync.Mutex{},
+		closeChan: make(chan bool, 1),
 	}
 
 	switch config.CompressionType {
@@ -93,31 +103,14 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 	p.messageSet = make([]*Message, config.MessageMaxCount)
 	p.messageSet = p.messageSet[:0]
 
-	p.leader, err = p.createLeader()
-	if err != nil {
-		glog.Errorf("create producer leader error: %s", err)
-		return nil
-	}
-
-	p.timer = time.NewTimer(time.Duration(config.ConnectionsMaxIdleMS) * time.Millisecond)
-	go func() {
-		<-p.timer.C
-		p.Close()
-	}()
-
-	// TODO wait to the next ticker to see if messageSet changes
-	go func() {
-		for range time.NewTicker(time.Duration(config.FlushIntervalMS) * time.Millisecond).C {
-			p.Flush()
-		}
-	}()
+	p.ensureOpen()
 
 	return p
 }
 
 func (p *SimpleProducer) ensureOpen() bool {
 	var err error
-	if p.closed == false {
+	if p.state == _state_open {
 		return true
 	}
 
@@ -127,20 +120,34 @@ func (p *SimpleProducer) ensureOpen() bool {
 		return false
 	}
 
-	p.closed = false
+	p.state = _state_open
 
-	// TODO: 应该可以推迟Timer的触发时间, flush 之后再过ConnectionsMaxIdleMS才关闭
-	// TODO: should delay timer when flush is called
 	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
 	go func() {
 		<-p.timer.C
 		p.Close()
 	}()
 
+	// TODO wait to the next ticker to see if messageSet changes
+	go func() {
+		ticker := time.NewTicker(time.Duration(p.config.FlushIntervalMS) * time.Millisecond).C
+		for {
+			select {
+			case <-ticker:
+				p.flushMutex.Lock()
+				p.Flush()
+				p.flushMutex.Unlock()
+			case <-p.closeChan:
+				return
+			}
+		}
+	}()
+
 	return true
 }
 
 func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
+	// TODO put ensureOpen between lock
 	if p.ensureOpen() == false {
 		return SimpleProducerClosedError
 	}
@@ -154,9 +161,9 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 		Key:        key,
 		Value:      value,
 	}
-	p.mutex.Lock()
+	p.messageSetMutex.Lock()
 	p.messageSet = append(p.messageSet, message)
-	p.mutex.Unlock()
+	p.messageSetMutex.Unlock()
 	if len(p.messageSet) >= p.config.MessageMaxCount {
 		p.Flush()
 	}
@@ -164,16 +171,17 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 }
 
 func (p *SimpleProducer) Flush() error {
-	if len(p.messageSet) == 0 {
+	if len(p.messageSet) == 0 || p.state == _state_closed {
 		return nil
 	}
 
-	p.mutex.Lock()
+	p.messageSetMutex.Lock()
 	messageSet := p.messageSet
 	p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-	p.mutex.Unlock()
+	p.messageSetMutex.Unlock()
 
-	// TODO should below code put between lock & unlock
+	// TODO should below code put between lock & unlock?
+	// TODO reading from channel will take too long?
 	if !p.timer.Stop() {
 		<-p.timer.C
 	}
@@ -256,9 +264,13 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 }
 
 func (p *SimpleProducer) Close() {
+	p.flushMutex.Lock()
+	defer p.flushMutex.Unlock()
+
 	glog.Info("flush before SimpleProducer is closed")
 	p.Flush()
 	glog.Info("SimpleProducer closing")
-	p.closed = true
+	p.state = _state_closed
+	p.closeChan <- true
 	p.leader.Close()
 }
