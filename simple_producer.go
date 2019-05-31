@@ -80,6 +80,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 		messageSetMutex: &sync.Mutex{},
 		flushMutex:      &sync.Mutex{},
+		closeChan: make(chan bool, 1),
 	}
 
 	switch config.CompressionType {
@@ -266,10 +267,10 @@ func (p *SimpleProducer) Close() {
 	p.flushMutex.Lock()
 	defer p.flushMutex.Unlock()
 
-	p.closeChan <- true
 	glog.Info("flush before SimpleProducer is closed")
 	p.Flush()
 	glog.Info("SimpleProducer closing")
 	p.state = _state_closed
+	p.closeChan <- true
 	p.leader.Close()
 }
