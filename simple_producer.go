@@ -29,7 +29,6 @@ type SimpleProducer struct {
 	messageSet MessageSet
 
 	messageSetMutex sync.Locker
-	flushMutex      sync.Locker
 	timer           *time.Timer
 	closeChan       chan bool
 
@@ -79,8 +78,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		state:     _state_init,
 
 		messageSetMutex: &sync.Mutex{},
-		flushMutex:      &sync.Mutex{},
-		closeChan: make(chan bool, 1),
+		closeChan:       make(chan bool, 1),
 	}
 
 	switch config.CompressionType {
@@ -100,8 +98,7 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		return nil
 	}
 
-	p.messageSet = make([]*Message, config.MessageMaxCount)
-	p.messageSet = p.messageSet[:0]
+	p.messageSet = make([]*Message, 0, config.MessageMaxCount)
 
 	p.ensureOpen()
 
@@ -134,9 +131,7 @@ func (p *SimpleProducer) ensureOpen() bool {
 		for {
 			select {
 			case <-ticker:
-				p.flushMutex.Lock()
 				p.Flush()
-				p.flushMutex.Unlock()
 			case <-p.closeChan:
 				return
 			}
@@ -163,41 +158,39 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 	}
 	p.messageSetMutex.Lock()
 	p.messageSet = append(p.messageSet, message)
-	p.messageSetMutex.Unlock()
 	if len(p.messageSet) >= p.config.MessageMaxCount {
-		p.Flush()
+		messageSet := p.messageSet
+		p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
+		p.messageSetMutex.Unlock()
+		p.flush(messageSet)
+	} else {
+		p.messageSetMutex.Unlock()
 	}
 	return nil
 }
 
 func (p *SimpleProducer) Flush() error {
-	if len(p.messageSet) == 0 || p.state == _state_closed {
-		return nil
+	p.messageSetMutex.Lock()
+	defer p.messageSetMutex.Unlock()
+
+	if len(p.messageSet) > 0 {
+		messageSet := p.messageSet
+		p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
+		return p.flush(messageSet)
+	}
+	return nil
+}
+
+func (p *SimpleProducer) flush(messageSet MessageSet) error {
+	if glog.V(5) {
+		glog.Infof("produce %d messsages", len(messageSet))
 	}
 
-	p.messageSetMutex.Lock()
-	messageSet := p.messageSet
-	p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-	p.messageSetMutex.Unlock()
-
-	// TODO should below code put between lock & unlock?
-	// TODO reading from channel will take too long?
+	// TODO if ConnectionsMaxIdleMS is too long , below <- may take too long time ?
 	if !p.timer.Stop() {
 		<-p.timer.C
 	}
 	p.timer.Reset(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
-
-	return p.flush(messageSet)
-}
-
-func (p *SimpleProducer) flush(messageSet MessageSet) error {
-	if len(messageSet) == 0 {
-		return nil
-	}
-
-	if glog.V(5) {
-		glog.Infof("produce %d messsages", len(messageSet))
-	}
 
 	produceRequest := &ProduceRequest{
 		RequiredAcks: p.config.Acks,
@@ -264,9 +257,6 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 }
 
 func (p *SimpleProducer) Close() {
-	p.flushMutex.Lock()
-	defer p.flushMutex.Unlock()
-
 	glog.Info("flush before SimpleProducer is closed")
 	p.Flush()
 	glog.Info("SimpleProducer closing")
