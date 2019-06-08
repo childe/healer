@@ -25,6 +25,7 @@ type SimpleConsumer struct {
 	offsetCommited int64
 
 	stopChanForCommit chan bool
+	consumeDoneChan   chan bool
 
 	messages chan *FullMessage
 
@@ -41,6 +42,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		brokers:     brokers,
 
 		stopChanForCommit: make(chan bool, 1),
+		consumeDoneChan:   make(chan bool, 1),
 	}
 
 	if config.GroupID != "" {
@@ -355,8 +357,11 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 				}
 				wg.Wait()
-				if c.stop {
+				select {
+				case <-c.consumeDoneChan:
 					return
+				default:
+					break
 				}
 			}
 		}()
@@ -410,11 +415,14 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				}
 			}
 
-			wg.Done()
-
 			if c.stop {
+				c.consumeDoneChan <- true
+				wg.Done()
 				break
+			} else {
+				wg.Done()
 			}
+
 		}
 		if c.leaderBroker != nil {
 			c.leaderBroker.Close()
