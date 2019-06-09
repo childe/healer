@@ -25,7 +25,6 @@ type SimpleConsumer struct {
 	offsetCommited int64
 
 	stopChanForCommit chan bool
-	consumeDoneChan   chan bool
 
 	messages chan *FullMessage
 
@@ -42,7 +41,6 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		brokers:     brokers,
 
 		stopChanForCommit: make(chan bool, 1),
-		consumeDoneChan:   make(chan bool, 1),
 	}
 
 	if config.GroupID != "" {
@@ -339,7 +337,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		buffers := make(chan []byte, 100)
 		innerMessages := make(chan *FullMessage, 100)
 
-		wg := &sync.WaitGroup{}
+		fetchWG := sync.WaitGroup{}
+		decodeWG := sync.WaitGroup{}
+		consumeDoneChan := false
 
 		fetchStarted := make(chan bool, 1)
 
@@ -347,7 +347,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		go func() {
 			fetchStarted <- true
 			for {
-				wg.Add(1)
+				fetchWG.Add(1)
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
@@ -356,12 +356,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 					glog.Errorf("fetch error:%s", err)
 					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 				}
-				wg.Wait()
-				select {
-				case <-c.consumeDoneChan:
+				fetchWG.Wait()
+				if consumeDoneChan {
 					return
-				default:
-					break
 				}
 			}
 		}()
@@ -373,8 +370,10 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				messages: innerMessages,
 			}
 			for {
+				decodeWG.Add(1)
 				fetchResponseStreamDecoder.consumeFetchResponse()
-				if c.stop {
+				decodeWG.Wait()
+				if consumeDoneChan {
 					return
 				}
 			}
@@ -416,11 +415,13 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			}
 
 			if c.stop {
-				c.consumeDoneChan <- true
-				wg.Done()
+				consumeDoneChan = true
+				fetchWG.Done()
+				decodeWG.Done()
 				break
 			} else {
-				wg.Done()
+				fetchWG.Done()
+				decodeWG.Done()
 			}
 
 		}
