@@ -2,6 +2,7 @@ package healer
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -334,8 +335,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			}
 		}()
 
-		buffers := make(chan []byte, 100)
-		innerMessages := make(chan *FullMessage, 100)
+		buffers := make(chan []byte, 1)
+		innerMessages := make(chan *FullMessage, 1)
 
 		fetchWG := sync.WaitGroup{}
 		decodeWG := sync.WaitGroup{}
@@ -345,7 +346,21 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 		// call fetch api
 		go func() {
+
+			defer func() {
+				r := recover()
+				if r == nil {
+					return
+				}
+				if fmt.Sprintf("%s", r) == "send on closed channel" {
+					glog.Info("buffers is closed by decoe goroutine.")
+					return
+				}
+				panic(r)
+			}()
+
 			fetchStarted <- true
+
 			for {
 				fetchWG.Add(1)
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
@@ -369,6 +384,20 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				buffers:  buffers,
 				messages: innerMessages,
 			}
+
+			defer func() {
+				r := recover()
+				if r == nil {
+					return
+				}
+				if fmt.Sprintf("%s", r) == "send on closed channel" {
+					glog.Info("inner messages channel is closed by consume goroutine. close bufffers and return")
+					close(buffers)
+					return
+				}
+				panic(r)
+			}()
+
 			for {
 				decodeWG.Add(1)
 				fetchResponseStreamDecoder.consumeFetchResponse()
@@ -428,6 +457,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		if c.leaderBroker != nil {
 			c.leaderBroker.Close()
 		}
+		close(innerMessages)
 	}(messages)
 
 	return messages, nil
