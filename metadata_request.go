@@ -46,7 +46,12 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 
 	offset = metadataRequest.RequestHeader.Encode(payload, offset)
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(metadataRequest.Topics)))
+	if metadataRequest.Topics == nil {
+		var i int32 = -1
+		binary.BigEndian.PutUint32(payload[offset:], uint32(i))
+	} else {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(metadataRequest.Topics)))
+	}
 	offset += 4
 
 	for _, topicname := range metadataRequest.Topics {
