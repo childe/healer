@@ -1,3 +1,4 @@
 target/
 /tools/bin/
 vendor/
+/_vendor-*
