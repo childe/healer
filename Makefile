@@ -18,3 +18,6 @@ all:
 
 test:
 	go test -v -args -brokers 127.0.0.1:9092 -broker 127.0.0.1:9092 -logtostderr
+
+clean:
+	rm -rf tools/bin/*
