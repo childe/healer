@@ -74,7 +74,8 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		closeChan:   make(chan bool, 1),
 	}
 
-	metadataResponse, err := broker.requestMetaData(clientID, nil)
+	topics := make([]string, 0)
+	metadataResponse, err := broker.requestMetaData(clientID, topics)
 	if metadataResponse == nil || metadataResponse.Brokers == nil {
 		return nil, err
 	}
@@ -104,6 +105,7 @@ func (brokers *Brokers) Controller() int32 {
 }
 
 func (brokers *Brokers) refreshMetadata() bool {
+	topics := make([]string, 0)
 	clientID := "healer-refresh-metadata"
 
 	// from origianl bootstrapServers
@@ -114,7 +116,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 			continue
 		}
 
-		metadataResponse, err := broker.requestMetaData(clientID, nil)
+		metadataResponse, err := broker.requestMetaData(clientID, topics)
 		if metadataResponse == nil || metadataResponse.Brokers == nil {
 			glog.Errorf("request metadata error: %s", err)
 			continue
@@ -145,7 +147,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 			continue
 		}
 
-		metadataResponse, err := broker.requestMetaData(clientID, nil)
+		metadataResponse, err := broker.requestMetaData(clientID, topics)
 		if metadataResponse == nil || metadataResponse.Brokers == nil {
 			glog.Errorf("request metadata error: %s", err)
 			continue
