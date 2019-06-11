@@ -182,7 +182,7 @@ func getGroups(groupID string) []string {
 	}
 
 	var p string = strings.Replace(groupID, ".", `\.`, -1)
-	p = strings.Replace(groupID, "*", ".*", -1)
+	p = strings.Replace(p, "*", ".*", -1)
 	var groupPattern *regexp.Regexp = regexp.MustCompile("^" + p + "$")
 
 	var (
@@ -208,9 +208,15 @@ func getAllTopics() ([]string, error) {
 		return nil, err
 	}
 
+	var p string = strings.Replace(*topic, ".", `\.`, -1)
+	p = strings.Replace(p, "*", ".*", -1)
+	var topicPattern *regexp.Regexp = regexp.MustCompile("^" + p + "$")
+
 	topics := make([]string, 0)
 	for _, t := range metadataResponse.TopicMetadatas {
-		topics = append(topics, t.TopicName)
+		if topicPattern.MatchString(t.TopicName) {
+			topics = append(topics, t.TopicName)
+		}
 	}
 
 	return topics, nil
@@ -344,8 +350,8 @@ func mainGroupNotGiven() {
 		err    error
 	)
 
-	if *topic != "" {
-		topics = append(topics, *topic)
+	if *topic != "" && !strings.Contains(*topic, "*") {
+		topics = []string{*topic}
 	} else {
 		topics, err = getAllTopics()
 		if err != nil {
