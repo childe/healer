@@ -69,7 +69,7 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 		correlationID: 0,
 		config:        config,
 
-		mutex: &sync.Mutex{},
+		mutex:                        &sync.Mutex{},
 		consumeWithoutHeartBeatMutex: &sync.Mutex{},
 		assignmentStrategy:           &RangeAssignmentStrategy{},
 
@@ -349,8 +349,8 @@ func (c *GroupConsumer) stop() {
 	}
 
 	// should not call leave
-	//c.wg.Wait()
-	//c.leave()
+	c.wg.Wait()
+	c.leave()
 }
 
 func (c *GroupConsumer) leave() {
