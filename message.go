@@ -9,8 +9,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/bkaradzic/go-lz4"
-	"github.com/eapache/go-xerial-snappy"
+	lz4 "github.com/bkaradzic/go-lz4"
+	snappy "github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
 )
 
@@ -194,7 +194,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		}
 
 		// if crc check true, then go on decode to next level
-		if compression != COMPRESSION_NONE {
+		if err == nil && compression != COMPRESSION_NONE {
 			if _messageSet, err := DecodeToMessageSet(message.Value); err != nil {
 				// TODO go on to next message in the messageSet?
 				glog.Errorf("decode message from value error:%s", err)
