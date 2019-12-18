@@ -452,10 +452,14 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinato
 }
 
 func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
-	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeoutMS, memberID, protocolType)
-	for _, gp := range gps {
-		joinGroupRequest.AddGroupProtocal(gp)
-	}
+	joinGroupRequest := NewJoinGroupRequest(1, clientID)
+	joinGroupRequest.GroupID = groupID
+	joinGroupRequest.SessionTimeout = sessionTimeoutMS
+	joinGroupRequest.RebalanceTimeout = 60000
+	joinGroupRequest.MemberID = memberID
+	joinGroupRequest.ProtocolType = protocolType
+	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
+	joinGroupRequest.GroupProtocols = gps
 
 	responseBytes, err := broker.Request(joinGroupRequest)
 	if err != nil {

@@ -32,7 +32,11 @@ func TestGroup(t *testing.T) {
 	}
 
 	// join group
-	joinGroupRequest := NewJoinGroupRequest(clientID, groupID, sessionTimeout, memberID, protocolType)
+	joinGroupRequest := NewJoinGroupRequest(0, clientID)
+	joinGroupRequest.GroupID = groupID
+	joinGroupRequest.SessionTimeout = sessionTimeout
+	joinGroupRequest.MemberID = memberID
+	joinGroupRequest.ProtocolType = protocolType
 	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 
 	responseBytes, err := coordinator.Request(joinGroupRequest)
