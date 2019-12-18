@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 )
 
-// version0
+// AlterConfigsRequest struct holds params in AlterConfigsRequest
 type AlterConfigsRequest struct {
-	RequestHeader *RequestHeader
-	Resources     []*AlterConfigsRequestResource
+	*RequestHeader
+	Resources []*AlterConfigsRequestResource
 }
 
+// AlterConfigsRequestResource is sub struct in AlterConfigsRequest
 type AlterConfigsRequestResource struct {
 	ResourceType  uint8
 	ResourceName  string
@@ -18,7 +19,7 @@ type AlterConfigsRequestResource struct {
 
 func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
 	payload[0] = r.ResourceType
-	offset += 1
+	offset++
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.ResourceName)))
 	offset += 2
@@ -35,6 +36,7 @@ func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
 	return
 }
 
+// AlterConfigsRequestConfigEntry is sub struct in AlterConfigsRequestResource
 type AlterConfigsRequestConfigEntry struct {
 	ConfigName  string
 	ConfigValue string
@@ -54,6 +56,7 @@ func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 	return
 }
 
+// NewAlterConfigsRequest create a new AlterConfigsRequest
 func NewAlterConfigsRequest(clientID string, resources []*AlterConfigsRequestResource) *AlterConfigsRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:     API_AlterConfigs,
@@ -63,12 +66,12 @@ func NewAlterConfigsRequest(clientID string, resources []*AlterConfigsRequestRes
 	return &AlterConfigsRequest{requestHeader, resources}
 }
 
-func (r *AlterConfigsRequest) Length() int {
+func (r *AlterConfigsRequest) length() int {
 	l := r.RequestHeader.length()
 
 	l += 4
 	for _, resource := range r.Resources {
-		l += 1
+		l++
 		l += 2 + len(resource.ResourceName)
 
 		l += 4
@@ -80,8 +83,9 @@ func (r *AlterConfigsRequest) Length() int {
 	return l
 }
 
+// Encode encodes AlterConfigsRequest object to []byte. it implement Request Interface
 func (r *AlterConfigsRequest) Encode() []byte {
-	requestLength := r.Length()
+	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)
 	offset := 0
@@ -99,12 +103,4 @@ func (r *AlterConfigsRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *AlterConfigsRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *AlterConfigsRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }
