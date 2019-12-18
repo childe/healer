@@ -163,10 +163,8 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 // join && set generationID&memberID
 func (c *GroupConsumer) join() error {
 	glog.Infof("try to join group %s", c.config.GroupID)
-	c.memberID = ""
 	var (
-		protocolType string = "consumer"
-		memberID     string = ""
+		protocolType = "consumer"
 	)
 
 	protocolMetadata := &ProtocolMetadata{
@@ -177,7 +175,7 @@ func (c *GroupConsumer) join() error {
 
 	gps := []*GroupProtocol{&GroupProtocol{"range", protocolMetadata.Encode()}}
 	joinGroupResponse, err := c.coordinator.requestJoinGroup(
-		c.config.ClientID, c.config.GroupID, int32(c.config.SessionTimeoutMS), memberID, protocolType, gps)
+		c.config.ClientID, c.config.GroupID, int32(c.config.SessionTimeoutMS), c.memberID, protocolType, gps)
 
 	if glog.V(2) {
 		b, _ := json.Marshal(joinGroupResponse)
@@ -348,9 +346,7 @@ func (c *GroupConsumer) stop() {
 		}
 	}
 
-	// should not call leave
 	c.wg.Wait()
-	c.leave()
 }
 
 func (c *GroupConsumer) leave() {
