@@ -12,6 +12,9 @@ import (
 	"github.com/golang/glog"
 )
 
+// GroupConsumer can join one group with other GroupConsumers with the same groupID
+// and they consume messages from Kafka
+// they will rebalance when new GroupConsumer joins or one leaves
 type GroupConsumer struct {
 	// TODO refresh metainfo in ticker
 	brokers       *Brokers
@@ -42,6 +45,7 @@ type GroupConsumer struct {
 	assignmentStrategy           AssignmentStrategy
 }
 
+// NewGroupConsumer cretae a new GroupConsumer
 func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, error) {
 	if err := config.checkValid(); err != nil {
 		return nil, err
@@ -88,7 +92,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	var (
 		metaDataResponse *MetadataResponse
 		err              error
-		_topics          map[string]bool = map[string]bool{}
+		_topics          = map[string]bool{}
 	)
 	for _, member := range c.members {
 		protocolMetadata := NewProtocolMetadata(member.MemberMetadata)
@@ -98,7 +102,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	}
 
 	c.topics = []string{}
-	for t, _ := range _topics {
+	for t := range _topics {
 		c.topics = append(c.topics, t)
 	}
 	for {
@@ -297,6 +301,7 @@ func (c *GroupConsumer) heartbeat() error {
 	return err
 }
 
+// CommitOffset commit offset to kafka server
 func (c *GroupConsumer) CommitOffset() {
 	for _, s := range c.simpleConsumers {
 		s.CommitOffset()
@@ -371,10 +376,14 @@ func (c *GroupConsumer) leave() {
 	c.joined = false
 }
 
+// Close will wait all simple consumers stop and then return
+// or timeout and return after 30s
 func (c *GroupConsumer) Close() {
 	c.AwaitClose(time.Second * 30)
 }
 
+// AwaitClose will wait all simple consumers stop and then return
+// or timeout and return after some time
 func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	c.closed = true
 	c.closeChan <- true
@@ -398,6 +407,8 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	c.leave()
 }
 
+// Consume will join group and then cosumes messages from kafka.
+// it return a chan, and client could get messages from the chan
 func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage, error) {
 	c.closed = false
 
@@ -518,7 +529,7 @@ func ifTopicMetadatasSame(a []*TopicMetadata, b []*TopicMetadata) bool {
 		return false
 	}
 
-	for i, _ := range a {
+	for i := range a {
 		if a[i].TopicName != b[i].TopicName || a[i].TopicErrorCode != b[i].TopicErrorCode {
 			return false
 		}
@@ -527,7 +538,7 @@ func ifTopicMetadatasSame(a []*TopicMetadata, b []*TopicMetadata) bool {
 			return false
 		}
 
-		for j, _ := range a[i].PartitionMetadatas {
+		for j := range a[i].PartitionMetadatas {
 			if a[i].PartitionMetadatas[j].PartitionID != b[i].PartitionMetadatas[j].PartitionID {
 				return false
 			}
