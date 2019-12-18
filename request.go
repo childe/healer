@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 )
 
-//var Non-user facing control APIs=4-7
 var (
 	API_ProduceRequest      uint16 = 0
 	API_FetchRequest        uint16 = 1
@@ -38,6 +37,7 @@ func (requestHeader *RequestHeader) length() int {
 	return 10 + len(requestHeader.ClientId)
 }
 
+// Encode encodes request header to []byte. this is used the all detailed request
 func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 	binary.BigEndian.PutUint16(payload[offset:], requestHeader.ApiKey)
 	offset += 2
@@ -56,6 +56,17 @@ func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 	return offset
 }
 
+// API return APiKey of the request(which hold the request header)
+func (requestHeader *RequestHeader) API() uint16 {
+	return requestHeader.ApiKey
+}
+
+// SetCorrelationID set request's correlationID
+func (requestHeader *RequestHeader) SetCorrelationID(c uint32) {
+	requestHeader.CorrelationID = c
+}
+
+// Request is implemented by all detailed request
 type Request interface {
 	Encode() []byte
 	API() uint16
