@@ -56,9 +56,14 @@ func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
 	return offset
 }
 
-// API return APiKey of the request(which hold the request header)
+// API returns APiKey of the request(which hold the request header)
 func (requestHeader *RequestHeader) API() uint16 {
 	return requestHeader.ApiKey
+}
+
+// APIVersion returns API version of the request
+func (requestHeader *RequestHeader) APIVersion() uint16 {
+	return requestHeader.ApiVersion
 }
 
 // SetCorrelationID set request's correlationID
