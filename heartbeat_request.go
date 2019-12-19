@@ -18,10 +18,10 @@ member_id	The member id assigned by the group coordinator or null if joining for
 
 // TODO version0
 type HeartbeatRequest struct {
-	RequestHeader *RequestHeader
-	GroupID       string
-	GenerationID  int32
-	MemberID      string
+	*RequestHeader
+	GroupID      string
+	GenerationID int32
+	MemberID     string
 }
 
 func NewHeartbeatRequest(clientID, groupID string, generationID int32, memberID string) *HeartbeatRequest {
@@ -66,12 +66,4 @@ func (heartbeatR *HeartbeatRequest) Encode() []byte {
 	copy(payload[offset:], heartbeatR.MemberID)
 
 	return payload
-}
-
-func (req *HeartbeatRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *HeartbeatRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

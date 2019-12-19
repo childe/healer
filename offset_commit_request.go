@@ -61,7 +61,7 @@ type OffsetCommitRequestTopic struct {
 }
 
 type OffsetCommitRequest struct {
-	RequestHeader *RequestHeader
+	*RequestHeader
 	GroupID       string
 	GenerationID  int32
 	MemberID      string
@@ -204,16 +204,4 @@ func (r *OffsetCommitRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *OffsetCommitRequest) APIVersion() uint16 {
-	return req.RequestHeader.ApiVersion
-}
-
-func (req *OffsetCommitRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *OffsetCommitRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

@@ -6,7 +6,7 @@ import (
 
 // version0
 type ListGroupsRequest struct {
-	RequestHeader *RequestHeader
+	*RequestHeader
 }
 
 func NewListGroupsRequest(clientID string) *ListGroupsRequest {
@@ -30,12 +30,4 @@ func (ListGroupsR *ListGroupsRequest) Encode() []byte {
 	ListGroupsR.RequestHeader.Encode(payload, offset)
 
 	return payload
-}
-
-func (req *ListGroupsRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *ListGroupsRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

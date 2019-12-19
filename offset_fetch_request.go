@@ -27,9 +27,9 @@ type OffsetFetchRequestTopic struct {
 }
 
 type OffsetFetchRequest struct {
-	RequestHeader *RequestHeader
-	GroupID       string
-	Topics        []*OffsetFetchRequestTopic
+	*RequestHeader
+	GroupID string
+	Topics  []*OffsetFetchRequestTopic
 }
 
 // request only ONE topic
@@ -122,12 +122,4 @@ func (r *OffsetFetchRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *OffsetFetchRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *OffsetFetchRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

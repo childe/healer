@@ -25,10 +25,10 @@ MessageSetSize	The size, in bytes, of the message set that follows.
 MessageSet		A set of messages in the standard format described above.
 */
 type ProduceRequest struct {
-	RequestHeader *RequestHeader
-	RequiredAcks  int16
-	Timeout       int32
-	TopicBlocks   []struct {
+	*RequestHeader
+	RequiredAcks int16
+	Timeout      int32
+	TopicBlocks  []struct {
 		TopicName      string
 		PartitonBlocks []struct {
 			Partition      int32
@@ -85,12 +85,4 @@ func (produceRequest *ProduceRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *ProduceRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *ProduceRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

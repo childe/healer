@@ -19,7 +19,7 @@ import (
 //      config_value => NULLABLE_STRING
 //  timeout => INT32
 type CreateTopicsRequest struct {
-	RequestHeader       *RequestHeader
+	*RequestHeader
 	CreateTopicRequests []*CreateTopicRequest
 	Timeout             int32
 }
@@ -153,16 +153,6 @@ func NewCreateTopicsRequest(clientID string, timeout int32) *CreateTopicsRequest
 		CreateTopicRequests: []*CreateTopicRequest{},
 		Timeout:             timeout,
 	}
-}
-
-// API return CreateTopicsRequest api key
-func (r *CreateTopicsRequest) API() uint16 {
-	return r.RequestHeader.ApiKey
-}
-
-// SetCorrelationID set correlationID to the request
-func (r *CreateTopicsRequest) SetCorrelationID(c uint32) {
-	r.RequestHeader.CorrelationID = c
 }
 
 var (

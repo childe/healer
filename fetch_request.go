@@ -40,11 +40,11 @@ type PartitionBlock struct {
 
 // version 0
 type FetchRequest struct {
-	RequestHeader *RequestHeader
-	ReplicaId     int32
-	MaxWaitTime   int32
-	MinBytes      int32
-	Topics        map[string][]*PartitionBlock
+	*RequestHeader
+	ReplicaId   int32
+	MaxWaitTime int32
+	MinBytes    int32
+	Topics      map[string][]*PartitionBlock
 }
 
 // TODO all partitions should have the SAME maxbytes?
@@ -125,12 +125,4 @@ func (fetchRequest *FetchRequest) Encode() []byte {
 		}
 	}
 	return payload
-}
-
-func (req *FetchRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *FetchRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

@@ -21,8 +21,8 @@ coordinator_type	The type of coordinator to find (0 = group, 1 = transaction)
 */
 
 type FindCoordinatorRequest struct {
-	RequestHeader *RequestHeader
-	GroupID       string
+	*RequestHeader
+	GroupID string
 }
 
 func NewFindCoordinatorRequest(clientID, groupID string) *FindCoordinatorRequest {
@@ -55,12 +55,4 @@ func (findCoordinatorR *FindCoordinatorRequest) Encode() []byte {
 	copy(payload[offset:], findCoordinatorR.GroupID)
 
 	return payload
-}
-
-func (req *FindCoordinatorRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *FindCoordinatorRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

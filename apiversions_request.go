@@ -3,7 +3,7 @@ package healer
 import "encoding/binary"
 
 type ApiVersionsRequest struct {
-	RequestHeader *RequestHeader
+	*RequestHeader
 }
 
 func NewApiVersionsRequest(apiVersion uint16, clientID string) Request {
@@ -27,12 +27,4 @@ func (req *ApiVersionsRequest) Encode() []byte {
 
 	req.RequestHeader.Encode(payload, offset)
 	return payload
-}
-
-func (req *ApiVersionsRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *ApiVersionsRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

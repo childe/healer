@@ -24,7 +24,7 @@ sasl_auth_bytes	SASL authentication bytes from client as defined by the SASL mec
 
 // version0
 type SaslAuthenticateRequest struct {
-	RequestHeader *RequestHeader
+	*RequestHeader
 	SaslAuthBytes []byte
 }
 
@@ -69,12 +69,4 @@ func (r *SaslAuthenticateRequest) Encode() []byte {
 	copy(payload[offset:], r.SaslAuthBytes)
 
 	return payload
-}
-
-func (req *SaslAuthenticateRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *SaslAuthenticateRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

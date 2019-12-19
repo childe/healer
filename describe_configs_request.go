@@ -4,8 +4,8 @@ import "encoding/binary"
 
 // version0
 type DescribeConfigsRequest struct {
-	RequestHeader *RequestHeader
-	Resources     []*DescribeConfigsRequestResource
+	*RequestHeader
+	Resources []*DescribeConfigsRequestResource
 }
 
 type DescribeConfigsRequestResource struct {
@@ -83,12 +83,4 @@ func (r *DescribeConfigsRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *DescribeConfigsRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *DescribeConfigsRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

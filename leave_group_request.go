@@ -14,9 +14,9 @@ import (
 
 // version 0
 type LeaveGroupRequest struct {
-	RequestHeader *RequestHeader
-	GroupID       string
-	MemberID      string
+	*RequestHeader
+	GroupID  string
+	MemberID string
 }
 
 func NewLeaveGroupRequest(clientID, groupID, memberID string) *LeaveGroupRequest {
@@ -59,12 +59,4 @@ func (r *LeaveGroupRequest) Encode() []byte {
 	offset += copy(payload[offset:], r.MemberID)
 
 	return payload
-}
-
-func (req *LeaveGroupRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *LeaveGroupRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

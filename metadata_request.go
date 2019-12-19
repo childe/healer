@@ -27,8 +27,8 @@ TopicsName		The topics to produce metadata for. If empty the request will yield 
 */
 
 type MetadataRequest struct {
-	RequestHeader *RequestHeader
-	Topics        []string
+	*RequestHeader
+	Topics []string
 }
 
 func (metadataRequest *MetadataRequest) Encode() []byte {
@@ -73,12 +73,4 @@ func NewMetadataRequest(clientID string, version uint16, topics []string) *Metad
 	}
 
 	return r
-}
-
-func (req *MetadataRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *MetadataRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

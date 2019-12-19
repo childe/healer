@@ -25,8 +25,8 @@ mechanism	SASL Mechanism chosen by the client.
 
 // version0
 type SaslHandShakeRequest struct {
-	RequestHeader *RequestHeader
-	Mechanism     string
+	*RequestHeader
+	Mechanism string
 }
 
 func NewSaslHandShakeRequest(clientID string, mechanism string) *SaslHandShakeRequest {
@@ -60,12 +60,4 @@ func (r *SaslHandShakeRequest) Encode() []byte {
 	copy(payload[offset:], r.Mechanism)
 
 	return payload
-}
-
-func (req *SaslHandShakeRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *SaslHandShakeRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

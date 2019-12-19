@@ -14,8 +14,8 @@ FIELDDESCRIPTION
 
 // version0
 type DescribeGroupsRequest struct {
-	RequestHeader *RequestHeader
-	Groups        []string
+	*RequestHeader
+	Groups []string
 }
 
 func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsRequest {
@@ -59,12 +59,4 @@ func (r *DescribeGroupsRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *DescribeGroupsRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *DescribeGroupsRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }

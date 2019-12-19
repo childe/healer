@@ -30,9 +30,9 @@ type PartitionOffsetRequestInfo struct {
 }
 
 type OffsetsRequest struct {
-	RequestHeader *RequestHeader
-	ReplicaId     int32
-	RequestInfo   map[string]map[int32]*PartitionOffsetRequestInfo
+	*RequestHeader
+	ReplicaId   int32
+	RequestInfo map[string]map[int32]*PartitionOffsetRequestInfo
 }
 
 // request only ONE topic
@@ -101,12 +101,4 @@ func (offsetR *OffsetsRequest) Encode() []byte {
 	}
 
 	return payload
-}
-
-func (req *OffsetsRequest) API() uint16 {
-	return req.RequestHeader.ApiKey
-}
-
-func (req *OffsetsRequest) SetCorrelationID(c uint32) {
-	req.RequestHeader.CorrelationID = c
 }
