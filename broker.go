@@ -66,11 +66,14 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 	}
 
 	// TODO since ??
-	//apiVersionsResponse, err := broker.requestApiVersions()
-	//if err != nil {
-	//return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
-	//}
-	//broker.apiVersions = apiVersionsResponse.ApiVersions
+	if config.KafkaVersion != "" && compareKafkaVersion(config.KafkaVersion, "0.10.0.0") >= 0 {
+		clientID := "healer-init"
+		apiVersionsResponse, err := broker.requestApiVersions(clientID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
+		}
+		broker.apiVersions = apiVersionsResponse.ApiVersions
+	}
 
 	return broker, nil
 }

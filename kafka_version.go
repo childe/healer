@@ -8,6 +8,7 @@ import (
 
 var kafkaVersion = flag.String("kafka-version", "1.0.0", "certain kafka API version is dependent on the flag")
 
+// compareKafkaVersion("0.9.0", "0.10.0") == -1
 func compareKafkaVersion(A, B string) int {
 	splitedA := strings.Split(A, ".")
 	splitedB := strings.Split(B, ".")
