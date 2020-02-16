@@ -1,8 +1,8 @@
 package healer
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -123,6 +123,32 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 	c.leaderBroker = leaderBroker
 	glog.V(5).Infof("got leader broker %s with id %d", c.leaderBroker.address, leaderID)
 	return nil
+}
+
+// offset not fetched from OffsetFetchRequest
+func (c *SimpleConsumer) initOffset() {
+	glog.V(5).Infof("[%s][%d] offset: %d", c.topic, c.partitionID, c.offset)
+
+	if c.offset >= 0 {
+		return
+	}
+
+	var err error
+	if c.offset == -1 {
+		c.fromBeginning = false
+	} else if c.offset == -2 {
+		c.fromBeginning = true
+	}
+
+	for !c.stop {
+		if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
+			glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
+			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+		} else {
+			glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
+			break
+		}
+	}
 }
 
 func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
@@ -290,26 +316,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		c.getCommitedOffet()
 	}
 
-	glog.V(5).Infof("[%s][%d] offset: %d", c.topic, c.partitionID, c.offset)
-
-	// offset not fetched from OffsetFetchRequest
-	if c.offset < 0 {
-		if c.offset == -1 {
-			c.fromBeginning = false
-		} else if c.offset == -2 {
-			c.fromBeginning = true
-		}
-
-		for !c.stop {
-			if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
-				glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
-				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
-			} else {
-				glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
-				break
-			}
-		}
-	}
+	c.initOffset()
 
 	if c.config.AutoCommit && c.config.GroupID != "" {
 		ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
@@ -335,30 +342,28 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			}
 		}()
 
+		defer func() {
+			if c.leaderBroker != nil {
+				c.leaderBroker.Close()
+			}
+		}()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		// fetch will stop sending kafka response to api after cancel
+		defer cancel()
+
 		buffers := make(chan []byte, 1)
 		innerMessages := make(chan *FullMessage, 1)
 
 		fetchWG := sync.WaitGroup{}
 		decodeWG := sync.WaitGroup{}
+		// 如果使用 stop 来决定两个 Goroutine 的停止, 可能会decode先停了, fetch 永远卡死了
 		consumeDoneChan := false
 
 		fetchStarted := make(chan bool, 1)
 
 		// call fetch api
 		go func() {
-
-			defer func() {
-				r := recover()
-				if r == nil {
-					return
-				}
-				if fmt.Sprintf("%s", r) == "send on closed channel" {
-					glog.Info("buffers is closed by decoe goroutine.")
-					return
-				}
-				panic(r)
-			}()
-
 			fetchStarted <- true
 
 			for {
@@ -366,7 +371,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
 
-				err := c.leaderBroker.requestFetchStreamingly(r, buffers)
+				err := c.leaderBroker.requestFetchStreamingly(ctx, r, buffers)
 				if err != nil {
 					glog.Errorf("fetch error:%s", err)
 					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
@@ -384,19 +389,6 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				buffers:  buffers,
 				messages: innerMessages,
 			}
-
-			defer func() {
-				r := recover()
-				if r == nil {
-					return
-				}
-				if fmt.Sprintf("%s", r) == "send on closed channel" {
-					glog.Info("inner messages channel is closed by consume goroutine. close bufffers and return")
-					close(buffers)
-					return
-				}
-				panic(r)
-			}()
 
 			for {
 				decodeWG.Add(1)
@@ -452,12 +444,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				fetchWG.Done()
 				decodeWG.Done()
 			}
-
 		}
-		if c.leaderBroker != nil {
-			c.leaderBroker.Close()
-		}
-		close(innerMessages)
 	}(messages)
 
 	return messages, nil

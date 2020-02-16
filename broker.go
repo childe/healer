@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
@@ -268,7 +269,7 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 	return responseBuf, nil
 }
 
-func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, timeout int) error {
+func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, buffers chan []byte, timeout int) error {
 	if glog.V(10) {
 		glog.Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
 	}
@@ -294,7 +295,13 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 			return err
 		}
 
-		buffers <- responseLengthBuf[l:length]
+		select {
+		case <-ctx.Done():
+			glog.Info("stop fetching data from kafka server because caller stop it")
+			return nil
+		default:
+			buffers <- responseLengthBuf[l:length]
+		}
 
 		if length+l == 4 {
 			break
@@ -322,7 +329,12 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 		if glog.V(15) {
 			glog.Infof("read %d bytes response", length)
 		}
-		buffers <- buf[:length]
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			buffers <- buf[:length]
+		}
 
 		readLength += length
 		if glog.V(15) {
@@ -338,7 +350,6 @@ func (broker *Broker) requestStreamingly(payload []byte, buffers chan []byte, ti
 			return nil
 		}
 	}
-	return nil
 }
 
 func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse, error) {
@@ -417,7 +428,7 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 	return findCoordinatorResponse, nil
 }
 
-func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffers chan []byte) (err error) {
+func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest, buffers chan []byte) (err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 	//defer close(buffers)
@@ -438,7 +449,7 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest, buffer
 		timeout = broker.config.TimeoutMSForEachAPI[fetchRequest.API()]
 	}
 
-	return broker.requestStreamingly(payload, buffers, timeout)
+	return broker.requestStreamingly(ctx, payload, buffers, timeout)
 }
 
 func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {

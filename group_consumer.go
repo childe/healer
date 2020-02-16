@@ -39,10 +39,11 @@ type GroupConsumer struct {
 
 	messages chan *FullMessage
 
-	mutex                        sync.Locker
-	consumeWithoutHeartBeatMutex sync.Locker
-	wg                           sync.WaitGroup // wg is used to tell if all consumer has already stopped
-	assignmentStrategy           AssignmentStrategy
+	mutex              sync.Locker
+	wg                 sync.WaitGroup // wg is used to tell if all consumer has already stopped
+	assignmentStrategy AssignmentStrategy
+
+	restartLocker sync.Locker
 }
 
 // NewGroupConsumer cretae a new GroupConsumer
@@ -73,14 +74,15 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 		correlationID: 0,
 		config:        config,
 
-		mutex:                        &sync.Mutex{},
-		consumeWithoutHeartBeatMutex: &sync.Mutex{},
-		assignmentStrategy:           &RangeAssignmentStrategy{},
+		mutex:              &sync.Mutex{},
+		assignmentStrategy: &RangeAssignmentStrategy{},
 
 		joined:               false,
 		coordinatorAvailable: false,
 
 		closeChan: make(chan bool, 1),
+
+		restartLocker: &sync.Mutex{},
 	}
 
 	return c, nil
@@ -344,6 +346,18 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 	return false
 }
 
+func (c *GroupConsumer) restart() {
+	// heartbeat and metadata changing could both cause restart. make sure they do not conflict
+	c.restartLocker.Lock()
+
+	c.stop()
+	// stop heartbeat
+	c.joined = false
+	c.consumeWithoutHeartBeat(c.config.FromBeginning)
+
+	c.restartLocker.Unlock()
+}
+
 func (c *GroupConsumer) stop() {
 	if c.simpleConsumers != nil {
 		for _, simpleConsumer := range c.simpleConsumers {
@@ -418,16 +432,16 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 	c.messages = messages
 
 	// go heartbeat
-	// FIXME goroutine never return
 	ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.SessionTimeoutMS) / 10)
 	go func() {
 		for range ticker.C {
+			if c.closed {
+				return
+			}
 			err := c.heartbeat()
 			if err != nil {
-				glog.Errorf("failed to send heartbeat: %s", err)
-				c.stop()
-				c.joined = false
-				c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
+				glog.Errorf("failed to send heartbeat, restart: %s", err)
+				c.restart()
 			}
 		}
 	}()
@@ -456,28 +470,24 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 				glog.Infof("topics[%s] metadata: %s", c.topics, b)
 			}
 			if !ifTopicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
-				glog.Info("metadata changed, restart simple consumers")
+				glog.Info("metadata changed, restart")
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
-				c.stop()
-				c.joined = false
-				c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
+				c.restart()
 			}
 		}
 	}()
 
-	return c.consumeWithoutHeartBeat(c.config.FromBeginning, c.messages)
+	return c.consumeWithoutHeartBeat(c.config.FromBeginning)
 }
 
-func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages chan *FullMessage) (chan *FullMessage, error) {
-	c.consumeWithoutHeartBeatMutex.Lock()
-	defer c.consumeWithoutHeartBeatMutex.Unlock()
+func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool) (chan *FullMessage, error) {
 
 	/* if groupconsumer restarts,
 	it should wait all simple consumers stoped */
 	c.wg.Wait()
 
 	var err error
-	joined := make(chan bool, 1)
+	joinedChan := make(chan bool, 1)
 	go func() {
 		for !c.closed {
 			err = c.joinAndSync()
@@ -487,13 +497,13 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 			}
 		}
-		joined <- true
+		joinedChan <- true
 	}()
 
 	select {
 	case <-c.closeChan:
-		return messages, nil
-	case <-joined:
+		return c.messages, nil
+	case <-joinedChan:
 	}
 
 	c.joined = true
@@ -509,10 +519,10 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool, messages cha
 
 		c.wg.Add(1)
 
-		go simpleConsumer.Consume(offset, messages)
+		go simpleConsumer.Consume(offset, c.messages)
 	}
 
-	return messages, nil
+	return c.messages, nil
 }
 
 // return true if same

@@ -70,8 +70,8 @@ func getOffset(topic string) (map[int32]int64, error) {
 
 	rst := make(map[int32]int64)
 	for _, offsetsResponse := range offsetsResponses {
-		for _, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
-			for topic, partitionOffset := range partitionOffsets {
+		for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
+			for _, partitionOffset := range partitionOffsets {
 				if len(partitionOffset.Offsets) != 1 {
 					return nil, fmt.Errorf("%s[%d] offsets return more than 1 value", topic, partitionOffset.Partition)
 				}

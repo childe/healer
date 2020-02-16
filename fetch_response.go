@@ -206,8 +206,6 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		}
 		hasAtLeastOneMessage = true
 	}
-
-	return nil
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicName string) error {
@@ -317,6 +315,7 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() bool {
 		}
 	}
 
+	// 早期版本的协议可能会有多出来的字节,需要丢弃
 	if streamDecoder.more {
 		n = streamDecoder.readAll()
 	}
