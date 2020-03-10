@@ -65,7 +65,6 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		}
 	}
 
-	// TODO since ??
 	if config.KafkaVersion != "" && compareKafkaVersion(config.KafkaVersion, "0.10.0.0") >= 0 {
 		clientID := "healer-init"
 		apiVersionsResponse, err := broker.requestApiVersions(clientID)
