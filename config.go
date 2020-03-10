@@ -54,6 +54,7 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b.TLSEnabled = c.TLSEnabled
 	b.TLS = c.TLS
 	b.SaslConfig = c.SaslConfig
+	b.KafkaVersion = c.KafkaVersion
 	return b
 }
 
@@ -67,7 +68,7 @@ func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
 }
 
 var (
-	brokerAddressNotSet = errors.New("broker address not set in broker config")
+	errBrokerAddressNotSet = errors.New("broker address not set in broker config")
 )
 
 func (c *BrokerConfig) checkValid() error {
@@ -90,6 +91,7 @@ type ConsumerConfig struct {
 	AutoCommit           bool   `json:"auto.commit,string"`
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
 	OffsetsStorage       int    `json:"offsets.storage,string"`
+	KafkaVersion         string `json:"kafka.version"`
 
 	TLSEnabled bool       `json:"tls.enabled,string"`
 	TLS        *TLSConfig `json:"tls"`

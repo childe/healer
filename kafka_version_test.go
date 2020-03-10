@@ -2,7 +2,7 @@ package healer
 
 import "testing"
 
-func TestAssgin(t *testing.T) {
+func TestKafkaVersionCompare(t *testing.T) {
 	var a string
 	var b string
 
