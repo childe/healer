@@ -198,6 +198,9 @@ func (c *GroupConsumer) join() error {
 		if err == AllError[15] || err == AllError[16] {
 			c.coordinatorAvailable = false
 		}
+		if err == AllError[25] {
+			c.memberID = ""
+		}
 		return err
 	}
 
