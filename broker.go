@@ -148,12 +148,14 @@ func (broker *Broker) sendSaslAuthenticate() error {
 	}
 
 	// authenticate
-	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	payload, err = broker.Request(saslAuthenticateRequest)
-	if err != nil {
-		return err
-	}
-	_, err = NewSaslAuthenticateResponse(payload)
+	authPayload := make([]byte, 4+2+len(user)+len(password))
+	binary.BigEndian.PutUint32(authPayload, uint32(len(authPayload)-4))
+	authPayload[4] = 0
+	copy(authPayload[5:], []byte(user))
+	authPayload[4+1+len(user)] = 0
+	copy(authPayload[4+1+len(user)+1:], []byte(password))
+	timeout := broker.config.TimeoutMSForEachAPI[36]
+	_, err = broker.request(authPayload, timeout)
 	if err != nil {
 		return err
 	}
