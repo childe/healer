@@ -225,7 +225,9 @@ func (c *SimpleConsumer) getCommitedOffet() {
 
 func (c *SimpleConsumer) Stop() {
 	c.stop = true
-	c.CommitOffset()
+	if c.config.AutoCommit {
+		c.CommitOffset()
+	}
 }
 
 // when NOT belong to GroupConsumer
@@ -258,6 +260,9 @@ func (c *SimpleConsumer) commitOffset() bool {
 	return false
 }
 
+// CommitOffset commit offset to coordinator
+// if simpleConsumer belong to a GroupConsumer, it uses groupconsumer to commit
+// else if it has GroupId, it use its own coordinator to commit
 func (c *SimpleConsumer) CommitOffset() {
 	if c.offset == c.offsetCommited {
 		if glog.V(5) {
