@@ -402,6 +402,8 @@ func (c *GroupConsumer) Close() {
 // AwaitClose will wait all simple consumers stop and then return
 // or timeout and return after some time
 func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
+	defer c.brokers.Close()
+
 	c.closed = true
 	c.closeChan <- true
 
