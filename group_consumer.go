@@ -107,7 +107,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	for t := range _topics {
 		c.topics = append(c.topics, t)
 	}
-	for {
+	for !c.closed{
 		metaDataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, c.topics)
 		if err == nil {
 			break
@@ -156,7 +156,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 
 	for _, partitionAssignment := range c.partitionAssignments {
 		for _, partitionID := range partitionAssignment.Partitions {
-			simpleConsumer := NewSimpleConsumerWithBrokers(c.topic, partitionID, c.config, c.brokers)
+			simpleConsumer := NewSimpleConsumerWithBrokers(partitionAssignment.Topic, partitionID, c.config, c.brokers)
 			simpleConsumer.belongTO = c
 			simpleConsumer.wg = &c.wg
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
@@ -238,6 +238,12 @@ func (c *GroupConsumer) sync() error {
 
 	if err != nil {
 		glog.Infof("sync %s error: %s", c.config.GroupID, err)
+		if err == AllError[15] || err == AllError[16] {
+			c.coordinatorAvailable = false
+		}
+		if err == AllError[25] {
+			c.memberID = ""
+		}
 		return err
 	}
 
