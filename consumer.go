@@ -13,6 +13,7 @@ type Consumer struct {
 	config *ConsumerConfig
 
 	brokers *Brokers
+	closed bool
 
 	simpleConsumers []*SimpleConsumer
 	wg              sync.WaitGroup // wg is used to tell if all consumer has already stopped
@@ -68,13 +69,16 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 		topics = append(topics, topicName)
 	}
 
-	for {
+	for !c.closed {
 		if metadataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, topics); err != nil {
 			glog.Errorf("could not get metadata of topics %v: %s", topics, err)
 			time.Sleep(time.Millisecond * 1000)
 		} else {
 			break
 		}
+	}
+	if c.closed{
+		return nil,nil
 	}
 
 	c.simpleConsumers = make([]*SimpleConsumer, 0)
@@ -123,6 +127,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 }
 
 func (c *Consumer) stop() {
+	c.closed = true
 	if c.simpleConsumers != nil {
 		for _, simpleConsumer := range c.simpleConsumers {
 			simpleConsumer.Stop()
@@ -147,6 +152,7 @@ func (consumer *Consumer) AwaitClose(timeout time.Duration) {
 
 	go func() {
 		consumer.wg.Wait()
+		consumer.brokers.Close()
 		c <- true
 	}()
 }

@@ -236,7 +236,7 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 		if length+l == 4 {
 			break
 		}
-		l = length
+		l += length
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
