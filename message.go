@@ -174,14 +174,14 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 			offset += int(keyLength)
 		}
 
-		valueLength := int(binary.BigEndian.Uint32(payload[offset:]))
+		valueLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 		if valueLength == -1 {
 			message.Value = nil
 		} else {
 			message.Value = make([]byte, valueLength)
-			copy(message.Value, payload[offset:offset+valueLength])
-			offset += valueLength
+			copy(message.Value, payload[offset:offset+int(valueLength)])
+			offset += int(valueLength)
 		}
 		compression := message.Attributes & 0x07
 		if compression != COMPRESSION_NONE {
