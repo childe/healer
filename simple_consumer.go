@@ -294,7 +294,6 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 	var err error
 
-	c.stop = false
 	c.offset = offset
 
 	glog.V(5).Infof("[%s][%d] offset: %d (before fetch offset)", c.topic, c.partitionID, c.offset)
@@ -332,6 +331,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 					c.CommitOffset()
 				case <-c.stopChanForCommit:
 					c.CommitOffset()
+					ticker.Stop()
 					return
 				}
 			}
