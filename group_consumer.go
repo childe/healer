@@ -3,6 +3,7 @@ package healer
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -107,7 +108,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	for t := range _topics {
 		c.topics = append(c.topics, t)
 	}
-	for !c.closed{
+	for !c.closed {
 		metaDataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, c.topics)
 		if err == nil {
 			break
@@ -195,7 +196,7 @@ func (c *GroupConsumer) join() error {
 			return err
 		}
 
-		if err == AllError[15] || err == AllError[16] {
+		if err == io.EOF || err == AllError[15] || err == AllError[16] {
 			c.coordinatorAvailable = false
 		}
 		if err == AllError[25] {
