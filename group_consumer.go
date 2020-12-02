@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -192,16 +193,18 @@ func (c *GroupConsumer) join() error {
 	if err != nil {
 		glog.Infof("join %s error: %s", c.config.GroupID, err)
 
-		if "*healer.Error" != reflect.TypeOf(err).String() {
-			return err
+		if err == AllError[25] {
+			c.memberID = ""
 		}
 
 		if err == io.EOF || err == AllError[15] || err == AllError[16] {
 			c.coordinatorAvailable = false
 		}
-		if err == AllError[25] {
-			c.memberID = ""
+
+		if strings.Contains(err.Error(), "connection refused") {
+			c.coordinatorAvailable = false
 		}
+
 		return err
 	}
 
