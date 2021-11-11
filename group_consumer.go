@@ -205,6 +205,10 @@ func (c *GroupConsumer) join() error {
 			c.coordinatorAvailable = false
 		}
 
+		if strings.Contains(err.Error(), "network is unreachable") {
+			c.coordinatorAvailable = false
+		}
+
 		return err
 	}
 
