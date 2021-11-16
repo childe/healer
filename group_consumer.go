@@ -208,6 +208,9 @@ func (c *GroupConsumer) join() error {
 		if strings.Contains(err.Error(), "network is unreachable") {
 			c.coordinatorAvailable = false
 		}
+		if strings.Contains(err.Error(), "i/o timeout") {
+			c.coordinatorAvailable = false
+		}
 
 		return err
 	}
