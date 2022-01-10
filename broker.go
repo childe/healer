@@ -182,6 +182,14 @@ func (broker *Broker) ensureOpen() error {
 			glog.Errorf("could not conn to %s: %s", broker.address, err)
 			return err
 		}
+
+		if broker.config.SaslConfig != nil {
+			if err := broker.sendSaslAuthenticate(); err != nil {
+				glog.Errorf("sasl authenticate error : %s", err)
+				return err
+			}
+		}
+
 		broker.conn = conn
 		broker.dead = false
 		broker.correlationID = 0
