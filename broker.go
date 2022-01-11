@@ -56,6 +56,7 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
 	}
 	broker.conn = conn
+	broker.dead = false
 
 	if broker.config.SaslConfig != nil {
 		if err := broker.sendSaslAuthenticate(); err != nil {
@@ -63,7 +64,6 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 			return nil, err
 		}
 	}
-	broker.dead = false
 
 	// TODO since ??
 	//apiVersionsResponse, err := broker.requestApiVersions()
