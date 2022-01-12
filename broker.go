@@ -137,7 +137,8 @@ func (broker *Broker) sendSaslAuthenticate() error {
 
 	payload = saslHandShakeRequest.Encode()
 
-	payload, err = broker.Request(saslHandShakeRequest)
+	timeout := broker.config.TimeoutMS
+	payload, err = broker.request(saslHandShakeRequest.Encode(), timeout)
 	if err != nil {
 		return err
 	}
@@ -149,7 +150,7 @@ func (broker *Broker) sendSaslAuthenticate() error {
 
 	// authenticate
 	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	payload, err = broker.Request(saslAuthenticateRequest)
+	payload, err = broker.request(saslAuthenticateRequest.Encode(), timeout)
 	if err != nil {
 		return err
 	}
