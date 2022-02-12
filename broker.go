@@ -65,13 +65,29 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		}
 	}
 
-	if config.KafkaVersion != "" && compareKafkaVersion(config.KafkaVersion, "0.10.0.0") >= 0 {
+	if config.KafkaVersion == "" || compareKafkaVersion(config.KafkaVersion, "0.10.0.0") >= 0 {
 		clientID := "healer-init"
 		apiVersionsResponse, err := broker.requestApiVersions(clientID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
 		}
 		broker.apiVersions = apiVersionsResponse.ApiVersions
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal api versions when init broker: %s", err)
+		}
+
+		if glog.V(10) {
+			glog.Infof("broker %s api versions:", address)
+			var versions string
+			for i, v := range broker.apiVersions {
+				if i+1 == len(broker.apiVersions) {
+					versions += fmt.Sprintf("%s:%d-%d", v.apiKey.String(), v.minVersion, v.maxVersion)
+				} else {
+					versions += fmt.Sprintf("%s:%d-%d,", v.apiKey.String(), v.minVersion, v.maxVersion)
+				}
+			}
+			glog.Infof("broker %s api versions: %s", address, versions)
+		}
 	}
 
 	return broker, nil
