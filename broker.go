@@ -35,7 +35,7 @@ type Broker struct {
 }
 
 var (
-	tlsConfigError = errors.New("Cert & File & CA must be set")
+	errTlsConfig = errors.New("Cert & File & CA must be set")
 )
 
 // NewBroker is used just as bootstrap in NewBrokers.
@@ -101,7 +101,7 @@ func newConn(address string, config *BrokerConfig) (net.Conn, error) {
 
 	if config.TLSEnabled {
 		if config.TLS == nil || config.TLS.Cert == "" || config.TLS.Key == "" || config.TLS.CA == "" {
-			return nil, tlsConfigError
+			return nil, errTlsConfig
 		}
 		if tlsConfig, err := createTLSConfig(config.TLS); err != nil {
 			return nil, err
