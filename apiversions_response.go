@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-type apiKey int16
+type ApiKey uint16
 
-func (k apiKey) String() string {
+func (k ApiKey) String() string {
 	switch k {
 	case 0:
 		return "Produce"
@@ -133,9 +133,9 @@ func (k apiKey) String() string {
 }
 
 type ApiVersion struct {
-	apiKey     apiKey
-	minVersion int16
-	maxVersion int16
+	apiKey     ApiKey
+	minVersion uint16
+	maxVersion uint16
 }
 
 // version 0
@@ -166,13 +166,13 @@ func NewApiVersionsResponse(payload []byte) (*ApiVersionsResponse, error) {
 
 	for i := uint32(0); i < apiVersionsCount; i++ {
 		apiVersion := &ApiVersion{}
-		apiVersion.apiKey = apiKey(binary.BigEndian.Uint16(payload[offset:]))
+		apiVersion.apiKey = ApiKey(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 
-		apiVersion.minVersion = int16(binary.BigEndian.Uint16(payload[offset:]))
+		apiVersion.minVersion = binary.BigEndian.Uint16(payload[offset:])
 		offset += 2
 
-		apiVersion.maxVersion = int16(binary.BigEndian.Uint16(payload[offset:]))
+		apiVersion.maxVersion = binary.BigEndian.Uint16(payload[offset:])
 		offset += 2
 
 		apiVersionsResponse.ApiVersions[i] = apiVersion
