@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 )
 
+// TODO type define ApiKey and change api_XXX to ApiKey type
+
 var (
 	API_ProduceRequest      uint16 = 0
 	API_FetchRequest        uint16 = 1
@@ -25,6 +27,10 @@ var (
 	API_AlterConfigs        uint16 = 33
 	API_SaslAuthenticate    uint16 = 36
 )
+
+var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
+	API_FetchRequest: []uint16{10, 0},
+}
 
 type RequestHeader struct {
 	ApiKey        uint16
