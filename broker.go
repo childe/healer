@@ -35,7 +35,7 @@ type Broker struct {
 }
 
 var (
-	errTlsConfig = errors.New("Cert & File & CA must be set")
+	errTLSConfig = errors.New("Cert & File & CA must be set")
 )
 
 // NewBroker is used just as bootstrap in NewBrokers.
@@ -93,6 +93,23 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 	return broker, nil
 }
 
+func (broker *Broker) getHighestAvailableAPIVersion(apiKey uint16) uint16 {
+	versions, ok := availableVersions[apiKey]
+
+	if !ok {
+		return 0
+	}
+
+	for _, version := range versions {
+		for _, brokerAPIVersion := range broker.apiVersions {
+			if uint16(brokerAPIVersion.apiKey) == apiKey && brokerAPIVersion.minVersion <= version && brokerAPIVersion.maxVersion >= version {
+				return version
+			}
+		}
+	}
+	return 0
+}
+
 func newConn(address string, config *BrokerConfig) (net.Conn, error) {
 	dialer := net.Dialer{
 		Timeout:   time.Millisecond * time.Duration(config.ConnectTimeoutMS),
@@ -101,7 +118,7 @@ func newConn(address string, config *BrokerConfig) (net.Conn, error) {
 
 	if config.TLSEnabled {
 		if config.TLS == nil || config.TLS.Cert == "" || config.TLS.Key == "" || config.TLS.CA == "" {
-			return nil, errTlsConfig
+			return nil, errTLSConfig
 		}
 		if tlsConfig, err := createTLSConfig(config.TLS); err != nil {
 			return nil, err
@@ -468,8 +485,9 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 	}
 
 	broker.correlationID++
+
 	fetchRequest.SetCorrelationID(broker.correlationID)
-	payload := fetchRequest.Encode()
+	payload := fetchRequest.Encode(broker.getHighestAvailableAPIVersion(API_FetchRequest))
 
 	timeout := broker.config.TimeoutMS
 	if len(broker.config.TimeoutMSForEachAPI) > int(fetchRequest.API()) {
