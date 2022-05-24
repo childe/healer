@@ -372,6 +372,7 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 
 		if glog.V(15) {
 			glog.Infof("read %d bytes response", length)
+			glog.Info(buf[:length])
 		}
 		select {
 		case <-ctx.Done():

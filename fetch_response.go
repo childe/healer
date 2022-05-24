@@ -24,19 +24,30 @@ Partition				The id of the partition this response is for.
 TopicName				The name of the topic this response entry is for.
 */
 
+type abortedTransaction struct {
+	producer_id  int64
+	first_offset int64
+}
+
 // PartitionResponse stores partitionID and MessageSet in the partition
 type PartitionResponse struct {
-	Partition           int32
-	ErrorCode           int16
-	HighwaterMarkOffset int64
-	MessageSetSizeBytes int32
-	MessageSet          MessageSet
+	Partition            int32
+	ErrorCode            int16
+	HighwaterMarkOffset  int64
+	last_stable_offset   int64
+	log_start_offset     int64
+	aborted_transactions []*abortedTransaction
+	MessageSetSizeBytes  int32
+	MessageSet           MessageSet
 }
 
 // FetchResponse stores topicname and arrya of PartitionResponse
 type FetchResponse struct {
-	CorrelationID int32
-	Responses     []struct {
+	CorrelationID    int32
+	throttle_time_ms int32
+	error_code       int16
+	session_id       int32
+	Responses        []struct {
 		TopicName          string
 		PartitionResponses []PartitionResponse
 	}
@@ -220,7 +231,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 		n      int
 	)
 
-	buffer, n = streamDecoder.read(18)
+	buffer, n = streamDecoder.read(18 + 20)
 
 	if n < 18 {
 		return &maxBytesTooSmall
@@ -235,7 +246,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 
 	//highwaterMarkOffset = int64(binary.BigEndian.Uint64(buffer[6:]))
 
-	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[14:])))
+	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[14+20:])))
 
 	err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes)
 	return err
@@ -286,9 +297,9 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() bool {
 	streamDecoder.totalLength = int(responseLength) + 4
 
 	// header
-	buffer, n := streamDecoder.read(8)
-	if n != 8 {
-		glog.Errorf("could read enough bytes(8) from buffer channel for fetch response header. read %d bytes", n)
+	buffer, n := streamDecoder.read(8 + 10)
+	if n != 8+10 {
+		glog.Errorf("could not read enough bytes(8) from buffer channel for fetch response header. read %d bytes", n)
 		return false
 	}
 
@@ -297,7 +308,7 @@ func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() bool {
 		glog.Infof("fetch correlationID: %d", correlationID)
 	}
 
-	responsesCount := binary.BigEndian.Uint32(buffer[4:])
+	responsesCount := binary.BigEndian.Uint32(buffer[4+10:])
 
 	if responsesCount == 0 {
 		return true
