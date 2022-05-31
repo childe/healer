@@ -1,53 +1,40 @@
 package healer
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
+	"io/ioutil"
 
 	"github.com/golang/glog"
+	"github.com/pierrec/lz4"
 )
 
-/*
-FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]]
-  TopicName => string
-  Partition => int32
-  ErrorCode => int16
-  HighwaterMarkOffset => int64
-  MessageSetSizeBytes => int32
-
-Field					Description
-HighwaterMarkOffset		The offset at the end of the log for this partition. This can be used by the client to determine how many messages behind the end of the log they are.
-MessageSet				The message data fetched from this partition, in the format described above.
-MessageSetSizeBytes			The size in bytes of the message set for this partition
-Partition				The id of the partition this response is for.
-TopicName				The name of the topic this response entry is for.
-*/
-
 type abortedTransaction struct {
-	producer_id  int64
-	first_offset int64
+	producerID  int64
+	firstOffset int64
 }
 
 // PartitionResponse stores partitionID and MessageSet in the partition
 type PartitionResponse struct {
-	Partition            int32
-	ErrorCode            int16
-	HighwaterMarkOffset  int64
-	last_stable_offset   int64
-	log_start_offset     int64
-	aborted_transactions []*abortedTransaction
-	MessageSetSizeBytes  int32
-	MessageSet           MessageSet
+	Partition           int32
+	ErrorCode           int16
+	HighwaterMarkOffset int64
+	lastStableOffset    int64
+	logStartOffset      int64
+	abortedTransactions []*abortedTransaction
+	MessageSetSizeBytes int32
+	MessageSet          MessageSet
 }
 
 // FetchResponse stores topicname and arrya of PartitionResponse
 type FetchResponse struct {
-	CorrelationID    int32
-	throttle_time_ms int32
-	error_code       int16
-	session_id       int32
-	Responses        []struct {
+	CorrelationID  int32
+	throttleTimeMs int32
+	errorCode      int16
+	sessionID      int32
+	Responses      []struct {
 		TopicName          string
 		PartitionResponses []PartitionResponse
 	}
@@ -60,6 +47,8 @@ type FetchResponseStreamDecoder struct {
 	buffers  chan []byte
 	messages chan *FullMessage
 	more     bool
+
+	version uint16
 }
 
 func (streamDecoder *FetchResponseStreamDecoder) readAll() (length int) {
@@ -164,25 +153,97 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		if offset == messageSetSizeBytes {
 			return nil
 		}
-		buf := make([]byte, 12)
-		n, _ = streamDecoder.readToBuf(buf[:8])
-		if n < 8 {
+		buf := make([]byte, 61)
+		n, _ = streamDecoder.readToBuf(buf)
+		if n < 61 {
 			if !hasAtLeastOneMessage {
 				return &maxBytesTooSmall
 			}
 			return nil
 		}
+		offset += 61
 
-		//messageOffset = int64(binary.BigEndian.Uint64(buffer))
-		offset += 8
+		baseOffset := int64(binary.BigEndian.Uint64(buf))
+		glog.Infof("baseOffset: %d", baseOffset)
 
-		n, _ = streamDecoder.readToBuf(buf[8:])
-		if n < 4 {
-			if !hasAtLeastOneMessage {
-				return &maxBytesTooSmall
-			}
+		batchLength := binary.BigEndian.Uint32(buf[8:])
+		glog.Infof("batchLength: %d", batchLength)
+
+		partitionLeaderEpoch := binary.BigEndian.Uint32(buf[12:])
+		glog.Infof("partitionLeaderEpoch: %d", partitionLeaderEpoch)
+
+		magic := buf[16]
+		glog.Infof("magic: %d", magic)
+
+		crc := binary.BigEndian.Uint32(buf[17:])
+		glog.Infof("crc: %d", crc)
+
+		attributes := binary.BigEndian.Uint16(buf[21:])
+		glog.Infof("attributes: %d", attributes)
+
+		compress := attributes & 0b11
+		glog.Infof("compress: %d", compress)
+
+		lastOffsetDelta := binary.BigEndian.Uint32(buf[23:])
+		glog.Infof("lastOffsetDalta: %d", lastOffsetDelta)
+
+		baseTimestamp := binary.BigEndian.Uint64(buf[27:])
+		glog.Infof("baseTimestamp: %d", baseTimestamp)
+
+		maxTimestamp := binary.BigEndian.Uint64(buf[35:])
+		glog.Infof("maxTimestamp: %d", maxTimestamp)
+
+		producerID := binary.BigEndian.Uint64(buf[43:])
+		glog.Infof("producerID: %d", producerID)
+
+		producerEpoch := binary.BigEndian.Uint16(buf[51:])
+		glog.Infof("producerEpoch: %d", producerEpoch)
+
+		baseSequence := binary.BigEndian.Uint32(buf[53:])
+		glog.Infof("baseSequence: %d", baseSequence)
+
+		count := int(binary.BigEndian.Uint32(buf[57:]))
+		glog.Infof("count: %d", count)
+
+		if count <= 0 {
 			return nil
 		}
+
+		buf = make([]byte, batchLength-49)
+		if n, err := streamDecoder.readToBuf(buf); err == nil {
+			glog.Infof("readToBuf: %d", n)
+		} else {
+			glog.Errorf("readToBuf:%d %s", n, err)
+			return nil
+		}
+
+		if compress == 3 {
+			reader := lz4.NewReader(bytes.NewReader(buf))
+			glog.Info(buf)
+			b, err := ioutil.ReadAll(reader)
+			glog.Infof("decode lz4 error: %v", err)
+			buf = b
+			glog.Info(buf)
+		}
+
+		offset = 0
+		for i := 0; i < count; i++ {
+			record, o := DecodeRecord(buf[offset:])
+			glog.Infof("record: %+v", record)
+			offset += int32(o)
+			message := &Message{
+				Offset: int64(record.offsetDelta) + baseOffset,
+				Key:    record.key,
+				Value:  record.value,
+			}
+			streamDecoder.messages <- &FullMessage{
+				TopicName:   topicName,
+				PartitionID: partitionID,
+				Message:     message,
+			}
+		}
+		return nil
+
 		messageSize = int32(binary.BigEndian.Uint32(buf[8:12]))
 		if messageSize <= 0 {
 			return nil
@@ -247,6 +308,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 	//highwaterMarkOffset = int64(binary.BigEndian.Uint64(buffer[6:]))
 
 	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[14+20:])))
+	glog.Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
 
 	err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes)
 	return err

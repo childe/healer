@@ -14,32 +14,84 @@ import (
 	"github.com/golang/glog"
 )
 
-/*
-Message sets
-One structure common to both the produce and fetch requests is the message set format. A message in kafka is a key-value pair with a small amount of associated metadata. A message set is just a sequence of messages with offset and size information. This format happens to be used both for the on-disk storage on the broker and the on-the-wire format.
-A message set is also the unit of compression in Kafka, and we allow messages to recursively contain compressed message sets to allow batch compression.
-N.B., MessageSets are not preceded by an int32 like other array elements in the protocol.
+// Header is concluded in Record
+type Header struct {
+	headerKeyLength   int32
+	headerKey         string
+	headerValueLength int32
+	Value             []byte
+}
 
-MessageSet => [Offset MessageSize Message]
-  Offset => int64
-  MessageSize => int32
+// Record is element of Records
+type Record struct {
+	length         int32
+	attributes     int8
+	timestampDelta int64
+	offsetDelta    int32
+	keyLength      int32
+	key            []byte
+	valueLen       int32
+	value          []byte
+	Headers        []Header
+}
 
-Message format
-Message => Crc MagicByte Attributes Key Value
-  Crc => int32
-  MagicByte => int8
-  Attributes => int8
-  Key => bytes
-  Value => bytes
+// DecodeRecord decodes the struct Record from the given payload.
+func DecodeRecord(payload []byte) (*Record, int) {
+	var record Record
+	var offset int = 0
+	length, o := ReadVarint(payload)
+	record.length = int32(length)
+	offset += o
 
-Offset			This is the offset used in kafka as the log sequence number. When the producer is sending messages it doesn't actually know the offset and can fill in any value here it likes.
-Crc				The CRC is the CRC32 of the remainder of the message bytes. This is used to check the integrity of the message on the broker and consumer.
-MagicByte		This is a version id used to allow backwards compatible evolution of the message binary format. The current value is 0.
-Attributes		This byte holds metadata attributes about the message. The lowest 2 bits contain the compression codec used for the message. The other bits should be set to 0.
-Key				The key is an optional message key that was used for partition assignment. The key can be null.
-Value			The value is the actual message contents as an opaque byte array. Kafka supports recursive messages in which case this may itself contain a message set. The message can be null.
-*/
+	record.attributes = int8(payload[offset])
+	offset++
 
+	timestampDelta, o := ReadVarint(payload[offset:])
+	record.timestampDelta = int64(timestampDelta)
+	offset += o
+
+	offsetDelta, o := ReadVarint(payload[offset:])
+	record.offsetDelta = int32(offsetDelta)
+	offset += o
+
+	keyLength, o := ReadVarint(payload[offset:])
+	record.keyLength = int32(keyLength)
+	offset += o
+
+	if keyLength > 0 {
+		record.key = make([]byte, keyLength)
+		offset += copy(record.key, payload[offset:offset+int(record.keyLength)])
+	}
+
+	valueLen, o := ReadVarint(payload[offset:])
+	record.valueLen = int32(valueLen)
+	offset += o
+	if valueLen > 0 {
+		record.value = make([]byte, valueLen)
+		offset += copy(record.value, payload[offset:offset+int(record.valueLen)])
+	}
+
+	return &record, offset
+}
+
+// Records is batch of Record
+type Records struct {
+	baseOffset           int64
+	batchLength          int32
+	partitionLeaderEpoch int32
+	magic                int8
+	crc                  int32
+	attributes           int16
+	lastOffsetDelta      int32
+	baseTimestamp        int64
+	maxTimestamp         int64
+	producerID           int64
+	producerEpoch        int16
+	baseSequence         int32
+	records              []Record
+}
+
+// FullMessage contains message value and topic and partition
 type FullMessage struct {
 	TopicName   string
 	PartitionID int32
@@ -47,6 +99,7 @@ type FullMessage struct {
 	Message     *Message
 }
 
+// Message is a message in a topic
 type Message struct {
 	Offset      int64
 	MessageSize int32
@@ -58,6 +111,8 @@ type Message struct {
 	Key        []byte
 	Value      []byte
 }
+
+// MessageSet is a batch of messages
 type MessageSet []*Message
 
 const (

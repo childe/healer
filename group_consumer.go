@@ -181,7 +181,7 @@ func (c *GroupConsumer) join() error {
 		UserData:     nil,
 	}
 
-	gps := []*GroupProtocol{&GroupProtocol{"range", protocolMetadata.Encode()}}
+	gps := []*GroupProtocol{{"range", protocolMetadata.Encode()}}
 	joinGroupResponse, err := c.coordinator.requestJoinGroup(
 		c.config.ClientID, c.config.GroupID, int32(c.config.SessionTimeoutMS), c.memberID, protocolType, gps)
 
