@@ -35,7 +35,6 @@ func NewLeaveGroupRequest(clientID, groupID, memberID string) *LeaveGroupRequest
 
 func (r *LeaveGroupRequest) Length() int {
 	l := r.RequestHeader.length() + 2 + len(r.GroupID) + 2 + len(r.MemberID)
-	l += 4
 	return l
 }
 
