@@ -55,6 +55,8 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b.TLS = c.TLS
 	b.SaslConfig = c.SaslConfig
 	b.KafkaVersion = c.KafkaVersion
+
+	b.MetadataRefreshIntervalMS = c.MetadataRefreshIntervalMS
 	return b
 }
 
@@ -64,6 +66,7 @@ func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
 	b.TLSEnabled = p.TLSEnabled
 	b.TLS = p.TLS
 	b.SaslConfig = p.SaslConfig
+	b.MetadataRefreshIntervalMS = p.MetadataRefreshIntervalMS
 	return b
 }
 
@@ -92,6 +95,8 @@ type ConsumerConfig struct {
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
 	OffsetsStorage       int    `json:"offsets.storage,string"`
 	KafkaVersion         string `json:"kafka.version"`
+
+	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string"`
 
 	TLSEnabled bool       `json:"tls.enabled,string"`
 	TLS        *TLSConfig `json:"tls"`
@@ -188,6 +193,8 @@ type ProducerConfig struct {
 	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms,string"`
 	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys,string"`
 	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms,string"`
+
+	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string"`
 
 	TLSEnabled bool       `json:"tls.enabled,string"`
 	TLS        *TLSConfig `json:"tls"`
