@@ -59,6 +59,7 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	if c.MetadataRefreshIntervalMS > 0 {
 		b.MetadataRefreshIntervalMS = c.MetadataRefreshIntervalMS
 	}
+	b.KafkaVersion = c.KafkaVersion
 	return b
 }
 
