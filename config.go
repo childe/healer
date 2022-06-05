@@ -54,7 +54,9 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b.TLS = c.TLS
 	b.SaslConfig = c.SaslConfig
 
-	b.MetadataRefreshIntervalMS = c.MetadataRefreshIntervalMS
+	if c.MetadataRefreshIntervalMS > 0 {
+		b.MetadataRefreshIntervalMS = c.MetadataRefreshIntervalMS
+	}
 	return b
 }
 
@@ -64,7 +66,9 @@ func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
 	b.TLSEnabled = p.TLSEnabled
 	b.TLS = p.TLS
 	b.SaslConfig = p.SaslConfig
-	b.MetadataRefreshIntervalMS = p.MetadataRefreshIntervalMS
+	if p.MetadataRefreshIntervalMS > 0 {
+		b.MetadataRefreshIntervalMS = p.MetadataRefreshIntervalMS
+	}
 	return b
 }
 
