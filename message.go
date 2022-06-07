@@ -39,22 +39,22 @@ type Record struct {
 func DecodeRecord(payload []byte) (*Record, int) {
 	var record Record
 	var offset int = 0
-	length, o := ReadVarint(payload)
+	length, o := binary.Varint(payload)
 	record.length = int32(length)
 	offset += o
 
 	record.attributes = int8(payload[offset])
 	offset++
 
-	timestampDelta, o := ReadVarint(payload[offset:])
+	timestampDelta, o := binary.Varint(payload[offset:])
 	record.timestampDelta = int64(timestampDelta)
 	offset += o
 
-	offsetDelta, o := ReadVarint(payload[offset:])
+	offsetDelta, o := binary.Varint(payload[offset:])
 	record.offsetDelta = int32(offsetDelta)
 	offset += o
 
-	keyLength, o := ReadVarint(payload[offset:])
+	keyLength, o := binary.Varint(payload[offset:])
 	record.keyLength = int32(keyLength)
 	offset += o
 
@@ -63,7 +63,7 @@ func DecodeRecord(payload []byte) (*Record, int) {
 		offset += copy(record.key, payload[offset:offset+int(record.keyLength)])
 	}
 
-	valueLen, o := ReadVarint(payload[offset:])
+	valueLen, o := binary.Varint(payload[offset:])
 	record.valueLen = int32(valueLen)
 	offset += o
 	if valueLen > 0 {
