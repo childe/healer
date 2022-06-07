@@ -8,9 +8,9 @@ type ApiVersionsRequest struct {
 
 func NewApiVersionsRequest(apiVersion uint16, clientID string) Request {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_ApiVersions,
-		ApiVersion: apiVersion,
-		ClientId:   clientID,
+		APIKey:     API_ApiVersions,
+		APIVersion: apiVersion,
+		ClientID:   clientID,
 	}
 
 	return &ApiVersionsRequest{

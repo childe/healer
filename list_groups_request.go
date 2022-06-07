@@ -11,9 +11,9 @@ type ListGroupsRequest struct {
 
 func NewListGroupsRequest(clientID string) *ListGroupsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_ListGroups,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_ListGroups,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &ListGroupsRequest{requestHeader}
 }

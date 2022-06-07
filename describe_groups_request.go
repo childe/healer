@@ -20,9 +20,9 @@ type DescribeGroupsRequest struct {
 
 func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_DescribeGroups,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_DescribeGroups,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &DescribeGroupsRequest{requestHeader, groups}
 }

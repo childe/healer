@@ -35,9 +35,9 @@ type OffsetFetchRequest struct {
 // request only ONE topic
 func NewOffsetFetchRequest(apiVersion uint16, clientID, groupID string) *OffsetFetchRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_OffsetFetchRequest,
-		ApiVersion: apiVersion,
-		ClientId:   clientID,
+		APIKey:     API_OffsetFetchRequest,
+		APIVersion: apiVersion,
+		ClientID:   clientID,
 	}
 
 	r := &OffsetFetchRequest{

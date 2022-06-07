@@ -38,9 +38,9 @@ func (r *DescribeConfigsRequestResource) encode(payload []byte) (offset int) {
 
 func NewDescribeConfigsRequest(clientID string, resources []*DescribeConfigsRequestResource) *DescribeConfigsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_DescribeConfigs,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_DescribeConfigs,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	if resources == nil {
 		resources = make([]*DescribeConfigsRequestResource, 0)

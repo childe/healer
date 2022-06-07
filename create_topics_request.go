@@ -143,9 +143,9 @@ type ConfigEntry struct {
 
 func NewCreateTopicsRequest(clientID string, timeout int32) *CreateTopicsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_CreateTopics,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_CreateTopics,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 
 	return &CreateTopicsRequest{

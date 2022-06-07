@@ -32,7 +32,7 @@ type MetadataRequest struct {
 }
 
 func (metadataRequest *MetadataRequest) Encode() []byte {
-	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientId)
+	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientID)
 	requestLength := requestHeaderLength + 4
 	for _, topic := range metadataRequest.Topics {
 		requestLength += 2 + len(topic)
@@ -65,9 +65,9 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 func NewMetadataRequest(clientID string, version uint16, topics []string) *MetadataRequest {
 	r := &MetadataRequest{
 		RequestHeader: &RequestHeader{
-			ApiKey:     API_MetadataRequest,
-			ApiVersion: version,
-			ClientId:   clientID,
+			APIKey:     API_MetadataRequest,
+			APIVersion: version,
+			ClientID:   clientID,
 		},
 		Topics: topics,
 	}

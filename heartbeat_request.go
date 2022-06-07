@@ -26,9 +26,9 @@ type HeartbeatRequest struct {
 
 func NewHeartbeatRequest(clientID, groupID string, generationID int32, memberID string) *HeartbeatRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_Heartbeat,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_Heartbeat,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &HeartbeatRequest{
 		RequestHeader: requestHeader,

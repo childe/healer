@@ -32,9 +32,9 @@ type FetchRequest struct {
 // NewFetchRequest creates a new FetchRequest
 func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_FetchRequest,
-		ApiVersion: 10,
-		ClientId:   clientID,
+		APIKey:     API_FetchRequest,
+		APIVersion: 10,
+		ClientID:   clientID,
 	}
 
 	topics := make(map[string][]*PartitionBlock)
@@ -81,7 +81,7 @@ func (fetchRequest *FetchRequest) length(version uint16) int {
 
 // Encode encodes request to []byte
 func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
-	fetchRequest.RequestHeader.ApiVersion = version
+	fetchRequest.RequestHeader.APIVersion = version
 
 	requestLength := fetchRequest.length(version)
 	payload := make([]byte, requestLength)

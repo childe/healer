@@ -39,9 +39,9 @@ func NewSaslAuthenticateRequest(clientID string, user, password, typ string) *Sa
 	}
 
 	requestHeader := &RequestHeader{
-		ApiKey:     API_SaslAuthenticate,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_SaslAuthenticate,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	saslAuthBytes := saslAuth.Encode()
 	return &SaslAuthenticateRequest{requestHeader, saslAuthBytes}

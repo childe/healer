@@ -21,9 +21,9 @@ type LeaveGroupRequest struct {
 
 func NewLeaveGroupRequest(clientID, groupID, memberID string) *LeaveGroupRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_LeaveGroup,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_LeaveGroup,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 
 	return &LeaveGroupRequest{

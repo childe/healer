@@ -49,9 +49,9 @@ type SyncGroupRequest struct {
 
 func NewSyncGroupRequest(clientID, groupID string, generationID int32, memberID string, groupAssignment GroupAssignment) *SyncGroupRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_SyncGroup,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_SyncGroup,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 
 	return &SyncGroupRequest{

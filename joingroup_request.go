@@ -28,9 +28,9 @@ type GroupProtocol struct {
 // NewJoinGroupRequest create a JoinGroupRequest
 func NewJoinGroupRequest(apiVersion uint16, clientID string) *JoinGroupRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_JoinGroup,
-		ApiVersion: apiVersion,
-		ClientId:   clientID,
+		APIKey:     API_JoinGroup,
+		APIVersion: apiVersion,
+		ClientID:   clientID,
 	}
 
 	return &JoinGroupRequest{
@@ -46,7 +46,7 @@ func (r *JoinGroupRequest) AddGroupProtocal(gp *GroupProtocol) {
 
 func (r *JoinGroupRequest) length() int {
 	l := r.RequestHeader.length() + 2 + len(r.GroupID) + 4 + 2 + len(r.MemberID) + 2 + len(r.ProtocolType)
-	if r.RequestHeader.ApiVersion == 1 || r.RequestHeader.ApiVersion == 2 {
+	if r.RequestHeader.APIVersion == 1 || r.RequestHeader.APIVersion == 2 {
 		l += 4 // RebalanceTimeout
 	}
 	l += 4
@@ -76,7 +76,7 @@ func (r *JoinGroupRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.SessionTimeout))
 	offset += 4
 
-	if r.APIVersion() == 1 || r.APIVersion() == 2 {
+	if r.Version() == 1 || r.Version() == 2 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(r.RebalanceTimeout))
 		offset += 4
 	}
