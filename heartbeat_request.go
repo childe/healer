@@ -43,7 +43,7 @@ func (heartbeatR *HeartbeatRequest) Length() int {
 	return requestLength
 }
 
-func (heartbeatR *HeartbeatRequest) Encode() []byte {
+func (heartbeatR *HeartbeatRequest) Encode(version uint16) []byte {
 	requestLength := heartbeatR.Length()
 
 	payload := make([]byte, requestLength+4)

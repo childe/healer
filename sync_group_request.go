@@ -73,7 +73,8 @@ func (r *SyncGroupRequest) Length() int {
 	return requestLength
 }
 
-func (r *SyncGroupRequest) Encode() []byte {
+// Encode encodes SyncGroupRequest to []byte
+func (r *SyncGroupRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 	payload := make([]byte, requestLength+4)
 	offset := 0

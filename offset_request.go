@@ -62,7 +62,7 @@ func NewOffsetsRequest(topic string, partitionIDs []int32, timeValue int64, offs
 	return offsetsRequest
 }
 
-func (offsetR *OffsetsRequest) Encode() []byte {
+func (offsetR *OffsetsRequest) Encode(version uint16) []byte {
 	requestLength := 8 + 2 + len(offsetR.RequestHeader.ClientID) + 4
 	requestLength += 4
 	for topicName, partitionInfo := range offsetR.RequestInfo {

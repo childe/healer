@@ -43,7 +43,7 @@ func (r *SaslHandShakeRequest) Length() int {
 	return l + 2 + len(r.Mechanism)
 }
 
-func (r *SaslHandShakeRequest) Encode() []byte {
+func (r *SaslHandShakeRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)

@@ -38,7 +38,7 @@ func NewFindCoordinatorRequest(clientID, groupID string) *FindCoordinatorRequest
 	}
 }
 
-func (findCoordinatorR *FindCoordinatorRequest) Encode() []byte {
+func (findCoordinatorR *FindCoordinatorRequest) Encode(version uint16) []byte {
 	requestLength := findCoordinatorR.RequestHeader.length() + 2 + len(findCoordinatorR.GroupID)
 
 	payload := make([]byte, requestLength+4)

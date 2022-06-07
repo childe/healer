@@ -50,7 +50,7 @@ func (produceRequest *ProduceRequest) Length() int {
 	return requestLength
 }
 
-func (produceRequest *ProduceRequest) Encode() []byte {
+func (produceRequest *ProduceRequest) Encode(version uint16) []byte {
 	requestLength := produceRequest.Length()
 	payload := make([]byte, requestLength+4)
 	offset := 0

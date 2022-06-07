@@ -52,7 +52,7 @@ func (r *SaslAuthenticateRequest) Length() int {
 	return l + 4 + len(r.SaslAuthBytes)
 }
 
-func (r *SaslAuthenticateRequest) Encode() []byte {
+func (r *SaslAuthenticateRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)

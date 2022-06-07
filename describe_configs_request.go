@@ -64,7 +64,7 @@ func (r *DescribeConfigsRequest) Length() int {
 	return l
 }
 
-func (r *DescribeConfigsRequest) Encode() []byte {
+func (r *DescribeConfigsRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)

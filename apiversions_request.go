@@ -18,7 +18,8 @@ func NewApiVersionsRequest(apiVersion uint16, clientID string) Request {
 	}
 }
 
-func (req *ApiVersionsRequest) Encode() []byte {
+// Encode encodes ApiVersionsRequest to []byte
+func (req *ApiVersionsRequest) Encode(version uint16) []byte {
 	payload := make([]byte, req.RequestHeader.length()+4)
 	offset := 0
 

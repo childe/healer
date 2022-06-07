@@ -154,7 +154,7 @@ func (r *OffsetCommitRequest) Length() int {
 	}
 	return l
 }
-func (r *OffsetCommitRequest) Encode() []byte {
+func (r *OffsetCommitRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 	payload := make([]byte, 4+requestLength)
 	offset := 0

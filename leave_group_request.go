@@ -38,7 +38,7 @@ func (r *LeaveGroupRequest) Length() int {
 	return l
 }
 
-func (r *LeaveGroupRequest) Encode() []byte {
+func (r *LeaveGroupRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)

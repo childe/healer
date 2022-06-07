@@ -58,7 +58,7 @@ func (r *JoinGroupRequest) length() int {
 }
 
 // Encode encodes the JoinGroupRequest object to []byte. it implement Request Interface
-func (r *JoinGroupRequest) Encode() []byte {
+func (r *JoinGroupRequest) Encode(version uint16) []byte {
 	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)

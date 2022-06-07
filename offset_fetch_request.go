@@ -90,7 +90,7 @@ func (r *OffsetFetchRequest) Length() int {
 	return l
 }
 
-func (r *OffsetFetchRequest) Encode() []byte {
+func (r *OffsetFetchRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 	payload := make([]byte, 4+requestLength)
 	offset := 0

@@ -18,7 +18,7 @@ func NewListGroupsRequest(clientID string) *ListGroupsRequest {
 	return &ListGroupsRequest{requestHeader}
 }
 
-func (ListGroupsR *ListGroupsRequest) Encode() []byte {
+func (ListGroupsR *ListGroupsRequest) Encode(version uint16) []byte {
 	requestLength := ListGroupsR.RequestHeader.length()
 
 	payload := make([]byte, requestLength+4)

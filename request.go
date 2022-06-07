@@ -81,7 +81,7 @@ func (requestHeader *RequestHeader) SetCorrelationID(c uint32) {
 
 // Request is implemented by all detailed request
 type Request interface {
-	Encode() []byte
+	Encode(version uint16) []byte
 	API() uint16
 	SetCorrelationID(uint32)
 }

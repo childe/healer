@@ -31,7 +31,7 @@ type MetadataRequest struct {
 	Topics []string
 }
 
-func (metadataRequest *MetadataRequest) Encode() []byte {
+func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
 	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientID)
 	requestLength := requestHeaderLength + 4
 	for _, topic := range metadataRequest.Topics {
