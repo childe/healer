@@ -6,28 +6,30 @@ import (
 	"github.com/golang/glog"
 )
 
+// PartitionBlock is the partition to fetch.
 type PartitionBlock struct {
-	Partition            int32
-	current_leader_epoch int32
-	FetchOffset          int64
-	logStartOffset       int64
-	MaxBytes             int32
+	Partition          int32
+	CurrentLeaderEpoch int32
+	FetchOffset        int64
+	LogStartOffset     int64
+	MaxBytes           int32
 }
 
+// FetchRequest holds all the parameters of fetch request
 type FetchRequest struct {
 	*RequestHeader
 	ReplicaID            int32
 	MaxWaitTime          int32
 	MinBytes             int32
 	MaxBytes             int32
-	isolationLevel       int8
-	sessionID            int32
-	sessionEpoch         int32
+	ISOLationLevel       int8
+	SessionID            int32
+	SessionEpoch         int32
 	Topics               map[string][]*PartitionBlock
-	forgottenTopicsDatas map[string][]int32
+	ForgottenTopicsDatas map[string][]int32
 }
 
-// TODO all partitions should have the SAME maxbytes?
+// NewFetchRequest creates a new FetchRequest
 func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchRequest {
 	requestHeader := &RequestHeader{
 		ApiKey:     API_FetchRequest,
@@ -43,7 +45,7 @@ func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchR
 		MaxWaitTime:          maxWaitTime,
 		MinBytes:             minBytes,
 		Topics:               topics,
-		forgottenTopicsDatas: make(map[string][]int32),
+		ForgottenTopicsDatas: make(map[string][]int32),
 	}
 }
 
@@ -62,16 +64,26 @@ func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, 
 	} else {
 		fetchRequest.Topics[topic] = []*PartitionBlock{partitionBlock}
 	}
+}
 
-	// fetchRequest.forgottenTopicsDatas[topic] = make([]int32, 0)
+func (fetchRequest *FetchRequest) length(version uint16) int {
+	length := 4 + fetchRequest.RequestHeader.length()
+	length += 25 + 4 + 4
+	for topicname := range fetchRequest.Topics {
+		length += 2 + len(topicname) + 28
+	}
+	for topicname, partitionIDs := range fetchRequest.ForgottenTopicsDatas {
+		length += 2 + len(topicname) + 4 + len(partitionIDs)*4
+	}
+
+	return length * 2
 }
 
 // Encode encodes request to []byte
 func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 	fetchRequest.RequestHeader.ApiVersion = version
 
-	// fix me
-	requestLength := 1024
+	requestLength := fetchRequest.length(version)
 	payload := make([]byte, requestLength)
 	offset := 0
 
@@ -88,12 +100,18 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 	offset += 4
 	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.MaxBytes))
 	offset += 4
-	payload[offset] = byte(fetchRequest.isolationLevel)
-	offset++
-	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.sessionID))
-	offset += 4
-	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.sessionEpoch))
-	offset += 4
+	if version >= 10 {
+		payload[offset] = byte(fetchRequest.ISOLationLevel)
+		offset++
+	}
+	if version >= 10 {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.SessionID))
+		offset += 4
+	}
+	if version >= 10 {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.SessionEpoch))
+		offset += 4
+	}
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.Topics)))
 	offset += 4
@@ -107,20 +125,24 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 		for _, partitionBlock := range partitionBlocks {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionBlock.Partition))
 			offset += 4
-			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionBlock.current_leader_epoch))
-			offset += 4
+			if version >= 10 {
+				binary.BigEndian.PutUint32(payload[offset:], uint32(partitionBlock.CurrentLeaderEpoch))
+				offset += 4
+			}
 			binary.BigEndian.PutUint64(payload[offset:], uint64(partitionBlock.FetchOffset))
 			offset += 8
-			binary.BigEndian.PutUint64(payload[offset:], uint64(partitionBlock.logStartOffset))
-			offset += 8
+			if version >= 10 {
+				binary.BigEndian.PutUint64(payload[offset:], uint64(partitionBlock.LogStartOffset))
+				offset += 8
+			}
 			binary.BigEndian.PutUint32(payload[offset:], uint32(partitionBlock.MaxBytes))
 			offset += 4
 		}
 	}
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.forgottenTopicsDatas)))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.ForgottenTopicsDatas)))
 	offset += 4
-	for topicName, partitions := range fetchRequest.forgottenTopicsDatas {
+	for topicName, partitions := range fetchRequest.ForgottenTopicsDatas {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicName)))
 		offset += 2
 		offset += copy(payload[offset:], topicName)
