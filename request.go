@@ -44,9 +44,10 @@ func (requestHeader *RequestHeader) length() int {
 	return 10 + len(requestHeader.ClientID)
 }
 
-// Encode encodes request header to []byte. this is used the all detailed request
+// Encode encodes request header to []byte. this is used the all request
 // If the playload is too small, Encode will panic.
-func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
+func (requestHeader *RequestHeader) Encode(payload []byte) int {
+	offset := 0
 	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIKey)
 	offset += 2
 

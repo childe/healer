@@ -27,7 +27,7 @@ func (ListGroupsR *ListGroupsRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	ListGroupsR.RequestHeader.Encode(payload, offset)
+	ListGroupsR.RequestHeader.Encode(payload[offset:])
 
 	return payload
 }

@@ -44,7 +44,7 @@ func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = metadataRequest.RequestHeader.Encode(payload, offset)
+	offset += metadataRequest.RequestHeader.Encode(payload[offset:])
 
 	if metadataRequest.Topics == nil {
 		var i int32 = -1

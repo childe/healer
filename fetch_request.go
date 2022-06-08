@@ -90,7 +90,7 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = fetchRequest.RequestHeader.Encode(payload, offset)
+	offset += fetchRequest.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.ReplicaID))
 	offset += 4

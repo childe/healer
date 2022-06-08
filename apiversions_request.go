@@ -26,6 +26,6 @@ func (req *ApiVersionsRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(req.RequestHeader.length()))
 	offset += 4
 
-	req.RequestHeader.Encode(payload, offset)
+	req.RequestHeader.Encode(payload[offset:])
 	return payload
 }
