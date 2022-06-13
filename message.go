@@ -71,6 +71,15 @@ func DecodeRecord(payload []byte) (*Record, int) {
 		offset += copy(record.value, payload[offset:offset+int(record.valueLen)])
 	}
 
+	headerCount, o := binary.Varint(payload)
+	offset += o
+	// fix me: decode headers
+	if headerCount > 0 {
+		record.Headers = make([]Header, headerCount)
+		for i := int64(0); i < headerCount; i++ {
+		}
+	}
+
 	return &record, offset
 }
 
