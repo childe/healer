@@ -465,7 +465,7 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 		return nil, err
 	}
 
-	findCoordinatorResponse, err := NewFindCoordinatorResponse(responseBuf)
+	findCoordinatorResponse, err := NewFindCoordinatorResponse(responseBuf, broker.getHighestAvailableAPIVersion(API_FindCoordinator))
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +505,7 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinato
 	if err != nil {
 		return nil, err
 	}
-	return NewFindCoordinatorResponse(responseBytes)
+	return NewFindCoordinatorResponse(responseBytes, broker.getHighestAvailableAPIVersion(API_FindCoordinator))
 }
 
 func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
