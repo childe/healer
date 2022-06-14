@@ -390,7 +390,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 		// decode
 		go func() {
-			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
+			fetchResponseStreamDecoder := fetchResponseStreamDecoder{
 				buffers:  buffers,
 				messages: innerMessages,
 				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),

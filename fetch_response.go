@@ -40,7 +40,7 @@ type FetchResponse struct {
 	}
 }
 
-type FetchResponseStreamDecoder struct {
+type fetchResponseStreamDecoder struct {
 	depositBuffer []byte
 	totalLength   int
 	//length        int
@@ -51,7 +51,7 @@ type FetchResponseStreamDecoder struct {
 	version uint16
 }
 
-func (streamDecoder *FetchResponseStreamDecoder) readAll() (length int) {
+func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
 	length = len(streamDecoder.depositBuffer)
 	streamDecoder.depositBuffer = streamDecoder.depositBuffer[:0]
 
@@ -70,7 +70,7 @@ func (streamDecoder *FetchResponseStreamDecoder) readAll() (length int) {
 
 var errShortRead = errors.New("short read")
 
-func (streamDecoder *FetchResponseStreamDecoder) readToBuf(p []byte) (n int, err error) {
+func (streamDecoder *fetchResponseStreamDecoder) readToBuf(p []byte) (n int, err error) {
 	var (
 		l      int
 		length int = len(p)
@@ -106,7 +106,7 @@ func (streamDecoder *FetchResponseStreamDecoder) readToBuf(p []byte) (n int, err
 	return length, nil
 }
 
-func (streamDecoder *FetchResponseStreamDecoder) read(n int) ([]byte, int) {
+func (streamDecoder *fetchResponseStreamDecoder) read(n int) ([]byte, int) {
 	if len(streamDecoder.depositBuffer) >= n {
 		rst := streamDecoder.depositBuffer[:n]
 		streamDecoder.depositBuffer = streamDecoder.depositBuffer[n:]
@@ -140,7 +140,7 @@ func (streamDecoder *FetchResponseStreamDecoder) read(n int) ([]byte, int) {
 	return rst, length
 }
 
-func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
+func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
 	var (
 		//messageOffset int64
 		messageSize int32
@@ -229,7 +229,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		offset = 0
 		for i := 0; i < count; i++ {
 			record, o := DecodeRecord(buf[offset:])
-			glog.Infof("record: %+v", record)
+			glog.Infof("o: %d, record: %+v", o, record)
 			offset += int32(o)
 			message := &Message{
 				Offset: int64(record.offsetDelta) + baseOffset,
@@ -280,7 +280,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeMessageSet(topicName stri
 	}
 }
 
-func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicName string) error {
+func (streamDecoder *fetchResponseStreamDecoder) encodePartitionResponse(topicName string) error {
 	var (
 		partition int32
 		errorCode int16
@@ -314,7 +314,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodePartitionResponse(topicNa
 	return err
 }
 
-func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
+func (streamDecoder *fetchResponseStreamDecoder) encodeResponses() error {
 	var (
 		err    error
 		buffer []byte
@@ -342,7 +342,7 @@ func (streamDecoder *FetchResponseStreamDecoder) encodeResponses() error {
 	return nil
 }
 
-func (streamDecoder *FetchResponseStreamDecoder) consumeFetchResponse() bool {
+func (streamDecoder *fetchResponseStreamDecoder) consumeFetchResponse() bool {
 	defer func() {
 		//close(streamDecoder.messages)
 		streamDecoder.messages <- nil
