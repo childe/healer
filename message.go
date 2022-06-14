@@ -14,12 +14,27 @@ import (
 	"github.com/golang/glog"
 )
 
-// Header is concluded in Record
-type Header struct {
+// RecordHeader is concluded in Record
+type RecordHeader struct {
 	headerKeyLength   int32
 	headerKey         string
 	headerValueLength int32
 	Value             []byte
+}
+
+func decodeHeader(payload []byte) (header RecordHeader, offset int) {
+	keyLength, o := binary.Varint(payload[offset:])
+	header.headerKeyLength = int32(keyLength)
+	offset += o
+	header.headerKey = string(payload[offset : offset+int(header.headerKeyLength)])
+	offset += int(header.headerKeyLength)
+
+	valueLength, o := binary.Varint(payload[offset:])
+	header.headerValueLength = int32(valueLength)
+	offset += o
+	header.Value = make([]byte, valueLength)
+	offset += copy(header.Value, payload[offset:offset+int(header.headerValueLength)])
+	return
 }
 
 // Record is element of Records
@@ -32,7 +47,7 @@ type Record struct {
 	key            []byte
 	valueLen       int32
 	value          []byte
-	Headers        []Header
+	Headers        []RecordHeader
 }
 
 // DecodeRecord decodes the struct Record from the given payload.
@@ -71,12 +86,14 @@ func DecodeRecord(payload []byte) (*Record, int) {
 		offset += copy(record.value, payload[offset:offset+int(record.valueLen)])
 	}
 
-	headerCount, o := binary.Varint(payload)
+	headerCount, o := binary.Varint(payload[offset:])
 	offset += o
 	// fix me: decode headers
 	if headerCount > 0 {
-		record.Headers = make([]Header, headerCount)
+		record.Headers = make([]RecordHeader, headerCount)
 		for i := int64(0); i < headerCount; i++ {
+			record.Headers[i], o = decodeHeader(payload[offset:])
+			offset += o
 		}
 	}
 
