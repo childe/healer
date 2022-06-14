@@ -437,7 +437,7 @@ func (broker *Broker) requestMetaData(clientID string, topics []string) (*Metada
 		return nil, err
 	}
 
-	return NewMetadataResponse(responseBuf)
+	return NewMetadataResponse(responseBuf, broker.getHighestAvailableAPIVersion(API_MetadataRequest))
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
