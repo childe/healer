@@ -234,6 +234,7 @@ func (broker *Broker) ensureOpen() error {
 }
 
 func (broker *Broker) Request(r Request) ([]byte, error) {
+	// TODO: ensureOpen befor lock?
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
