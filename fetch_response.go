@@ -342,7 +342,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeResponses() error {
 	return nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) consumeFetchResponse() bool {
+func (streamDecoder *fetchResponseStreamDecoder) streamDecode() bool {
 	defer func() {
 		//close(streamDecoder.messages)
 		streamDecoder.messages <- nil

@@ -390,7 +390,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 		// decode
 		go func() {
-			fetchResponseStreamDecoder := fetchResponseStreamDecoder{
+			frsd := fetchResponseStreamDecoder{
 				buffers:  buffers,
 				messages: innerMessages,
 				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
@@ -398,7 +398,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 			for {
 				decodeWG.Add(1)
-				fetchResponseStreamDecoder.consumeFetchResponse()
+				frsd.streamDecode()
 				decodeWG.Wait()
 				if consumeDoneChan {
 					return
