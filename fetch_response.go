@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -49,6 +50,9 @@ type fetchResponseStreamDecoder struct {
 	more     bool
 
 	version uint16
+
+	responsesCount int
+	correlationID  int32
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
@@ -314,7 +318,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodePartitionResponse(topicNa
 	return err
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) encodeResponses() error {
+func (streamDecoder *fetchResponseStreamDecoder) encodeResponses(version uint16) error {
 	var (
 		err    error
 		buffer []byte
@@ -342,9 +346,33 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeResponses() error {
 	return nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) decodeHeader() {
+func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) error {
+	var (
+		headerLength int
+		countOffset  int
+	)
+	switch version {
+	case 0:
+		headerLength = 8
+		countOffset = 4
+	case 10:
+		headerLength = 18
+		countOffset = 14
+	}
+	buffer, n := streamDecoder.read(headerLength)
+	if n != headerLength {
+		return fmt.Errorf("could read enough bytes(8) from buffer channel for fetch response header. read %d bytes", n)
+	}
+
+	streamDecoder.correlationID = int32(binary.BigEndian.Uint32(buffer))
+	if glog.V(10) {
+		glog.Infof("fetch correlationID: %d", streamDecoder.correlationID)
+	}
+	streamDecoder.responsesCount = int(binary.BigEndian.Uint32(buffer[countOffset:]))
+	return nil
 }
-func (streamDecoder *fetchResponseStreamDecoder) streamDecode() bool {
+
+func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16) error {
 	defer func() {
 		//close(streamDecoder.messages)
 		streamDecoder.messages <- nil
@@ -354,31 +382,20 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode() bool {
 
 	payloadLengthBuf, n := streamDecoder.read(4)
 	if n != 4 {
-		glog.Errorf("could not read enough bytes(4) to get fetchresponse length. read %d bytes", n)
-		return false
+		return fmt.Errorf("could not read enough bytes(4) to get fetchresponse length. read %d bytes", n)
 	}
 	responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
 	streamDecoder.totalLength = int(responseLength) + 4
 
-	// header
-	buffer, n := streamDecoder.read(8 + 10)
-	if n != 8+10 {
-		glog.Errorf("could not read enough bytes(8) from buffer channel for fetch response header. read %d bytes", n)
-		return false
+	if err := streamDecoder.decodeHeader(version); err != nil {
+		return err
+	}
+	if streamDecoder.responsesCount == 0 {
+		return nil
 	}
 
-	correlationID := binary.BigEndian.Uint32(buffer)
-	if glog.V(10) {
-		glog.Infof("fetch correlationID: %d", correlationID)
-	}
-
-	responsesCount := binary.BigEndian.Uint32(buffer[4+10:])
-
-	if responsesCount == 0 {
-		return true
-	}
-	for ; responsesCount > 0; responsesCount-- {
-		err := streamDecoder.encodeResponses()
+	for i := 0; i < streamDecoder.responsesCount; i++ {
+		err := streamDecoder.encodeResponses(version)
 		if err != nil {
 			streamDecoder.messages <- &FullMessage{
 				TopicName:   "",
@@ -395,8 +412,8 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode() bool {
 		n = streamDecoder.readAll()
 	}
 	if glog.V(10) {
-		glog.Infof("fetch correlationID: %d done", correlationID)
+		glog.Infof("fetch correlationID: %d done", streamDecoder.correlationID)
 	}
 
-	return true
+	return nil
 }

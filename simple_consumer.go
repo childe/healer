@@ -398,7 +398,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 			for {
 				decodeWG.Add(1)
-				frsd.streamDecode()
+				frsd.streamDecode(c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest))
 				decodeWG.Wait()
 				if consumeDoneChan {
 					return
