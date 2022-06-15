@@ -357,7 +357,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		// fetch will stop sending kafka response to api after cancel
 		defer cancel()
 
-		buffers := make(chan []byte, 1)
+		buffers := make(chan []byte, 10)
 		innerMessages := make(chan *FullMessage, 1)
 
 		fetchWG := sync.WaitGroup{}
