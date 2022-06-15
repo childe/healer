@@ -342,6 +342,8 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeResponses() error {
 	return nil
 }
 
+func (streamDecoder *fetchResponseStreamDecoder) decodeHeader() {
+}
 func (streamDecoder *fetchResponseStreamDecoder) streamDecode() bool {
 	defer func() {
 		//close(streamDecoder.messages)
