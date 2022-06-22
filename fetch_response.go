@@ -232,7 +232,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 
 		offset = 0
 		for i := 0; i < count; i++ {
-			record, o := DecodeRecord(buf[offset:])
+			record, o := DecodeToRecord(buf[offset:])
 			glog.Infof("o: %d, record: %+v", o, record)
 			offset += int32(o)
 			message := &Message{
@@ -284,7 +284,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 	}
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) encodePartitionResponse(topicName string) error {
+func (streamDecoder *fetchResponseStreamDecoder) encodePartitionResponse(topicName string, version uint16) error {
 	var (
 		partition int32
 		errorCode int16
@@ -338,7 +338,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeResponses(version uint16)
 	}
 
 	for ; partitionResponseCount > 0; partitionResponseCount-- {
-		err = streamDecoder.encodePartitionResponse(topicName)
+		err = streamDecoder.encodePartitionResponse(topicName, version)
 		if err != nil {
 			return err
 		}

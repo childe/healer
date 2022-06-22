@@ -50,8 +50,8 @@ type Record struct {
 	Headers        []RecordHeader
 }
 
-// DecodeRecord decodes the struct Record from the given payload.
-func DecodeRecord(payload []byte) (*Record, int) {
+// DecodeToRecord decodes the struct Record from the given payload.
+func DecodeToRecord(payload []byte) (*Record, int) {
 	var record Record
 	var offset int = 0
 	length, o := binary.Varint(payload)
