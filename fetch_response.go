@@ -1,13 +1,14 @@
 package healer
 
 import (
-	"bytes"
+	"compress/gzip"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 
+	snappy "github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
 	"github.com/pierrec/lz4"
 )
@@ -143,6 +144,39 @@ func (streamDecoder *fetchResponseStreamDecoder) read(n int) ([]byte, int) {
 
 	return rst, length
 }
+func (streamDecoder *fetchResponseStreamDecoder) uncompress(compress int8) (uncompressedBytes []byte, err error) {
+	switch compress {
+	case COMPRESSION_NONE:
+		uncompressedBytes, err = ioutil.ReadAll(streamDecoder)
+		if err != nil {
+			return uncompressedBytes, fmt.Errorf("read uncompressed records bytes error: %w", err)
+		}
+	case COMPRESSION_GZIP:
+		reader, err := gzip.NewReader(streamDecoder)
+		if err != nil {
+			return nil, fmt.Errorf("create gzip reader of records bytes error: %w", err)
+		}
+		if uncompressedBytes, err = ioutil.ReadAll(reader); err != nil && err != io.EOF {
+			return nil, fmt.Errorf("uncompress gzip records error: %w", err)
+		}
+	case COMPRESSION_SNAPPY:
+		buf, err := ioutil.ReadAll(streamDecoder)
+		if err != nil {
+			return nil, fmt.Errorf("read streamDecoder error: %w", err)
+		}
+		uncompressedBytes, err = snappy.Decode(buf)
+		if err != nil {
+			return nil, fmt.Errorf("uncompress snappy records error: %w", err)
+		}
+	case COMPRESSION_LZ4:
+		reader := lz4.NewReader(streamDecoder)
+		uncompressedBytes, err = ioutil.ReadAll(reader)
+		if err != nil {
+			return nil, fmt.Errorf("uncompress lz4 records error: %w", err)
+		}
+	}
+	return uncompressedBytes, nil
+}
 
 func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
 	var (
@@ -170,7 +204,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		baseOffset := int64(binary.BigEndian.Uint64(buf))
 		// glog.Infof("baseOffset: %d", baseOffset)
 
-		batchLength := binary.BigEndian.Uint32(buf[8:])
+		// batchLength := binary.BigEndian.Uint32(buf[8:])
 		// glog.Infof("batchLength: %d", batchLength)
 
 		// partitionLeaderEpoch := binary.BigEndian.Uint32(buf[12:])
@@ -213,24 +247,20 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 			return nil
 		}
 
-		buf = make([]byte, batchLength-49)
-		if n, err := streamDecoder.Read(buf); err != nil {
-			glog.Errorf("readToBuf:%d %s", n, err)
-			return nil
-		}
+		// buf = make([]byte, batchLength-49)
+		// if n, err := streamDecoder.Read(buf); err != nil {
+		// 	glog.Errorf("readToBuf:%d %s", n, err)
+		// 	return nil
+		// }
 
-		if compress == 3 {
-			reader := lz4.NewReader(bytes.NewReader(buf))
-			b, err := ioutil.ReadAll(reader)
-			if err != nil {
-				glog.Infof("decode lz4 error: %v", err)
-			}
-			buf = b
+		uncompressedBytes, err := streamDecoder.uncompress(int8(compress))
+		if err != nil {
+			return err
 		}
 
 		offset = 0
 		for i := 0; i < count; i++ {
-			record, o := DecodeToRecord(buf[offset:])
+			record, o := DecodeToRecord(uncompressedBytes[offset:])
 			// glog.Infof("o: %d, record: %+v", o, record)
 			offset += int32(o)
 			message := &Message{
