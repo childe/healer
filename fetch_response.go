@@ -74,7 +74,7 @@ func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
 
 var errShortRead = errors.New("short read")
 
-func (streamDecoder *fetchResponseStreamDecoder) readToBuf(p []byte) (n int, err error) {
+func (streamDecoder *fetchResponseStreamDecoder) Read(p []byte) (n int, err error) {
 	var (
 		l      int
 		length int = len(p)
@@ -158,7 +158,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 			return nil
 		}
 		buf := make([]byte, 61)
-		n, _ = streamDecoder.readToBuf(buf)
+		n, _ = streamDecoder.Read(buf)
 		if n < 61 {
 			if !hasAtLeastOneMessage {
 				return &maxBytesTooSmall
@@ -214,7 +214,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		}
 
 		buf = make([]byte, batchLength-49)
-		if n, err := streamDecoder.readToBuf(buf); err != nil {
+		if n, err := streamDecoder.Read(buf); err != nil {
 			glog.Errorf("readToBuf:%d %s", n, err)
 			return nil
 		}
@@ -254,7 +254,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 
 		value := make([]byte, 12+int(messageSize))
 		copy(value, buf)
-		n, _ = streamDecoder.readToBuf(value[12:])
+		n, _ = streamDecoder.Read(value[12:])
 
 		if n < int(messageSize) {
 			if !hasAtLeastOneMessage {
