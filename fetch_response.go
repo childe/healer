@@ -178,7 +178,7 @@ func (streamDecoder *fetchResponseStreamDecoder) uncompress(compress int8) (unco
 	return uncompressedBytes, nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32) error {
+func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) error {
 	var (
 		//messageOffset int64
 		messageSize int32
@@ -342,7 +342,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodePartitionResponse(topicNa
 	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[14+20:])))
 	// glog.Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
 
-	err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes)
+	err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes, version)
 	return err
 }
 
