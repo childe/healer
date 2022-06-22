@@ -191,10 +191,10 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		offset += 4
 
 		payload[offset] = byte(message.MagicByte)
-		offset += 1
+		offset++
 
 		payload[offset] = byte(message.Attributes)
-		offset += 1
+		offset++
 
 		if message.Key == nil {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(i))

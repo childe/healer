@@ -180,7 +180,6 @@ func (streamDecoder *fetchResponseStreamDecoder) uncompress(compress int8) (unco
 
 func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) error {
 	var (
-		//messageOffset int64
 		messageSize int32
 		n           int
 		offset      int32 = 0
@@ -202,43 +201,18 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		offset += 61
 
 		baseOffset := int64(binary.BigEndian.Uint64(buf))
-		// glog.Infof("baseOffset: %d", baseOffset)
-
 		// batchLength := binary.BigEndian.Uint32(buf[8:])
-		// glog.Infof("batchLength: %d", batchLength)
-
 		// partitionLeaderEpoch := binary.BigEndian.Uint32(buf[12:])
-		// glog.Infof("partitionLeaderEpoch: %d", partitionLeaderEpoch)
-
 		// magic := buf[16]
-		// glog.Infof("magic: %d", magic)
-
 		// crc := binary.BigEndian.Uint32(buf[17:])
-		// glog.Infof("crc: %d", crc)
-
 		attributes := binary.BigEndian.Uint16(buf[21:])
-		// glog.Infof("attributes: %d", attributes)
-
 		compress := attributes & 0b11
-		// glog.Infof("compress: %d", compress)
-
 		// lastOffsetDelta := binary.BigEndian.Uint32(buf[23:])
-		// glog.Infof("lastOffsetDalta: %d", lastOffsetDelta)
-
 		// baseTimestamp := binary.BigEndian.Uint64(buf[27:])
-		// glog.Infof("baseTimestamp: %d", baseTimestamp)
-
 		// maxTimestamp := binary.BigEndian.Uint64(buf[35:])
-		// glog.Infof("maxTimestamp: %d", maxTimestamp)
-
 		// producerID := binary.BigEndian.Uint64(buf[43:])
-		// glog.Infof("producerID: %d", producerID)
-
 		// producerEpoch := binary.BigEndian.Uint16(buf[51:])
-		// glog.Infof("producerEpoch: %d", producerEpoch)
-
 		// baseSequence := binary.BigEndian.Uint32(buf[53:])
-		// glog.Infof("baseSequence: %d", baseSequence)
 
 		count := int(binary.BigEndian.Uint32(buf[57:]))
 		// glog.Infof("count: %d", count)
@@ -246,12 +220,6 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		if count <= 0 {
 			return nil
 		}
-
-		// buf = make([]byte, batchLength-49)
-		// if n, err := streamDecoder.Read(buf); err != nil {
-		// 	glog.Errorf("readToBuf:%d %s", n, err)
-		// 	return nil
-		// }
 
 		uncompressedBytes, err := streamDecoder.uncompress(int8(compress))
 		if err != nil {
