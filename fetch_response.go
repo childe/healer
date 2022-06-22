@@ -168,72 +168,70 @@ func (streamDecoder *fetchResponseStreamDecoder) encodeMessageSet(topicName stri
 		offset += 61
 
 		baseOffset := int64(binary.BigEndian.Uint64(buf))
-		glog.Infof("baseOffset: %d", baseOffset)
+		// glog.Infof("baseOffset: %d", baseOffset)
 
 		batchLength := binary.BigEndian.Uint32(buf[8:])
-		glog.Infof("batchLength: %d", batchLength)
+		// glog.Infof("batchLength: %d", batchLength)
 
-		partitionLeaderEpoch := binary.BigEndian.Uint32(buf[12:])
-		glog.Infof("partitionLeaderEpoch: %d", partitionLeaderEpoch)
+		// partitionLeaderEpoch := binary.BigEndian.Uint32(buf[12:])
+		// glog.Infof("partitionLeaderEpoch: %d", partitionLeaderEpoch)
 
-		magic := buf[16]
-		glog.Infof("magic: %d", magic)
+		// magic := buf[16]
+		// glog.Infof("magic: %d", magic)
 
-		crc := binary.BigEndian.Uint32(buf[17:])
-		glog.Infof("crc: %d", crc)
+		// crc := binary.BigEndian.Uint32(buf[17:])
+		// glog.Infof("crc: %d", crc)
 
 		attributes := binary.BigEndian.Uint16(buf[21:])
-		glog.Infof("attributes: %d", attributes)
+		// glog.Infof("attributes: %d", attributes)
 
 		compress := attributes & 0b11
-		glog.Infof("compress: %d", compress)
+		// glog.Infof("compress: %d", compress)
 
-		lastOffsetDelta := binary.BigEndian.Uint32(buf[23:])
-		glog.Infof("lastOffsetDalta: %d", lastOffsetDelta)
+		// lastOffsetDelta := binary.BigEndian.Uint32(buf[23:])
+		// glog.Infof("lastOffsetDalta: %d", lastOffsetDelta)
 
-		baseTimestamp := binary.BigEndian.Uint64(buf[27:])
-		glog.Infof("baseTimestamp: %d", baseTimestamp)
+		// baseTimestamp := binary.BigEndian.Uint64(buf[27:])
+		// glog.Infof("baseTimestamp: %d", baseTimestamp)
 
-		maxTimestamp := binary.BigEndian.Uint64(buf[35:])
-		glog.Infof("maxTimestamp: %d", maxTimestamp)
+		// maxTimestamp := binary.BigEndian.Uint64(buf[35:])
+		// glog.Infof("maxTimestamp: %d", maxTimestamp)
 
-		producerID := binary.BigEndian.Uint64(buf[43:])
-		glog.Infof("producerID: %d", producerID)
+		// producerID := binary.BigEndian.Uint64(buf[43:])
+		// glog.Infof("producerID: %d", producerID)
 
-		producerEpoch := binary.BigEndian.Uint16(buf[51:])
-		glog.Infof("producerEpoch: %d", producerEpoch)
+		// producerEpoch := binary.BigEndian.Uint16(buf[51:])
+		// glog.Infof("producerEpoch: %d", producerEpoch)
 
-		baseSequence := binary.BigEndian.Uint32(buf[53:])
-		glog.Infof("baseSequence: %d", baseSequence)
+		// baseSequence := binary.BigEndian.Uint32(buf[53:])
+		// glog.Infof("baseSequence: %d", baseSequence)
 
 		count := int(binary.BigEndian.Uint32(buf[57:]))
-		glog.Infof("count: %d", count)
+		// glog.Infof("count: %d", count)
 
 		if count <= 0 {
 			return nil
 		}
 
 		buf = make([]byte, batchLength-49)
-		if n, err := streamDecoder.readToBuf(buf); err == nil {
-			glog.Infof("readToBuf: %d", n)
-		} else {
+		if n, err := streamDecoder.readToBuf(buf); err != nil {
 			glog.Errorf("readToBuf:%d %s", n, err)
 			return nil
 		}
 
 		if compress == 3 {
 			reader := lz4.NewReader(bytes.NewReader(buf))
-			glog.Info(buf)
 			b, err := ioutil.ReadAll(reader)
-			glog.Infof("decode lz4 error: %v", err)
+			if err != nil {
+				glog.Infof("decode lz4 error: %v", err)
+			}
 			buf = b
-			glog.Info(buf)
 		}
 
 		offset = 0
 		for i := 0; i < count; i++ {
 			record, o := DecodeToRecord(buf[offset:])
-			glog.Infof("o: %d, record: %+v", o, record)
+			// glog.Infof("o: %d, record: %+v", o, record)
 			offset += int32(o)
 			message := &Message{
 				Offset: int64(record.offsetDelta) + baseOffset,
@@ -312,7 +310,7 @@ func (streamDecoder *fetchResponseStreamDecoder) encodePartitionResponse(topicNa
 	//highwaterMarkOffset = int64(binary.BigEndian.Uint64(buffer[6:]))
 
 	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[14+20:])))
-	glog.Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
+	// glog.Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
 
 	err = streamDecoder.encodeMessageSet(topicName, partition, messageSetSizeBytes)
 	return err
