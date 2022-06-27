@@ -77,7 +77,6 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		}
 
 		if glog.V(10) {
-			glog.Infof("broker %s api versions:", address)
 			var versions string
 			for i, v := range broker.apiVersions {
 				if i+1 == len(broker.apiVersions) {
