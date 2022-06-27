@@ -194,20 +194,41 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 		}
 	}()
 
+	firstMessageSet := true
+	var value []byte
 	for {
 		if offset == messageSetSizeBytes {
 			return
 		}
 
-		messageSize = int32(binary.BigEndian.Uint32(header17[8:]))
-		value := make([]byte, 12+int(messageSize)) // messageSize doesn't include the size of messageSize itself. 12 equals to the size of the header of offset & message_size.
-		copy(value, header17)
-		n, _ := streamDecoder.Read(value[17:])
-		if n < int(messageSize)-17 {
-			return
-		}
+		if firstMessageSet {
+			firstMessageSet = false
+			messageSize = int32(binary.BigEndian.Uint32(header17[8:]))
+			value = make([]byte, 12+int(messageSize)) // messageSize doesn't include the size of messageSize itself. 12 equals to the size of the header of offset & message_size.
+			copy(value, header17)
+			n, _ := streamDecoder.Read(value[17:])
+			if n < int(messageSize)-17 {
+				return
+			}
 
-		offset += messageSize
+			offset += messageSize + 12
+		} else {
+			buf, n := streamDecoder.read(12)
+			if n < 12 {
+				return
+			}
+			messageSize = int32(binary.BigEndian.Uint32(buf[8:]))
+			value = make([]byte, 12+int(messageSize))
+			n, err = streamDecoder.Read(value[12:])
+			if err != nil {
+				return err
+			}
+			if n != int(messageSize) {
+				return
+			}
+
+			offset += messageSize + 12
+		}
 
 		messageSet, err := DecodeToMessageSet(value)
 

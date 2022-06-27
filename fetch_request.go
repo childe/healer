@@ -51,8 +51,9 @@ func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchR
 
 func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, fetchOffset int64, maxBytes int32) {
 	if glog.V(10) {
-		glog.Infof("fetch request %s[%d]:%d", topic, partitionID, fetchOffset)
+		glog.Infof("fetch request %s[%d]:%d, maxBytes:%d", topic, partitionID, fetchOffset, maxBytes)
 	}
+	fetchRequest.MaxBytes += maxBytes
 	partitionBlock := &PartitionBlock{
 		Partition:   partitionID,
 		FetchOffset: fetchOffset,
