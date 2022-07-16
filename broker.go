@@ -371,7 +371,7 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 			return err
 		}
 
-		if glog.V(15) {
+		if glog.V(100) {
 			glog.Infof("read %d bytes response", length)
 			glog.Info(buf[:length])
 		}

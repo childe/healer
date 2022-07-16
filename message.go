@@ -55,6 +55,7 @@ func DecodeToRecord(payload []byte) (*Record, int) {
 	var record Record
 	var offset int = 0
 	length, o := binary.Varint(payload)
+	glog.V(15).Infof("length: %d", length)
 	record.length = int32(length)
 	offset += o
 
@@ -62,14 +63,17 @@ func DecodeToRecord(payload []byte) (*Record, int) {
 	offset++
 
 	timestampDelta, o := binary.Varint(payload[offset:])
+	glog.V(15).Infof("timestampDelta: %d", timestampDelta)
 	record.timestampDelta = int64(timestampDelta)
 	offset += o
 
 	offsetDelta, o := binary.Varint(payload[offset:])
+	glog.V(15).Infof("offsetDelta: %d", offsetDelta)
 	record.offsetDelta = int32(offsetDelta)
 	offset += o
 
 	keyLength, o := binary.Varint(payload[offset:])
+	glog.V(15).Infof("keyLength: %d", keyLength)
 	record.keyLength = int32(keyLength)
 	offset += o
 
@@ -79,6 +83,7 @@ func DecodeToRecord(payload []byte) (*Record, int) {
 	}
 
 	valueLen, o := binary.Varint(payload[offset:])
+	glog.V(15).Infof("valueLen: %d", valueLen)
 	record.valueLen = int32(valueLen)
 	offset += o
 	if valueLen > 0 {
@@ -87,8 +92,8 @@ func DecodeToRecord(payload []byte) (*Record, int) {
 	}
 
 	headerCount, o := binary.Varint(payload[offset:])
+	glog.V(15).Infof("headerCount: %d", headerCount)
 	offset += o
-	// fix me: decode headers
 	if headerCount > 0 {
 		record.Headers = make([]RecordHeader, headerCount)
 		for i := int64(0); i < headerCount; i++ {
