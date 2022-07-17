@@ -149,15 +149,15 @@ func (streamDecoder *fetchResponseStreamDecoder) read(n int) ([]byte, int) {
 }
 
 // uncompress read all remaining bytes and uncompress them
-func (streamDecoder *fetchResponseStreamDecoder) uncompress(compress int8) (uncompressedBytes []byte, err error) {
+func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err error) {
 	switch compress {
 	case COMPRESSION_NONE:
-		uncompressedBytes, err = ioutil.ReadAll(streamDecoder)
+		uncompressedBytes, err = ioutil.ReadAll(reader)
 		if err != nil {
 			return uncompressedBytes, fmt.Errorf("read uncompressed records bytes error: %w", err)
 		}
 	case COMPRESSION_GZIP:
-		reader, err := gzip.NewReader(streamDecoder)
+		reader, err := gzip.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("create gzip reader of records bytes error: %w", err)
 		}
@@ -165,7 +165,7 @@ func (streamDecoder *fetchResponseStreamDecoder) uncompress(compress int8) (unco
 			return nil, fmt.Errorf("uncompress gzip records error: %w", err)
 		}
 	case COMPRESSION_SNAPPY:
-		buf, err := ioutil.ReadAll(streamDecoder)
+		buf, err := ioutil.ReadAll(reader)
 		if err != nil {
 			return nil, fmt.Errorf("read streamDecoder error: %w", err)
 		}
@@ -174,7 +174,7 @@ func (streamDecoder *fetchResponseStreamDecoder) uncompress(compress int8) (unco
 			return nil, fmt.Errorf("uncompress snappy records error: %w", err)
 		}
 	case COMPRESSION_LZ4:
-		reader := lz4.NewReader(streamDecoder)
+		reader := lz4.NewReader(reader)
 		uncompressedBytes, err = ioutil.ReadAll(reader)
 		if err != nil {
 			return nil, fmt.Errorf("uncompress lz4 records error: %w", err)
@@ -260,7 +260,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 
 	baseOffset := int64(binary.BigEndian.Uint64(buf))
 	glog.V(15).Infof("baseOffset: %d", baseOffset)
-	// batchLength := binary.BigEndian.Uint32(buf[8:])
+	batchLength := binary.BigEndian.Uint32(buf[8:])
+	glog.V(15).Infof("batchLength: %d", batchLength)
 	// partitionLeaderEpoch := binary.BigEndian.Uint32(buf[12:])
 	// magic := buf[16]
 	// crc := binary.BigEndian.Uint32(buf[17:])
@@ -281,9 +282,11 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 		return nil
 	}
 
-	uncompressedBytes, err := streamDecoder.uncompress(int8(compress))
+	// 49 == offset of (batchLength, records count]
+	r := io.LimitReader(streamDecoder, int64(batchLength)-49)
+	uncompressedBytes, err := uncompress(int8(compress), r)
 	if err != nil {
-		return err
+		return fmt.Errorf("uncompress records bytes error: %w", err)
 	}
 	glog.V(100).Infof("uncompressedBytes: %v", uncompressedBytes)
 
