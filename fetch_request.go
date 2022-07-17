@@ -86,10 +86,7 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 
 	requestLength := fetchRequest.length(version)
 	payload := make([]byte, requestLength)
-	offset := 0
-
-	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
-	offset += 4
+	offset := 4 // payload[:4] is requestLength, it will be filled at the end
 
 	offset += fetchRequest.RequestHeader.Encode(payload[offset:])
 
@@ -99,9 +96,10 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 	offset += 4
 	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.MinBytes))
 	offset += 4
-	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.MaxBytes))
-	offset += 4
+
 	if version >= 10 {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.MaxBytes))
+		offset += 4
 		payload[offset] = byte(fetchRequest.ISOLationLevel)
 		offset++
 	}
@@ -141,18 +139,20 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 		}
 	}
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.ForgottenTopicsDatas)))
-	offset += 4
-	for topicName, partitions := range fetchRequest.ForgottenTopicsDatas {
-		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicName)))
-		offset += 2
-		offset += copy(payload[offset:], topicName)
-
-		binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitions)))
+	if version >= 10 {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.ForgottenTopicsDatas)))
 		offset += 4
-		for _, p := range partitions {
-			binary.BigEndian.PutUint32(payload[offset:], uint32(p))
+		for topicName, partitions := range fetchRequest.ForgottenTopicsDatas {
+			binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicName)))
+			offset += 2
+			offset += copy(payload[offset:], topicName)
+
+			binary.BigEndian.PutUint32(payload[offset:], uint32(len(partitions)))
 			offset += 4
+			for _, p := range partitions {
+				binary.BigEndian.PutUint32(payload[offset:], uint32(p))
+				offset += 4
+			}
 		}
 	}
 
