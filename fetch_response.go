@@ -183,76 +183,49 @@ func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err 
 	return uncompressedBytes, nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topicName string, partitionID int32, messageSetSizeBytes int32, header17 []byte) (err error) {
-	var (
-		messageSize          int32
-		offset               int32 = 0
-		hasAtLeastOneMessage bool  = false
-	)
-
-	defer func() {
-		if hasAtLeastOneMessage == false && err == nil {
-			err = &maxBytesTooSmall
-		}
-	}()
-
-	firstMessageSet := true
+func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topicName string, partitionID int32, magic int, header17 []byte) (offset int, err error) {
 	var value []byte
-	for {
-		if offset == messageSetSizeBytes {
-			return
-		}
+	buf, n := streamDecoder.read(12)
+	if n < 12 {
+		err = fmt.Errorf("could not read 12 bytes(offset and message_size) for messageset with magic %d", magic)
+		return
+	}
+	messageSize := int32(binary.BigEndian.Uint32(buf[8:]))
+	value = make([]byte, 12+int(messageSize))
+	n, err = streamDecoder.Read(value[12:])
+	if err != nil {
+		return
+	}
+	if n < int(messageSize) {
+		err = fmt.Errorf("could not read %d bytes(message body) for messageset with magic 0 or 1", messageSize)
+		return
+	}
+	copy(value, buf)
 
-		if firstMessageSet {
-			firstMessageSet = false
-			messageSize = int32(binary.BigEndian.Uint32(header17[8:]))
-			value = make([]byte, 12+int(messageSize)) // messageSize doesn't include the size of messageSize itself. 12 equals to the size of the header of offset & message_size.
-			copy(value, header17)
-			n, _ := streamDecoder.Read(value[17:])
-			if n < int(messageSize)-17 {
-				return
-			}
+	offset = len(value)
 
-			offset += messageSize + 12
-		} else {
-			buf, n := streamDecoder.read(12)
-			if n < 12 {
-				return
-			}
-			messageSize = int32(binary.BigEndian.Uint32(buf[8:]))
-			value = make([]byte, 12+int(messageSize))
-			n, err = streamDecoder.Read(value[12:])
-			if err != nil {
-				return err
-			}
-			if n != int(messageSize) {
-				return
-			}
+	messageSet, err := DecodeToMessageSet(value)
+	if err != nil {
+		return
+	}
 
-			offset += messageSize + 12
-		}
-
-		messageSet, err := DecodeToMessageSet(value)
-
-		if err != nil {
-			return err
-		}
-
-		for i := range messageSet {
-			streamDecoder.messages <- &FullMessage{
-				TopicName:   topicName,
-				PartitionID: partitionID,
-				Message:     messageSet[i],
-			}
-			hasAtLeastOneMessage = true
+	for i := range messageSet {
+		streamDecoder.messages <- &FullMessage{
+			TopicName:   topicName,
+			PartitionID: partitionID,
+			Message:     messageSet[i],
 		}
 	}
+
+	return
 }
-func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName string, partitionID int32, header17 []byte) (err error) {
-	bytesBeforeRecordsLength := 44
+
+// offset returned equals to batchLength + 12
+func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName string, partitionID int32, header17 []byte) (offset int, err error) {
+	bytesBeforeRecordsLength := 44 // (magic, records count]
 	bytesBeforeRecords, n := streamDecoder.read(bytesBeforeRecordsLength)
 	if n < bytesBeforeRecordsLength {
-		return errFetchResponseTooShortNoRecordsMeta
+		return offset, errFetchResponseTooShortNoRecordsMeta
 	}
 	buf := make([]byte, len(bytesBeforeRecords)+len(header17))
 	copy(buf, header17)
@@ -279,22 +252,22 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	glog.V(15).Infof("count: %d", count)
 
 	if count <= 0 {
-		return nil
+		return
 	}
 
 	// 49 == offset of (batchLength, records count]
 	r := io.LimitReader(streamDecoder, int64(batchLength)-49)
 	uncompressedBytes, err := uncompress(int8(compress), r)
 	if err != nil {
-		return fmt.Errorf("uncompress records bytes error: %w", err)
+		return offset, fmt.Errorf("uncompress records bytes error: %w", err)
 	}
 	glog.V(100).Infof("uncompressedBytes: %v", uncompressedBytes)
 
-	offset := 0
+	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
-		record, o := DecodeToRecord(uncompressedBytes[offset:])
+		record, o := DecodeToRecord(uncompressedBytes[uncompressedBytesOffset:])
 		glog.V(15).Infof("o: %d, record: %+v", o, record)
-		offset += o
+		uncompressedBytesOffset += o
 		message := &Message{
 			Offset: int64(record.offsetDelta) + baseOffset,
 			Key:    record.key,
@@ -306,22 +279,47 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 			Message:     message,
 		}
 	}
-	return nil
+	offset = int(batchLength) + 12
+	return
 }
 
+// messageSetSizeBytes may include more the one `Record Batch`, that is, `Record Batch`,`Record Batch`,`Record Batch`...
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) (err error) {
-	// payload before magic
-	header17, n := streamDecoder.read(17)
-	if n < 16 {
-		return errFetchResponseTooShortNoMagic
-	}
+	var hasAtLeastOneMessage bool = false
+	defer func() {
+		if hasAtLeastOneMessage == false && err == nil {
+			err = &maxBytesTooSmall
+		}
+	}()
 
-	magic := header17[16]
-	glog.Infof("magic: %d", magic)
-	if magic < 2 {
-		return streamDecoder.decodeMessageSetMagic0or1(topicName, partitionID, messageSetSizeBytes, header17)
+	var (
+		offset int
+		o      int
+	)
+	for offset < int(messageSetSizeBytes) {
+		// payload before magic
+		header17, n := streamDecoder.read(17)
+		if n < 17 {
+			return
+		}
+		offset += n
+
+		magic := header17[16]
+		glog.V(10).Infof("magic: %d", magic)
+
+		if magic < 2 {
+			o, err = streamDecoder.decodeMessageSetMagic0or1(topicName, partitionID, int(magic), header17)
+		} else {
+			o, err = streamDecoder.decodeRecordsMagic2(topicName, partitionID, header17)
+		}
+		if err != nil {
+			return err
+		}
+		offset += o
+
+		hasAtLeastOneMessage = true
 	}
-	return streamDecoder.decodeRecordsMagic2(topicName, partitionID, header17)
+	return nil
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicName string, version uint16) error {
@@ -354,6 +352,9 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 
 	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[34:])))
 	glog.Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
+	if messageSetSizeBytes == 0 {
+		return nil
+	}
 
 	err = streamDecoder.decodeMessageSet(topicName, partition, messageSetSizeBytes, version)
 	return err
