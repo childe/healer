@@ -249,7 +249,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 }
 
 // offset returned equals to batchLength + 12
-func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName string, partitionID int32, header17 []byte) (offset int, err error) {
+func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName string, partitionID int32, header17 []byte, version uint16) (offset int, err error) {
 	bytesBeforeRecordsLength := 44 // (magic, records count]
 	bytesBeforeRecords, n := streamDecoder.read(bytesBeforeRecordsLength)
 	if n < bytesBeforeRecordsLength {
@@ -292,13 +292,14 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	}
 	glog.V(100).Infof("uncompressedBytes: %v", uncompressedBytes)
 
+	// if we use fetch request with version 0 and not big enough fetch.max.bytes, kafka server may return partial records, and the NOT begins with the requests offset.
+	// healer will ignore the records, double fetch.max.bytes, and then retry.
+	tmpRecordQueue := make([]*Message, 0, count)
+
 	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
 		record, o, err := DecodeToRecord(uncompressedBytes[uncompressedBytesOffset:])
-		if err == errUncompleteRecord {
-			if i == 0 {
-				return offset + o, errUncompleteRecordWithoutAnyRecord
-			}
+		if err != nil {
 			return offset + o, err
 		}
 		glog.V(15).Infof("o: %d, record: %+v", o, record)
@@ -308,14 +309,29 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 			Key:    record.key,
 			Value:  record.value,
 		}
-		streamDecoder.messages <- &FullMessage{
-			TopicName:   topicName,
-			PartitionID: partitionID,
-			Message:     message,
+		if version == 0 {
+			tmpRecordQueue = append(tmpRecordQueue, message)
+		} else {
+			streamDecoder.messages <- &FullMessage{
+				TopicName:   topicName,
+				PartitionID: partitionID,
+				Message:     message,
+			}
 		}
 	}
+
+	if version == 0 {
+		for _, message := range tmpRecordQueue {
+			streamDecoder.messages <- &FullMessage{
+				TopicName:   topicName,
+				PartitionID: partitionID,
+				Message:     message,
+			}
+		}
+	}
+
 	offset = int(batchLength) + 12
-	return
+	return offset, nil
 }
 
 // messageSetSizeBytes may include more the one `Record Batch`, that is, `Record Batch`,`Record Batch`,`Record Batch`...
@@ -345,14 +361,14 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 		if magic < 2 {
 			o, err = streamDecoder.decodeMessageSetMagic0or1(topicName, partitionID, int(magic), header17)
 		} else {
-			o, err = streamDecoder.decodeRecordsMagic2(topicName, partitionID, header17)
+			o, err = streamDecoder.decodeRecordsMagic2(topicName, partitionID, header17, version)
 		}
 		offset += o
 		if err != nil {
-			if err == errUncompleteRecord {
-				hasAtLeastOneMessage = true
-				return nil
-			}
+			// if err == errUncompleteRecord {
+			// 	hasAtLeastOneMessage = true
+			// 	return nil
+			// }
 			return err
 		}
 		hasAtLeastOneMessage = true
