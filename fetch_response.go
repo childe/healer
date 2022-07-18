@@ -14,7 +14,7 @@ import (
 )
 
 var errFetchResponseTooShortNoMagic = errors.New("fetch response too short, could not get magic value")
-var errFetchResponseTooShortNoRecordsMeta = errors.New("fetch response too short, could not get records metadata(form baseOffset to baseSequence")
+var errFetchResponseTooShortNoRecordsMeta = errors.New("fetch response too short, could not get records metadata(form baseOffset to baseSequence)")
 
 type abortedTransaction struct {
 	producerID  int64
@@ -192,11 +192,13 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 	}()
 
 	firstMessageSet := true
+	var trueMessageOffset int64
 	var value []byte
 	for {
 		if firstMessageSet {
 			firstMessageSet = false
 			messageSize := int(binary.BigEndian.Uint32(header17[8:]))
+			glog.V(10).Infof("messageSize: %d", messageSize)
 			value = make([]byte, 12+messageSize) // messageSize doesn't include the size of messageSize itself. 12 equals to the size of the header of offset & message_size.
 			copy(value, header17)
 			n, _ := streamDecoder.Read(value[17:])
@@ -211,6 +213,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 				return
 			}
 			messageSize := int(binary.BigEndian.Uint32(buf[8:]))
+			glog.V(10).Infof("messageSize: %d", messageSize)
 			value = make([]byte, 12+messageSize)
 			n, err = streamDecoder.Read(value[12:])
 			if err != nil {
@@ -229,8 +232,18 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 			return offset, err
 		}
 
+		if len(messageSet) == 0 {
+			return offset, nil
+		}
+
+		if firstMessageSet {
+			trueMessageOffset = messageSet[0].Offset
+		}
+
 		// TODO send each message to the channel directly?
 		for i := range messageSet {
+			messageSet[i].Offset = trueMessageOffset
+			trueMessageOffset++
 			streamDecoder.messages <- &FullMessage{
 				TopicName:   topicName,
 				PartitionID: partitionID,
@@ -269,6 +282,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	// producerEpoch := binary.BigEndian.Uint16(buf[51:])
 	// baseSequence := binary.BigEndian.Uint32(buf[53:])
 
+	// count is not accurate, payload maybe truncated by maxsize parameter in fetch request
 	count := int(binary.BigEndian.Uint32(buf[57:]))
 	glog.V(15).Infof("count: %d", count)
 
@@ -286,7 +300,13 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 
 	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
-		record, o := DecodeToRecord(uncompressedBytes[uncompressedBytesOffset:])
+		record, o, err := DecodeToRecord(uncompressedBytes[uncompressedBytesOffset:])
+		if err == errUncompleteRecord {
+			if i == 0 {
+				return offset + o, errUncompleteRecordWithoutAnyRecord
+			}
+			return offset + o, err
+		}
 		glog.V(15).Infof("o: %d, record: %+v", o, record)
 		uncompressedBytesOffset += o
 		message := &Message{
@@ -333,11 +353,14 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 		} else {
 			o, err = streamDecoder.decodeRecordsMagic2(topicName, partitionID, header17)
 		}
+		offset += o
 		if err != nil {
+			if err == errUncompleteRecord {
+				hasAtLeastOneMessage = true
+				return nil
+			}
 			return err
 		}
-		offset += o
-
 		hasAtLeastOneMessage = true
 	}
 	return nil

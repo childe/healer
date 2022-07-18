@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -13,6 +14,9 @@ import (
 	snappy "github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
 )
+
+var errUncompleteRecord = errors.New("Uncomplete Record, The last bytes are not enough to decode the record")
+var errUncompleteRecordWithoutAnyRecord = errors.New("Uncomplete Record, The last bytes are not enough to decode the record, and NO record has been decoded")
 
 // RecordHeader is concluded in Record
 type RecordHeader struct {
@@ -51,11 +55,14 @@ type Record struct {
 }
 
 // DecodeToRecord decodes the struct Record from the given payload.
-func DecodeToRecord(payload []byte) (*Record, int) {
-	var record Record
-	var offset int = 0
+func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	length, o := binary.Varint(payload)
 	glog.V(15).Infof("length: %d", length)
+	glog.V(15).Infof("playload length: %d", len(payload))
+	if length == 0 || len(payload[o:]) < int(length) {
+		err = errUncompleteRecord
+		return
+	}
 	record.length = int32(length)
 	offset += o
 
@@ -102,7 +109,7 @@ func DecodeToRecord(payload []byte) (*Record, int) {
 		}
 	}
 
-	return &record, offset
+	return
 }
 
 // Records is batch of Record
@@ -139,6 +146,7 @@ type Message struct {
 	Crc        uint32
 	MagicByte  int8
 	Attributes int8
+	Timestamp  uint64
 	Key        []byte
 	Value      []byte
 }
@@ -249,6 +257,11 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 
 		message.Attributes = int8(payload[offset])
 		offset++
+
+		if message.MagicByte == 1 {
+			message.Timestamp = binary.BigEndian.Uint64(payload[offset:])
+			offset += 8
+		}
 
 		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
