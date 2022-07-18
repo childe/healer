@@ -232,6 +232,7 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 }
 
 func DecodeToMessageSet(payload []byte) (MessageSet, error) {
+	glog.Infof("payload %v", payload)
 	messageSet := MessageSet{}
 	var offset int = 0
 	var err error
@@ -244,6 +245,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		message := &Message{}
 
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
+		glog.Infof("message.Offset %d", message.Offset)
 		offset += 8
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -253,6 +255,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		offset += 4
 
 		message.MagicByte = int8(payload[offset])
+		glog.Infof("message.MagicByte %d", message.MagicByte)
 		offset++
 
 		message.Attributes = int8(payload[offset])
