@@ -58,6 +58,8 @@ type fetchResponseStreamDecoder struct {
 
 	responsesCount int
 	correlationID  int32
+
+	startOffset int64
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
@@ -248,10 +250,12 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 
 		// TODO send each message to the channel directly?
 		for i := range messageSet {
-			streamDecoder.messages <- &FullMessage{
-				TopicName:   topicName,
-				PartitionID: partitionID,
-				Message:     messageSet[i],
+			if messageSet[i].Offset >= streamDecoder.startOffset {
+				streamDecoder.messages <- &FullMessage{
+					TopicName:   topicName,
+					PartitionID: partitionID,
+					Message:     messageSet[i],
+				}
 			}
 		}
 		hasAtLeastOneMessage = true
@@ -302,9 +306,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	}
 	glog.V(100).Infof("uncompressedBytes: %v", uncompressedBytes)
 
-	// if we use fetch request with version 0 and not big enough fetch.max.bytes, kafka server may return partial records, and the NOT begins with the requests offset.
-	// healer will ignore the records, double fetch.max.bytes, and then retry.
-
 	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
 		record, o, err := DecodeToRecord(uncompressedBytes[uncompressedBytesOffset:])
@@ -318,10 +319,12 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 			Key:    record.key,
 			Value:  record.value,
 		}
-		streamDecoder.messages <- &FullMessage{
-			TopicName:   topicName,
-			PartitionID: partitionID,
-			Message:     message,
+		if message.Offset >= streamDecoder.startOffset {
+			streamDecoder.messages <- &FullMessage{
+				TopicName:   topicName,
+				PartitionID: partitionID,
+				Message:     message,
+			}
 		}
 	}
 
@@ -410,6 +413,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 		return nil
 	}
 
+	// if we use fetch request with version 0 and not big enough fetch.max.bytes, kafka server may return partial records, and the NOT begins with the requests offset.
+	// healer will ignore the records, double fetch.max.bytes, and then retry.
 	glog.Infof("messageSetSizeBytes: %d, totalLength: %d, offset: %d", messageSetSizeBytes, streamDecoder.totalLength, streamDecoder.offset)
 	if int(messageSetSizeBytes) > streamDecoder.totalLength-streamDecoder.offset {
 		return &maxBytesTooSmall
@@ -473,7 +478,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 	return nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16) error {
+func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, startOffset int64) error {
 	defer func() {
 		//close(streamDecoder.messages)
 		streamDecoder.messages <- nil
@@ -481,6 +486,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16) er
 
 	streamDecoder.depositBuffer = make([]byte, 0)
 	streamDecoder.offset = 0
+	streamDecoder.startOffset = startOffset
 
 	payloadLengthBuf, n := streamDecoder.read(4)
 	if n != 4 {
