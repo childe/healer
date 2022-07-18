@@ -48,7 +48,8 @@ type FetchResponse struct {
 type fetchResponseStreamDecoder struct {
 	depositBuffer []byte
 	totalLength   int
-	//length        int
+	offset        int
+
 	buffers  chan []byte
 	messages chan *FullMessage
 	more     bool
@@ -60,6 +61,9 @@ type fetchResponseStreamDecoder struct {
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
+	defer func() {
+		streamDecoder.offset += length
+	}()
 	length = len(streamDecoder.depositBuffer)
 	streamDecoder.depositBuffer = streamDecoder.depositBuffer[:0]
 
@@ -79,6 +83,10 @@ func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
 var errShortRead = errors.New("short read")
 
 func (streamDecoder *fetchResponseStreamDecoder) Read(p []byte) (n int, err error) {
+	defer func() {
+		streamDecoder.offset += n
+	}()
+
 	var (
 		l      int
 		length int = len(p)
@@ -114,17 +122,19 @@ func (streamDecoder *fetchResponseStreamDecoder) Read(p []byte) (n int, err erro
 	return length, nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) read(n int) ([]byte, int) {
+func (streamDecoder *fetchResponseStreamDecoder) read(n int) (rst []byte, length int) {
+	defer func() {
+		streamDecoder.offset += length
+	}()
+
 	if len(streamDecoder.depositBuffer) >= n {
-		rst := streamDecoder.depositBuffer[:n]
+		rst = streamDecoder.depositBuffer[:n]
 		streamDecoder.depositBuffer = streamDecoder.depositBuffer[n:]
 		return rst, n
 	}
 
+	rst = make([]byte, n)
 	var (
-		rst    []byte = make([]byte, n)
-		length int    = 0
-
 		buffer []byte
 		i      int
 	)
@@ -415,6 +425,11 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 		return nil
 	}
 
+	glog.Infof("messageSetSizeBytes: %d, totalLength: %d, offset: %d", messageSetSizeBytes, streamDecoder.totalLength, streamDecoder.offset)
+	if int(messageSetSizeBytes) > streamDecoder.totalLength-streamDecoder.offset {
+		return &maxBytesTooSmall
+	}
+
 	err = streamDecoder.decodeMessageSet(topicName, partition, messageSetSizeBytes, version)
 	return err
 }
@@ -480,6 +495,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16) er
 	}()
 
 	streamDecoder.depositBuffer = make([]byte, 0)
+	streamDecoder.offset = 0
 
 	payloadLengthBuf, n := streamDecoder.read(4)
 	if n != 4 {
