@@ -192,7 +192,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 	}()
 
 	firstMessageSet := true
-	var trueMessageOffset int64
 	var value []byte
 	for {
 		if firstMessageSet {
@@ -222,6 +221,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 			if n < messageSize {
 				return
 			}
+			copy(value, buf)
 
 			offset += messageSize + 12
 		}
@@ -236,14 +236,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 			return offset, nil
 		}
 
-		if firstMessageSet {
-			trueMessageOffset = messageSet[0].Offset
-		}
-
 		// TODO send each message to the channel directly?
 		for i := range messageSet {
-			messageSet[i].Offset = trueMessageOffset
-			trueMessageOffset++
 			streamDecoder.messages <- &FullMessage{
 				TopicName:   topicName,
 				PartitionID: partitionID,
