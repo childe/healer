@@ -29,7 +29,7 @@ var (
 )
 
 var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
-	API_FetchRequest: {10, 0},
+	API_FetchRequest: {0},
 }
 
 // RequestHeader is the request header, which is used in all requests. It contains apiKey, apiVersion, correlationID, clientID
