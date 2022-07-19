@@ -23,10 +23,6 @@ type Broker struct {
 	conn        net.Conn
 	apiVersions []*ApiVersion
 
-	//since each client should have one broker, so maybe broker should has the same clientID with client?
-	// TODO different clientID should have independent broker?
-	//clientID string
-
 	correlationID uint32
 
 	mux sync.Mutex
@@ -41,7 +37,6 @@ var (
 // NewBroker is used just as bootstrap in NewBrokers.
 // user must always init a Brokers instance by NewBrokers
 func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, error) {
-	//TODO get available api versions
 	broker := &Broker{
 		config:  config,
 		address: address,
@@ -214,8 +209,7 @@ func (broker *Broker) ensureOpen() error {
 		time.Sleep(time.Millisecond * 200)
 		conn, err := newConn(broker.address, broker.config)
 		if err != nil {
-			glog.Errorf("could not conn to %s: %s", broker.address, err)
-			return err
+			return fmt.Errorf("could not connect to %s: %w", broker.address, err)
 		}
 
 		broker.conn = conn
@@ -224,8 +218,7 @@ func (broker *Broker) ensureOpen() error {
 
 		if broker.config.SaslConfig != nil {
 			if err := broker.sendSaslAuthenticate(); err != nil {
-				glog.Errorf("sasl authenticate error : %s", err)
-				return err
+				return fmt.Errorf("sasl authenticate error: %w", err)
 			}
 		}
 	}
@@ -233,7 +226,6 @@ func (broker *Broker) ensureOpen() error {
 }
 
 func (broker *Broker) Request(r Request) ([]byte, error) {
-	// TODO: ensureOpen befor lock?
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
