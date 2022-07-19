@@ -261,6 +261,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName string, partitionID int32, header17 []byte) (offset int, err error) {
 	bytesBeforeRecordsLength := 44 // (magic, records count]
 	bytesBeforeRecords, n := streamDecoder.read(bytesBeforeRecordsLength)
+	offset += n
 	if n < bytesBeforeRecordsLength {
 		return offset, errFetchResponseTooShortNoRecordsMeta
 	}
@@ -293,19 +294,23 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 		return
 	}
 
-	// 49 == offset of (batchLength, records count]
+	// 49 == length of (batchLength, records count]
 	r := io.LimitReader(streamDecoder, int64(batchLength)-49)
 	uncompressedBytes, err := uncompress(int8(compress), r)
 	if err != nil {
 		return offset, fmt.Errorf("uncompress records bytes error: %w", err)
 	}
+	offset += int(batchLength) - 49
 	glog.V(100).Infof("uncompressedBytes: %v", uncompressedBytes)
 
 	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
 		record, o, err := DecodeToRecord(uncompressedBytes[uncompressedBytesOffset:])
 		if err != nil {
-			return offset + o, err
+			if err == errUncompleteRecord {
+				err = nil
+			}
+			return offset, err
 		}
 		glog.V(15).Infof("o: %d, record: %+v", o, record)
 		uncompressedBytesOffset += o
@@ -324,7 +329,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 		}
 	}
 
-	offset = int(batchLength) + 12
 	return offset, nil
 }
 

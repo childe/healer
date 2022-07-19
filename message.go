@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -13,6 +14,8 @@ import (
 	snappy "github.com/eapache/go-xerial-snappy"
 	"github.com/golang/glog"
 )
+
+var errUncompleteRecord = errors.New("Uncomplete Record, The last bytes are not enough to decode the record")
 
 // RecordHeader is concluded in Record
 type RecordHeader struct {
@@ -56,9 +59,7 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	glog.V(15).Infof("length: %d", length)
 	glog.V(15).Infof("playload length: %d", len(payload))
 	if length == 0 || len(payload[o:]) < int(length) {
-		// do not return maxBytesTooSmall here. decodeMessageSet will return maxBytesTooSmall if no messages is consumed.
-		// err = &maxBytesTooSmall
-		return
+		return record, o, errUncompleteRecord
 	}
 	record.length = int32(length)
 	offset += o
