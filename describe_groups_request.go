@@ -20,9 +20,9 @@ type DescribeGroupsRequest struct {
 
 func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_DescribeGroups,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_DescribeGroups,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &DescribeGroupsRequest{requestHeader, groups}
 }
@@ -36,7 +36,7 @@ func (r *DescribeGroupsRequest) Length() int {
 	return l
 }
 
-func (r *DescribeGroupsRequest) Encode() []byte {
+func (r *DescribeGroupsRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -45,7 +45,7 @@ func (r *DescribeGroupsRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Groups)))
 	offset += 4

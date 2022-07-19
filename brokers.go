@@ -85,9 +85,9 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	defer brokers.mutex.Unlock()
 	brokers.controllerID = metadataResponse.ControllerID
 	for _, brokerInfo := range metadataResponse.Brokers {
-		brokers.brokersInfo[brokerInfo.NodeId] = brokerInfo
+		brokers.brokersInfo[brokerInfo.NodeID] = brokerInfo
 		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
-			brokers.brokers[brokerInfo.NodeId] = broker
+			brokers.brokers[brokerInfo.NodeID] = broker
 		}
 	}
 
@@ -126,7 +126,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 
 		brokersInfo := make(map[int32]*BrokerInfo)
 		for _, brokerInfo := range metadataResponse.Brokers {
-			brokersInfo[brokerInfo.NodeId] = brokerInfo
+			brokersInfo[brokerInfo.NodeID] = brokerInfo
 		}
 		brokers.brokersInfo = brokersInfo
 
@@ -157,7 +157,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 
 		brokersInfo := make(map[int32]*BrokerInfo)
 		for _, brokerInfo := range metadataResponse.Brokers {
-			brokersInfo[brokerInfo.NodeId] = brokerInfo
+			brokersInfo[brokerInfo.NodeID] = brokerInfo
 		}
 		brokers.brokersInfo = brokersInfo
 
@@ -186,7 +186,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			return broker, nil
 		} else {
@@ -201,7 +201,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 
 	// try again after refereshing metadata
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			return broker, nil
 		} else {
@@ -240,7 +240,7 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeId, brokers.config)
+		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			brokers.brokers[nodeID] = broker
 			return broker, nil
@@ -257,7 +257,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*Meta
 		metadataResponse *MetadataResponse
 	)
 	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeId)
+		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			glog.Infof("get broker from %s:%d error: %s", brokerInfo.Host, brokerInfo.Port, err)
 			continue
@@ -368,9 +368,9 @@ func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (i
 
 func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
 	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeId)
+		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
-			glog.Errorf("get broker[%d] error:%s", brokerInfo.NodeId, err)
+			glog.Errorf("get broker[%d] error:%s", brokerInfo.NodeID, err)
 			continue
 		}
 		response, err := broker.findCoordinator(clientID, groupID)
@@ -386,7 +386,7 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordina
 
 func (brokers *Brokers) RequestDescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
 	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeId)
+		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			continue
 		}
@@ -403,7 +403,7 @@ func (brokers *Brokers) RequestDescribeGroups(clientID string, groups []string) 
 
 func (brokers *Brokers) Request(req Request) ([]byte, error) {
 	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeId)
+		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			continue
 		}

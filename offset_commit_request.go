@@ -72,9 +72,9 @@ type OffsetCommitRequest struct {
 // request only ONE topic
 func NewOffsetCommitRequest(apiVersion uint16, clientID, groupID string) *OffsetCommitRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_OffsetCommitRequest,
-		ApiVersion: apiVersion,
-		ClientId:   clientID,
+		APIKey:     API_OffsetCommitRequest,
+		APIVersion: apiVersion,
+		ClientID:   clientID,
 	}
 
 	r := &OffsetCommitRequest{
@@ -140,7 +140,7 @@ func (r *OffsetCommitRequest) Length() int {
 	l := r.RequestHeader.length()
 	l += 2 + len(r.GroupID)
 
-	if r.APIVersion() == 2 {
+	if r.Version() == 2 {
 		l += 4 + 2 + len(r.MemberID) + 8
 	}
 
@@ -154,7 +154,7 @@ func (r *OffsetCommitRequest) Length() int {
 	}
 	return l
 }
-func (r *OffsetCommitRequest) Encode() []byte {
+func (r *OffsetCommitRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 	payload := make([]byte, 4+requestLength)
 	offset := 0
@@ -162,13 +162,13 @@ func (r *OffsetCommitRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2
 	offset += copy(payload[offset:], r.GroupID)
 
-	if r.APIVersion() == 2 {
+	if r.Version() == 2 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(r.GenerationID))
 		offset += 4
 

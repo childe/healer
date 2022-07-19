@@ -31,9 +31,9 @@ type SaslHandShakeRequest struct {
 
 func NewSaslHandShakeRequest(clientID string, mechanism string) *SaslHandShakeRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_SaslHandshake,
-		ApiVersion: 1,
-		ClientId:   clientID,
+		APIKey:     API_SaslHandshake,
+		APIVersion: 1,
+		ClientID:   clientID,
 	}
 	return &SaslHandShakeRequest{requestHeader, mechanism}
 }
@@ -43,7 +43,7 @@ func (r *SaslHandShakeRequest) Length() int {
 	return l + 2 + len(r.Mechanism)
 }
 
-func (r *SaslHandShakeRequest) Encode() []byte {
+func (r *SaslHandShakeRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -52,7 +52,7 @@ func (r *SaslHandShakeRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.Mechanism)))
 	offset += 2

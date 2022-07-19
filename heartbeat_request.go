@@ -26,9 +26,9 @@ type HeartbeatRequest struct {
 
 func NewHeartbeatRequest(clientID, groupID string, generationID int32, memberID string) *HeartbeatRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_Heartbeat,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_Heartbeat,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &HeartbeatRequest{
 		RequestHeader: requestHeader,
@@ -43,7 +43,7 @@ func (heartbeatR *HeartbeatRequest) Length() int {
 	return requestLength
 }
 
-func (heartbeatR *HeartbeatRequest) Encode() []byte {
+func (heartbeatR *HeartbeatRequest) Encode(version uint16) []byte {
 	requestLength := heartbeatR.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -52,7 +52,7 @@ func (heartbeatR *HeartbeatRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = heartbeatR.RequestHeader.Encode(payload, offset)
+	offset += heartbeatR.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(heartbeatR.GroupID)))
 	offset += 2

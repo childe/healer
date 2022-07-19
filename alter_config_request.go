@@ -59,9 +59,9 @@ func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 // NewAlterConfigsRequest create a new AlterConfigsRequest
 func NewAlterConfigsRequest(clientID string, resources []*AlterConfigsRequestResource) *AlterConfigsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_AlterConfigs,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_AlterConfigs,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &AlterConfigsRequest{requestHeader, resources}
 }
@@ -93,7 +93,7 @@ func (r *AlterConfigsRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Resources)))
 	offset += 4

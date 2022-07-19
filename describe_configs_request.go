@@ -38,9 +38,9 @@ func (r *DescribeConfigsRequestResource) encode(payload []byte) (offset int) {
 
 func NewDescribeConfigsRequest(clientID string, resources []*DescribeConfigsRequestResource) *DescribeConfigsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_DescribeConfigs,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_DescribeConfigs,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	if resources == nil {
 		resources = make([]*DescribeConfigsRequestResource, 0)
@@ -64,7 +64,7 @@ func (r *DescribeConfigsRequest) Length() int {
 	return l
 }
 
-func (r *DescribeConfigsRequest) Encode() []byte {
+func (r *DescribeConfigsRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -73,7 +73,7 @@ func (r *DescribeConfigsRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Resources)))
 	offset += 4

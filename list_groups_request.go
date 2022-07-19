@@ -11,14 +11,14 @@ type ListGroupsRequest struct {
 
 func NewListGroupsRequest(clientID string) *ListGroupsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_ListGroups,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_ListGroups,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	return &ListGroupsRequest{requestHeader}
 }
 
-func (ListGroupsR *ListGroupsRequest) Encode() []byte {
+func (ListGroupsR *ListGroupsRequest) Encode(version uint16) []byte {
 	requestLength := ListGroupsR.RequestHeader.length()
 
 	payload := make([]byte, requestLength+4)
@@ -27,7 +27,7 @@ func (ListGroupsR *ListGroupsRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	ListGroupsR.RequestHeader.Encode(payload, offset)
+	ListGroupsR.RequestHeader.Encode(payload[offset:])
 
 	return payload
 }

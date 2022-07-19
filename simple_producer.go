@@ -197,9 +197,9 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 		Timeout:      p.config.RequestTimeoutMS,
 	}
 	produceRequest.RequestHeader = &RequestHeader{
-		ApiKey:     API_ProduceRequest,
-		ApiVersion: 0,
-		ClientId:   p.config.ClientID,
+		APIKey:     API_ProduceRequest,
+		APIVersion: 0,
+		ClientID:   p.config.ClientID,
 	}
 
 	produceRequest.TopicBlocks = make([]struct {

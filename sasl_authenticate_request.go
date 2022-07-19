@@ -39,9 +39,9 @@ func NewSaslAuthenticateRequest(clientID string, user, password, typ string) *Sa
 	}
 
 	requestHeader := &RequestHeader{
-		ApiKey:     API_SaslAuthenticate,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_SaslAuthenticate,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 	saslAuthBytes := saslAuth.Encode()
 	return &SaslAuthenticateRequest{requestHeader, saslAuthBytes}
@@ -52,7 +52,7 @@ func (r *SaslAuthenticateRequest) Length() int {
 	return l + 4 + len(r.SaslAuthBytes)
 }
 
-func (r *SaslAuthenticateRequest) Encode() []byte {
+func (r *SaslAuthenticateRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -61,7 +61,7 @@ func (r *SaslAuthenticateRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.SaslAuthBytes)))
 	offset += 4

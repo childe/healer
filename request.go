@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 )
 
+// TODO type define ApiKey and change api_XXX to ApiKey type
+
 var (
 	API_ProduceRequest      uint16 = 0
 	API_FetchRequest        uint16 = 1
@@ -26,44 +28,51 @@ var (
 	API_SaslAuthenticate    uint16 = 36
 )
 
+var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
+	API_FetchRequest: {10, 0},
+}
+
+// RequestHeader is the request header, which is used in all requests. It contains apiKey, apiVersion, correlationID, clientID
 type RequestHeader struct {
-	ApiKey        uint16
-	ApiVersion    uint16
+	APIKey        uint16
+	APIVersion    uint16
 	CorrelationID uint32
-	ClientId      string
+	ClientID      string
 }
 
 func (requestHeader *RequestHeader) length() int {
-	return 10 + len(requestHeader.ClientId)
+	return 10 + len(requestHeader.ClientID)
 }
 
-// Encode encodes request header to []byte. this is used the all detailed request
-func (requestHeader *RequestHeader) Encode(payload []byte, offset int) int {
-	binary.BigEndian.PutUint16(payload[offset:], requestHeader.ApiKey)
+// Encode encodes request header to []byte. this is used the all request
+// If the playload is too small, Encode will panic.
+func (requestHeader *RequestHeader) Encode(payload []byte) int {
+	offset := 0
+	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIKey)
 	offset += 2
 
-	binary.BigEndian.PutUint16(payload[offset:], requestHeader.ApiVersion)
+	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIVersion)
 	offset += 2
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestHeader.CorrelationID))
 	offset += 4
 
-	binary.BigEndian.PutUint16(payload[offset:], uint16(len(requestHeader.ClientId)))
+	binary.BigEndian.PutUint16(payload[offset:], uint16(len(requestHeader.ClientID)))
 	offset += 2
-	copy(payload[offset:], requestHeader.ClientId)
-	offset += len(requestHeader.ClientId)
+	copy(payload[offset:], requestHeader.ClientID)
+	offset += len(requestHeader.ClientID)
 
 	return offset
 }
 
 // API returns APiKey of the request(which hold the request header)
 func (requestHeader *RequestHeader) API() uint16 {
-	return requestHeader.ApiKey
+	return requestHeader.APIKey
 }
 
-// APIVersion returns API version of the request
-func (requestHeader *RequestHeader) APIVersion() uint16 {
-	return requestHeader.ApiVersion
+// Version returns API version of the request
+func (requestHeader *RequestHeader) Version() uint16 {
+	return requestHeader.APIVersion
 }
 
 // SetCorrelationID set request's correlationID
@@ -73,7 +82,7 @@ func (requestHeader *RequestHeader) SetCorrelationID(c uint32) {
 
 // Request is implemented by all detailed request
 type Request interface {
-	Encode() []byte
+	Encode(version uint16) []byte
 	API() uint16
 	SetCorrelationID(uint32)
 }

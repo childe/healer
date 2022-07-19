@@ -74,9 +74,9 @@ func (h *Helper) GetGroups() []string {
 	}
 	groups := []string{}
 	for _, brokerinfo := range h.metaInfo.brokers {
-		broker, err := h.brokers.GetBroker(brokerinfo.NodeId)
+		broker, err := h.brokers.GetBroker(brokerinfo.NodeID)
 		if err != nil {
-			glog.Errorf("get broker [%d] error:%s", brokerinfo.NodeId, err)
+			glog.Errorf("get broker [%d] error:%s", brokerinfo.NodeID, err)
 			return nil
 		}
 

@@ -5,19 +5,22 @@ import (
 	"fmt"
 )
 
+// Coordinator is the struct of coordinator, including nodeID, host and port
 type Coordinator struct {
 	NodeID int32
 	Host   string
 	Port   int32
 }
 
+// FindCoordinatorResponse is the response of findcoordinator request, including correlationID, errorCode, coordinator
 type FindCoordinatorResponse struct {
 	CorrelationID uint32
 	ErrorCode     uint16
-	Coordinator   *Coordinator
+	Coordinator   Coordinator
 }
 
-func NewFindCoordinatorResponse(payload []byte) (*FindCoordinatorResponse, error) {
+// NewFindCoordinatorResponse create a NewFindCoordinatorResponse instance from response payload bytes
+func NewFindCoordinatorResponse(payload []byte, version uint16) (*FindCoordinatorResponse, error) {
 	findCoordinatorResponse := &FindCoordinatorResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
@@ -32,7 +35,7 @@ func NewFindCoordinatorResponse(payload []byte) (*FindCoordinatorResponse, error
 	findCoordinatorResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
 	offset += 2
 
-	coordinator := &Coordinator{}
+	coordinator := Coordinator{}
 	findCoordinatorResponse.Coordinator = coordinator
 
 	coordinator.NodeID = int32(binary.BigEndian.Uint32(payload[offset:]))

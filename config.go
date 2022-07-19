@@ -32,6 +32,7 @@ type BrokerConfig struct {
 	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string"`
 	TLSEnabled                bool       `json:"tls.enabled,string"`
 	TLS                       *TLSConfig `json:"tls"`
+	KafkaVersion              string     `json:"kafka.version"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
@@ -73,7 +74,7 @@ func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
 }
 
 var (
-	brokerAddressNotSet = errors.New("broker address not set in broker config")
+	errBrokerAddressNotSet = errors.New("broker address not set in broker config")
 )
 
 func (c *BrokerConfig) checkValid() error {

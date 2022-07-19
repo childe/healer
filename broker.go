@@ -35,7 +35,7 @@ type Broker struct {
 }
 
 var (
-	tlsConfigError = errors.New("Cert & File & CA must be set")
+	errTLSConfig = errors.New("Cert & File & CA must be set")
 )
 
 // NewBroker is used just as bootstrap in NewBrokers.
@@ -65,14 +65,48 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		}
 	}
 
-	// TODO since ??
-	//apiVersionsResponse, err := broker.requestApiVersions()
-	//if err != nil {
-	//return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
-	//}
-	//broker.apiVersions = apiVersionsResponse.ApiVersions
+	if config.KafkaVersion == "" || compareKafkaVersion(config.KafkaVersion, "0.10.0.0") >= 0 {
+		clientID := "healer-init"
+		apiVersionsResponse, err := broker.requestApiVersions(clientID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
+		}
+		broker.apiVersions = apiVersionsResponse.ApiVersions
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal api versions when init broker: %s", err)
+		}
+
+		if glog.V(10) {
+			var versions string
+			for i, v := range broker.apiVersions {
+				if i+1 == len(broker.apiVersions) {
+					versions += fmt.Sprintf("%s:%d-%d", v.apiKey.String(), v.minVersion, v.maxVersion)
+				} else {
+					versions += fmt.Sprintf("%s:%d-%d,", v.apiKey.String(), v.minVersion, v.maxVersion)
+				}
+			}
+			glog.Infof("broker %s api versions: %s", address, versions)
+		}
+	}
 
 	return broker, nil
+}
+
+func (broker *Broker) getHighestAvailableAPIVersion(apiKey uint16) uint16 {
+	versions, ok := availableVersions[apiKey]
+
+	if !ok {
+		return 0
+	}
+
+	for _, version := range versions {
+		for _, brokerAPIVersion := range broker.apiVersions {
+			if uint16(brokerAPIVersion.apiKey) == apiKey && brokerAPIVersion.minVersion <= version && brokerAPIVersion.maxVersion >= version {
+				return version
+			}
+		}
+	}
+	return 0
 }
 
 func newConn(address string, config *BrokerConfig) (net.Conn, error) {
@@ -83,7 +117,7 @@ func newConn(address string, config *BrokerConfig) (net.Conn, error) {
 
 	if config.TLSEnabled {
 		if config.TLS == nil || config.TLS.Cert == "" || config.TLS.Key == "" || config.TLS.CA == "" {
-			return nil, tlsConfigError
+			return nil, errTLSConfig
 		}
 		if tlsConfig, err := createTLSConfig(config.TLS); err != nil {
 			return nil, err
@@ -135,10 +169,10 @@ func (broker *Broker) sendSaslAuthenticate() error {
 	)
 	saslHandShakeRequest := NewSaslHandShakeRequest(clientID, mechanism)
 
-	payload = saslHandShakeRequest.Encode()
+	payload = saslHandShakeRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate))
 
 	timeout := broker.config.TimeoutMS
-	payload, err = broker.request(saslHandShakeRequest.Encode(), timeout)
+	payload, err = broker.request(saslHandShakeRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate)), timeout)
 	if err != nil {
 		return err
 	}
@@ -150,7 +184,7 @@ func (broker *Broker) sendSaslAuthenticate() error {
 
 	// authenticate
 	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	payload, err = broker.request(saslAuthenticateRequest.Encode(), timeout)
+	payload, err = broker.request(saslAuthenticateRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate)), timeout)
 	if err != nil {
 		return err
 	}
@@ -199,6 +233,7 @@ func (broker *Broker) ensureOpen() error {
 }
 
 func (broker *Broker) Request(r Request) ([]byte, error) {
+	// TODO: ensureOpen befor lock?
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
@@ -212,7 +247,7 @@ func (broker *Broker) Request(r Request) ([]byte, error) {
 	if len(broker.config.TimeoutMSForEachAPI) > int(r.API()) {
 		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
 	}
-	return broker.request(r.Encode(), timeout)
+	return broker.request(r.Encode(broker.getHighestAvailableAPIVersion(r.API())), timeout)
 }
 
 func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
@@ -272,8 +307,9 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 		}
 	}
 	copy(responseBuf[0:4], responseLengthBuf)
-	glog.V(10).Infof("response length: %d. CorrelationID: %d", len(responseBuf), binary.BigEndian.Uint32(responseBuf[4:]))
-	glog.V(100).Infof("response:%v", responseBuf)
+	if glog.V(10) {
+		glog.Infof("response length: %d. CorrelationID: %d", len(responseBuf), binary.BigEndian.Uint32(responseBuf[4:]))
+	}
 
 	return responseBuf, nil
 }
@@ -335,9 +371,10 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 			return err
 		}
 
-		if glog.V(15) {
-			glog.Infof("read %d bytes response", length)
-		}
+		// if glog.V(100) {
+		// 	glog.Infof("read %d bytes response", length)
+		// 	glog.Info(buf[:length])
+		// }
 		select {
 		case <-ctx.Done():
 			return nil
@@ -401,7 +438,7 @@ func (broker *Broker) requestMetaData(clientID string, topics []string) (*Metada
 		return nil, err
 	}
 
-	return NewMetadataResponse(responseBuf)
+	return NewMetadataResponse(responseBuf, broker.getHighestAvailableAPIVersion(API_MetadataRequest))
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
@@ -429,7 +466,7 @@ func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoo
 		return nil, err
 	}
 
-	findCoordinatorResponse, err := NewFindCoordinatorResponse(responseBuf)
+	findCoordinatorResponse, err := NewFindCoordinatorResponse(responseBuf, broker.getHighestAvailableAPIVersion(API_FindCoordinator))
 	if err != nil {
 		return nil, err
 	}
@@ -450,8 +487,10 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 	}
 
 	broker.correlationID++
+
 	fetchRequest.SetCorrelationID(broker.correlationID)
-	payload := fetchRequest.Encode()
+	payload := fetchRequest.Encode(broker.getHighestAvailableAPIVersion(API_FetchRequest))
+	// glog.V(100).Infof("fetch request payload: %v", payload)
 
 	timeout := broker.config.TimeoutMS
 	if len(broker.config.TimeoutMSForEachAPI) > int(fetchRequest.API()) {
@@ -468,7 +507,7 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinato
 	if err != nil {
 		return nil, err
 	}
-	return NewFindCoordinatorResponse(responseBytes)
+	return NewFindCoordinatorResponse(responseBytes, broker.getHighestAvailableAPIVersion(API_FindCoordinator))
 }
 
 func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {

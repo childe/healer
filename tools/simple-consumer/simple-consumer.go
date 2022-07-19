@@ -20,6 +20,7 @@ var (
 	topic       = flag.String("topic", "", "REQUIRED: The topic to consume from.")
 	partition   = flag.Int("partition", 0, "The partition to consume from.")
 	offset      = flag.Int64("offset", -2, "The offset id to consume from, default to -2 which means from beginning; while value -1 means from end(default -2).")
+	stopOffset  = flag.Int64("stop-offset", 0, "fetch messages until stop-offset")
 	maxMessages = flag.Int("max-messages", math.MaxInt32, "The number of messages to consume (default: 2147483647)")
 	printOffset = flag.Bool("printoffset", true, "print offset before message")
 
@@ -35,6 +36,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+	defer glog.Flush()
 
 	if *topic == "" {
 		flag.PrintDefaults()
@@ -75,7 +77,10 @@ func main() {
 		message := <-messages
 		if message.Error != nil {
 			fmt.Printf("messag error:%s\n", message.Error)
-			return
+			break
+		}
+		if *stopOffset > 0 && message.Message.Offset >= *stopOffset {
+			break
 		}
 		if *printOffset {
 			fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
@@ -83,5 +88,4 @@ func main() {
 			fmt.Printf("%s\n", message.Message.Value)
 		}
 	}
-	glog.Flush()
 }

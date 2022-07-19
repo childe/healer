@@ -5,19 +5,6 @@ import (
 	"errors"
 )
 
-// CreateTopicsRequest v0 is described in http://kafka.apache.org/protocol.html
-// CreateTopics Request (Version: 0) => [create_topic_requests] timeout
-//  create_topic_requests => topic num_partitions replication_factor [replica_assignment] [config_entries]
-//    topic => STRING
-//    num_partitions => INT32
-//    replication_factor => INT16
-//    replica_assignment => partition [replicas]
-//      partition => INT32
-//      replicas => INT32
-//    config_entries => config_name config_value
-//      config_name => STRING
-//      config_value => NULLABLE_STRING
-//  timeout => INT32
 type CreateTopicsRequest struct {
 	*RequestHeader
 	CreateTopicRequests []*CreateTopicRequest
@@ -36,7 +23,7 @@ func (r *CreateTopicsRequest) Length() int {
 }
 
 // Encode encodes CreateTopicsRequest to binary bytes
-func (r *CreateTopicsRequest) Encode() []byte {
+func (r *CreateTopicsRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -45,7 +32,7 @@ func (r *CreateTopicsRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.CreateTopicRequests)))
 	offset += 4
@@ -143,9 +130,9 @@ type ConfigEntry struct {
 
 func NewCreateTopicsRequest(clientID string, timeout int32) *CreateTopicsRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_CreateTopics,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_CreateTopics,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 
 	return &CreateTopicsRequest{

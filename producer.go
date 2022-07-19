@@ -72,7 +72,7 @@ func (p *Producer) refreshTopicMeta() error {
 			continue
 		}
 		if len(metadataResponse.TopicMetadatas) == 0 {
-			glog.Errorf("get topic metadata error: %s", zeroTopicMetadata)
+			glog.Errorf("get topic metadata error: %s", errNoTopicsInMetadata)
 			continue
 		}
 		p.topicMeta = metadataResponse.TopicMetadatas[0]

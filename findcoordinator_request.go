@@ -27,9 +27,9 @@ type FindCoordinatorRequest struct {
 
 func NewFindCoordinatorRequest(clientID, groupID string) *FindCoordinatorRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_FindCoordinator,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_FindCoordinator,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 
 	return &FindCoordinatorRequest{
@@ -38,7 +38,7 @@ func NewFindCoordinatorRequest(clientID, groupID string) *FindCoordinatorRequest
 	}
 }
 
-func (findCoordinatorR *FindCoordinatorRequest) Encode() []byte {
+func (findCoordinatorR *FindCoordinatorRequest) Encode(version uint16) []byte {
 	requestLength := findCoordinatorR.RequestHeader.length() + 2 + len(findCoordinatorR.GroupID)
 
 	payload := make([]byte, requestLength+4)
@@ -47,7 +47,7 @@ func (findCoordinatorR *FindCoordinatorRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = findCoordinatorR.RequestHeader.Encode(payload, offset)
+	offset += findCoordinatorR.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(findCoordinatorR.GroupID)))
 	offset += 2

@@ -31,8 +31,8 @@ type MetadataRequest struct {
 	Topics []string
 }
 
-func (metadataRequest *MetadataRequest) Encode() []byte {
-	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientId)
+func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
+	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientID)
 	requestLength := requestHeaderLength + 4
 	for _, topic := range metadataRequest.Topics {
 		requestLength += 2 + len(topic)
@@ -44,7 +44,7 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = metadataRequest.RequestHeader.Encode(payload, offset)
+	offset += metadataRequest.RequestHeader.Encode(payload[offset:])
 
 	if metadataRequest.Topics == nil {
 		var i int32 = -1
@@ -65,9 +65,9 @@ func (metadataRequest *MetadataRequest) Encode() []byte {
 func NewMetadataRequest(clientID string, version uint16, topics []string) *MetadataRequest {
 	r := &MetadataRequest{
 		RequestHeader: &RequestHeader{
-			ApiKey:     API_MetadataRequest,
-			ApiVersion: version,
-			ClientId:   clientID,
+			APIKey:     API_MetadataRequest,
+			APIVersion: version,
+			ClientID:   clientID,
 		},
 		Topics: topics,
 	}

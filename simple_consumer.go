@@ -357,7 +357,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		// fetch will stop sending kafka response to api after cancel
 		defer cancel()
 
-		buffers := make(chan []byte, 1)
+		buffers := make(chan []byte, 10)
 		innerMessages := make(chan *FullMessage, 1)
 
 		fetchWG := sync.WaitGroup{}
@@ -390,14 +390,15 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 		// decode
 		go func() {
-			fetchResponseStreamDecoder := FetchResponseStreamDecoder{
+			frsd := fetchResponseStreamDecoder{
 				buffers:  buffers,
 				messages: innerMessages,
+				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
 			}
 
 			for {
 				decodeWG.Add(1)
-				fetchResponseStreamDecoder.consumeFetchResponse()
+				frsd.streamDecode(c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest), c.offset)
 				decodeWG.Wait()
 				if consumeDoneChan {
 					return
@@ -411,7 +412,11 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				message := <-innerMessages
 				if message != nil {
 					if message.Error != nil {
-						glog.Infof("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
+						glog.Errorf("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
+						if message.Error == &maxBytesTooSmall {
+							c.config.FetchMaxBytes *= 2
+							glog.Infof("fetch.max.bytes is too small, double it to %d", c.config.FetchMaxBytes)
+						}
 						if message.Error == AllError[1] {
 							c.offset, err = c.getOffset(c.fromBeginning)
 							if err != nil {

@@ -21,9 +21,9 @@ type LeaveGroupRequest struct {
 
 func NewLeaveGroupRequest(clientID, groupID, memberID string) *LeaveGroupRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_LeaveGroup,
-		ApiVersion: 0,
-		ClientId:   clientID,
+		APIKey:     API_LeaveGroup,
+		APIVersion: 0,
+		ClientID:   clientID,
 	}
 
 	return &LeaveGroupRequest{
@@ -38,7 +38,7 @@ func (r *LeaveGroupRequest) Length() int {
 	return l
 }
 
-func (r *LeaveGroupRequest) Encode() []byte {
+func (r *LeaveGroupRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
@@ -47,7 +47,7 @@ func (r *LeaveGroupRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2

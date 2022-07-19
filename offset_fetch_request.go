@@ -35,9 +35,9 @@ type OffsetFetchRequest struct {
 // request only ONE topic
 func NewOffsetFetchRequest(apiVersion uint16, clientID, groupID string) *OffsetFetchRequest {
 	requestHeader := &RequestHeader{
-		ApiKey:     API_OffsetFetchRequest,
-		ApiVersion: apiVersion,
-		ClientId:   clientID,
+		APIKey:     API_OffsetFetchRequest,
+		APIVersion: apiVersion,
+		ClientID:   clientID,
 	}
 
 	r := &OffsetFetchRequest{
@@ -90,7 +90,7 @@ func (r *OffsetFetchRequest) Length() int {
 	return l
 }
 
-func (r *OffsetFetchRequest) Encode() []byte {
+func (r *OffsetFetchRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 	payload := make([]byte, 4+requestLength)
 	offset := 0
@@ -98,7 +98,7 @@ func (r *OffsetFetchRequest) Encode() []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset = r.RequestHeader.Encode(payload, offset)
+	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -14,32 +15,119 @@ import (
 	"github.com/golang/glog"
 )
 
-/*
-Message sets
-One structure common to both the produce and fetch requests is the message set format. A message in kafka is a key-value pair with a small amount of associated metadata. A message set is just a sequence of messages with offset and size information. This format happens to be used both for the on-disk storage on the broker and the on-the-wire format.
-A message set is also the unit of compression in Kafka, and we allow messages to recursively contain compressed message sets to allow batch compression.
-N.B., MessageSets are not preceded by an int32 like other array elements in the protocol.
+var errUncompleteRecord = errors.New("Uncomplete Record, The last bytes are not enough to decode the record")
 
-MessageSet => [Offset MessageSize Message]
-  Offset => int64
-  MessageSize => int32
+// RecordHeader is concluded in Record
+type RecordHeader struct {
+	headerKeyLength   int32
+	headerKey         string
+	headerValueLength int32
+	Value             []byte
+}
 
-Message format
-Message => Crc MagicByte Attributes Key Value
-  Crc => int32
-  MagicByte => int8
-  Attributes => int8
-  Key => bytes
-  Value => bytes
+func decodeHeader(payload []byte) (header RecordHeader, offset int) {
+	keyLength, o := binary.Varint(payload[offset:])
+	header.headerKeyLength = int32(keyLength)
+	offset += o
+	header.headerKey = string(payload[offset : offset+int(header.headerKeyLength)])
+	offset += int(header.headerKeyLength)
 
-Offset			This is the offset used in kafka as the log sequence number. When the producer is sending messages it doesn't actually know the offset and can fill in any value here it likes.
-Crc				The CRC is the CRC32 of the remainder of the message bytes. This is used to check the integrity of the message on the broker and consumer.
-MagicByte		This is a version id used to allow backwards compatible evolution of the message binary format. The current value is 0.
-Attributes		This byte holds metadata attributes about the message. The lowest 2 bits contain the compression codec used for the message. The other bits should be set to 0.
-Key				The key is an optional message key that was used for partition assignment. The key can be null.
-Value			The value is the actual message contents as an opaque byte array. Kafka supports recursive messages in which case this may itself contain a message set. The message can be null.
-*/
+	valueLength, o := binary.Varint(payload[offset:])
+	header.headerValueLength = int32(valueLength)
+	offset += o
+	header.Value = make([]byte, valueLength)
+	offset += copy(header.Value, payload[offset:offset+int(header.headerValueLength)])
+	return
+}
 
+// Record is element of Records
+type Record struct {
+	length         int32
+	attributes     int8
+	timestampDelta int64
+	offsetDelta    int32
+	keyLength      int32
+	key            []byte
+	valueLen       int32
+	value          []byte
+	Headers        []RecordHeader
+}
+
+// DecodeToRecord decodes the struct Record from the given payload.
+func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
+	length, o := binary.Varint(payload)
+	if length == 0 || len(payload[o:]) < int(length) {
+		return record, o, errUncompleteRecord
+	}
+	record.length = int32(length)
+	offset += o
+
+	record.attributes = int8(payload[offset])
+	offset++
+
+	timestampDelta, o := binary.Varint(payload[offset:])
+	record.timestampDelta = int64(timestampDelta)
+	offset += o
+
+	offsetDelta, o := binary.Varint(payload[offset:])
+	record.offsetDelta = int32(offsetDelta)
+	offset += o
+
+	keyLength, o := binary.Varint(payload[offset:])
+	record.keyLength = int32(keyLength)
+	offset += o
+
+	if keyLength > 0 {
+		record.key = make([]byte, keyLength)
+		offset += copy(record.key, payload[offset:offset+int(record.keyLength)])
+	}
+
+	valueLen, o := binary.Varint(payload[offset:])
+	record.valueLen = int32(valueLen)
+	offset += o
+	if valueLen > 0 {
+		record.value = make([]byte, valueLen)
+		offset += copy(record.value, payload[offset:offset+int(record.valueLen)])
+	}
+
+	headerCount, o := binary.Varint(payload[offset:])
+	if glog.V(15) {
+		glog.Infof("timestampDelta: %d", timestampDelta)
+		glog.Infof("offsetDelta: %d", offsetDelta)
+		glog.Infof("keyLength: %d", keyLength)
+		glog.Infof("valueLen: %d", valueLen)
+		glog.Infof("headerCount: %d", headerCount)
+	}
+	offset += o
+	if headerCount > 0 {
+		record.Headers = make([]RecordHeader, headerCount)
+		for i := int64(0); i < headerCount; i++ {
+			record.Headers[i], o = decodeHeader(payload[offset:])
+			offset += o
+		}
+	}
+
+	return
+}
+
+// Records is batch of Record
+type Records struct {
+	baseOffset           int64
+	batchLength          int32
+	partitionLeaderEpoch int32
+	magic                int8
+	crc                  int32
+	attributes           int16
+	lastOffsetDelta      int32
+	baseTimestamp        int64
+	maxTimestamp         int64
+	producerID           int64
+	producerEpoch        int16
+	baseSequence         int32
+	records              []Record
+}
+
+// FullMessage contains message value and topic and partition
 type FullMessage struct {
 	TopicName   string
 	PartitionID int32
@@ -47,6 +135,7 @@ type FullMessage struct {
 	Message     *Message
 }
 
+// Message is a message in a topic
 type Message struct {
 	Offset      int64
 	MessageSize int32
@@ -55,9 +144,12 @@ type Message struct {
 	Crc        uint32
 	MagicByte  int8
 	Attributes int8
+	Timestamp  uint64
 	Key        []byte
 	Value      []byte
 }
+
+// MessageSet is a batch of messages
 type MessageSet []*Message
 
 const (
@@ -110,10 +202,10 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		offset += 4
 
 		payload[offset] = byte(message.MagicByte)
-		offset += 1
+		offset++
 
 		payload[offset] = byte(message.Attributes)
-		offset += 1
+		offset++
 
 		if message.Key == nil {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(i))
@@ -137,6 +229,9 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 	return offset
 }
 
+// DecodeToMessageSet decodes a MessageSet from a byte array.
+// MessageSet is [offset message_size message], but it only decode one message in healer generally, loops inside decodeMessageSetMagic0or1.
+// if message.Value is compressed, it will uncompress the value and returns an array of messages.
 func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 	messageSet := MessageSet{}
 	var offset int = 0
@@ -163,6 +258,11 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 
 		message.Attributes = int8(payload[offset])
 		offset++
+
+		if message.MagicByte == 1 {
+			message.Timestamp = binary.BigEndian.Uint64(payload[offset:])
+			offset += 8
+		}
 
 		keyLength := int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
