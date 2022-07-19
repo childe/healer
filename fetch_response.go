@@ -300,9 +300,9 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 		return offset, fmt.Errorf("uncompress records bytes error: %w", err)
 	}
 	offset += int(batchLength) - 49
-	if glog.V(100) {
-		glog.Infof("uncompressedBytes: %v", uncompressedBytes)
-	}
+	// if glog.V(100) {
+	// 	glog.Infof("uncompressedBytes: %v", uncompressedBytes)
+	// }
 
 	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
@@ -313,9 +313,9 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 			}
 			return offset, err
 		}
-		if glog.V(100) {
-			glog.Infof("o: %d, record: %+v", o, record)
-		}
+		// if glog.V(100) {
+		// 	glog.Infof("o: %d, record: %+v", o, record)
+		// }
 		uncompressedBytesOffset += o
 		message := &Message{
 			Offset: int64(record.offsetDelta) + baseOffset,
