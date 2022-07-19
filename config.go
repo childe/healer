@@ -112,7 +112,7 @@ func DefaultConsumerConfig() *ConsumerConfig {
 			TimeoutMSForEachAPI: make([]int, 0),
 			KeepAliveMS:         7200000,
 		},
-		ClientID:             "",
+		ClientID:             "healer",
 		GroupID:              "",
 		SessionTimeoutMS:     30000,
 		RetryBackOffMS:       100,
