@@ -338,7 +338,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 // messageSetSizeBytes may include more the one `Record Batch`, that is, `Record Batch`,`Record Batch`,`Record Batch`...
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) (err error) {
 	defer func() {
-		if err == &maxBytesTooSmall {
+		if err == io.EOF || err == &maxBytesTooSmall {
 			if streamDecoder.hasOneMessage == true {
 				err = nil
 			}
