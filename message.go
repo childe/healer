@@ -56,7 +56,8 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	glog.V(15).Infof("length: %d", length)
 	glog.V(15).Infof("playload length: %d", len(payload))
 	if length == 0 || len(payload[o:]) < int(length) {
-		err = &maxBytesTooSmall
+		// do not return maxBytesTooSmall here. decodeMessageSet will return maxBytesTooSmall if no messages is consumed.
+		// err = &maxBytesTooSmall
 		return
 	}
 	record.length = int32(length)
@@ -227,8 +228,11 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 	return offset
 }
 
+// DecodeToMessageSet decodes a MessageSet from a byte array.
+// MessageSet is [offset message_size message], but it only decode one message in healer generally, loops inside decodeMessageSetMagic0or1.
+// if message.Value is compressed, it will uncompress the value and returns an array of messages.
 func DecodeToMessageSet(payload []byte) (MessageSet, error) {
-	glog.Infof("payload %v", payload)
+	glog.V(15).Infof("payload %v", payload)
 	messageSet := MessageSet{}
 	var offset int = 0
 	var err error

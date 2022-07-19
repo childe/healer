@@ -60,6 +60,8 @@ type fetchResponseStreamDecoder struct {
 	correlationID  int32
 
 	startOffset int64
+
+	hasOneMessage bool
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int) {
@@ -196,13 +198,6 @@ func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err 
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topicName string, partitionID int32, magic int, header17 []byte) (offset int, err error) {
-	var hasAtLeastOneMessage bool = false
-	defer func() {
-		if hasAtLeastOneMessage == false && err == nil {
-			err = &maxBytesTooSmall
-		}
-	}()
-
 	firstMessageSet := true
 	var value []byte
 	for {
@@ -256,9 +251,9 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 					PartitionID: partitionID,
 					Message:     messageSet[i],
 				}
+				streamDecoder.hasOneMessage = true
 			}
 		}
-		hasAtLeastOneMessage = true
 	}
 }
 
@@ -325,6 +320,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 				PartitionID: partitionID,
 				Message:     message,
 			}
+			streamDecoder.hasOneMessage = true
 		}
 	}
 
@@ -334,9 +330,13 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 
 // messageSetSizeBytes may include more the one `Record Batch`, that is, `Record Batch`,`Record Batch`,`Record Batch`...
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) (err error) {
-	var hasAtLeastOneMessage bool = false
 	defer func() {
-		if hasAtLeastOneMessage == false && err == nil {
+		if err == &maxBytesTooSmall {
+			if streamDecoder.hasOneMessage == true {
+				err = nil
+			}
+		}
+		if streamDecoder.hasOneMessage == false && err == nil {
 			err = &maxBytesTooSmall
 		}
 	}()
@@ -354,7 +354,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 		offset += n
 
 		magic := header17[16]
-		glog.V(10).Infof("magic: %d", magic)
+		glog.V(15).Infof("magic: %d", magic)
 
 		if magic < 2 {
 			o, err = streamDecoder.decodeMessageSetMagic0or1(topicName, partitionID, int(magic), header17)
@@ -369,7 +369,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 			// }
 			return err
 		}
-		hasAtLeastOneMessage = true
 	}
 	return nil
 }
@@ -487,6 +486,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, st
 	streamDecoder.depositBuffer = make([]byte, 0)
 	streamDecoder.offset = 0
 	streamDecoder.startOffset = startOffset
+	streamDecoder.hasOneMessage = false
 
 	payloadLengthBuf, n := streamDecoder.read(4)
 	if n != 4 {
