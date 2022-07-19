@@ -54,12 +54,10 @@ func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
 	b.TLSEnabled = c.TLSEnabled
 	b.TLS = c.TLS
 	b.SaslConfig = c.SaslConfig
-	b.KafkaVersion = c.KafkaVersion
 
 	if c.MetadataRefreshIntervalMS > 0 {
 		b.MetadataRefreshIntervalMS = c.MetadataRefreshIntervalMS
 	}
-	b.KafkaVersion = c.KafkaVersion
 	return b
 }
 
@@ -99,7 +97,6 @@ type ConsumerConfig struct {
 	AutoCommit           bool   `json:"auto.commit,string"`
 	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
 	OffsetsStorage       int    `json:"offsets.storage,string"`
-	KafkaVersion         string `json:"kafka.version"`
 
 	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string"`
 
