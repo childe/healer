@@ -56,8 +56,6 @@ type Record struct {
 // DecodeToRecord decodes the struct Record from the given payload.
 func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	length, o := binary.Varint(payload)
-	glog.V(15).Infof("length: %d", length)
-	glog.V(15).Infof("playload length: %d", len(payload))
 	if length == 0 || len(payload[o:]) < int(length) {
 		return record, o, errUncompleteRecord
 	}
@@ -68,17 +66,14 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	offset++
 
 	timestampDelta, o := binary.Varint(payload[offset:])
-	glog.V(15).Infof("timestampDelta: %d", timestampDelta)
 	record.timestampDelta = int64(timestampDelta)
 	offset += o
 
 	offsetDelta, o := binary.Varint(payload[offset:])
-	glog.V(15).Infof("offsetDelta: %d", offsetDelta)
 	record.offsetDelta = int32(offsetDelta)
 	offset += o
 
 	keyLength, o := binary.Varint(payload[offset:])
-	glog.V(15).Infof("keyLength: %d", keyLength)
 	record.keyLength = int32(keyLength)
 	offset += o
 
@@ -88,7 +83,6 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	}
 
 	valueLen, o := binary.Varint(payload[offset:])
-	glog.V(15).Infof("valueLen: %d", valueLen)
 	record.valueLen = int32(valueLen)
 	offset += o
 	if valueLen > 0 {
@@ -97,7 +91,13 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	}
 
 	headerCount, o := binary.Varint(payload[offset:])
-	glog.V(15).Infof("headerCount: %d", headerCount)
+	if glog.V(15) {
+		glog.Infof("timestampDelta: %d", timestampDelta)
+		glog.Infof("offsetDelta: %d", offsetDelta)
+		glog.Infof("keyLength: %d", keyLength)
+		glog.Infof("valueLen: %d", valueLen)
+		glog.Infof("headerCount: %d", headerCount)
+	}
 	offset += o
 	if headerCount > 0 {
 		record.Headers = make([]RecordHeader, headerCount)
@@ -233,7 +233,6 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 // MessageSet is [offset message_size message], but it only decode one message in healer generally, loops inside decodeMessageSetMagic0or1.
 // if message.Value is compressed, it will uncompress the value and returns an array of messages.
 func DecodeToMessageSet(payload []byte) (MessageSet, error) {
-	glog.V(15).Infof("payload %v", payload)
 	messageSet := MessageSet{}
 	var offset int = 0
 	var err error
@@ -246,7 +245,6 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		message := &Message{}
 
 		message.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
-		glog.Infof("message.Offset %d", message.Offset)
 		offset += 8
 
 		message.MessageSize = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -256,7 +254,6 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		offset += 4
 
 		message.MagicByte = int8(payload[offset])
-		glog.Infof("message.MagicByte %d", message.MagicByte)
 		offset++
 
 		message.Attributes = int8(payload[offset])

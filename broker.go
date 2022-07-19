@@ -490,7 +490,7 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 
 	fetchRequest.SetCorrelationID(broker.correlationID)
 	payload := fetchRequest.Encode(broker.getHighestAvailableAPIVersion(API_FetchRequest))
-	glog.Infof("fetch request payload: %v", payload)
+	glog.V(100).Infof("fetch request payload: %v", payload)
 
 	timeout := broker.config.TimeoutMS
 	if len(broker.config.TimeoutMSForEachAPI) > int(fetchRequest.API()) {
