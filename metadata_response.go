@@ -14,7 +14,9 @@ var (
 // MetadataResponse holds all the parameters of metadata response, including the brokers and topics
 type MetadataResponse struct {
 	CorrelationID  uint32
+	ThrottleTimeMs int32
 	Brokers        []*BrokerInfo
+	ClusterID      string
 	ControllerID   int32
 	TopicMetadatas []*TopicMetadata
 }
@@ -81,8 +83,10 @@ type PartitionMetadataInfo struct {
 	PartitionErrorCode int16
 	PartitionID        int32
 	Leader             int32
+	LeaderEpoch        int32
 	Replicas           []int32
 	Isr                []int32
+	OfflineReplicas    []int32
 }
 
 func decodeToPartitionMetadataInfo(payload []byte, version uint16) (p PartitionMetadataInfo, offset int) {
@@ -92,6 +96,10 @@ func decodeToPartitionMetadataInfo(payload []byte, version uint16) (p PartitionM
 	offset += 4
 	p.Leader = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
+	if version == 7 {
+		p.LeaderEpoch = int32(binary.BigEndian.Uint32(payload[offset:]))
+		offset += 4
+	}
 	replicasCount := uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 	p.Replicas = make([]int32, replicasCount)
@@ -105,6 +113,16 @@ func decodeToPartitionMetadataInfo(payload []byte, version uint16) (p PartitionM
 	for k := uint32(0); k < isrCount; k++ {
 		p.Isr[k] = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
+	}
+
+	if version == 7 {
+		count := binary.BigEndian.Uint32(payload[offset:])
+		offset += 4
+		p.OfflineReplicas = make([]int32, count)
+		for k := uint32(0); k < count; k++ {
+			p.OfflineReplicas[k] = int32(binary.BigEndian.Uint32(payload[offset:]))
+			offset += 4
+		}
 	}
 	return
 }
@@ -123,8 +141,13 @@ func NewMetadataResponse(payload []byte, version uint16) (*MetadataResponse, err
 	}
 	offset += 4
 
-	metadataResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	metadataResponse.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
+
+	if version == 7 {
+		metadataResponse.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
+		offset += 4
+	}
 
 	// Encode Brokers
 	brokersCount := int(binary.BigEndian.Uint32(payload[offset:]))
@@ -136,6 +159,11 @@ func NewMetadataResponse(payload []byte, version uint16) (*MetadataResponse, err
 		offset += o
 	}
 
+	if version == 7 {
+		l := int(binary.BigEndian.Uint16(payload[offset:]))
+		metadataResponse.ClusterID = string(payload[offset : offset+l])
+		offset += 2 + l
+	}
 	// ControllerID
 	metadataResponse.ControllerID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4

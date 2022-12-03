@@ -28,15 +28,24 @@ TopicsName		The topics to produce metadata for. If empty the request will yield 
 
 type MetadataRequest struct {
 	*RequestHeader
-	Topics []string
+	Topics                 []string
+	AllowAutoTopicCreation bool
+}
+
+func (r *MetadataRequest) length(version uint16) int {
+	requestHeaderLength := r.RequestHeader.length()
+	requestLength := requestHeaderLength + 4
+	for _, topic := range r.Topics {
+		requestLength += 2 + len(topic)
+	}
+	if version == 7 {
+		requestLength += 1
+	}
+	return requestLength
 }
 
 func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
-	requestHeaderLength := 8 + 2 + len(metadataRequest.RequestHeader.ClientID)
-	requestLength := requestHeaderLength + 4
-	for _, topic := range metadataRequest.Topics {
-		requestLength += 2 + len(topic)
-	}
+	requestLength := metadataRequest.length(version)
 
 	payload := make([]byte, requestLength+4)
 	offset := 0
@@ -58,6 +67,15 @@ func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topicname)))
 		offset += 2
 		offset += copy(payload[offset:], topicname)
+	}
+
+	if version == 7 {
+		if metadataRequest.AllowAutoTopicCreation {
+			payload[offset] = 1
+		} else {
+			payload[offset] = 0
+		}
+		offset++
 	}
 	return payload
 }
