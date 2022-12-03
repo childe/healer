@@ -9,6 +9,7 @@ func TestOffsetCommitRequest(t *testing.T) {
 		offset      int64
 		topic       = "test"
 		groupID     = "hangout"
+		version     uint16
 	)
 	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
 
@@ -33,7 +34,7 @@ func TestOffsetCommitRequest(t *testing.T) {
 		t.Error("offsetcommit request payload length should be 67")
 	}
 
-	payload := r.Encode()
+	payload := r.Encode(version)
 	if len(payload) != 71 {
 		t.Error("offsetcommit request payload length should be 71")
 	}

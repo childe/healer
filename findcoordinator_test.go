@@ -6,11 +6,12 @@ func TestFindCoordinator(t *testing.T) {
 	var (
 		clientID string = "healer"
 		groupID  string = "healer.topicname"
+		version  uint16 = 0
 	)
 
 	request := NewFindCoordinatorRequest(clientID, groupID)
 
-	payload := request.Encode()
+	payload := request.Encode(version)
 	if len(payload) != 38 {
 		t.Error("offsets request payload length should be 38")
 	}
@@ -29,7 +30,7 @@ func TestFindCoordinator(t *testing.T) {
 		t.Logf("got response from findcoordinator request:%d bytes", len(responseBytes))
 	}
 
-	response, err := NewFindCoordinatorResponse(responseBytes)
+	response, err := NewFindCoordinatorResponse(responseBytes, version)
 	if err != nil {
 		t.Errorf("decode findcoordinator response error:%s", err)
 	} else {

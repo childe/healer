@@ -12,6 +12,7 @@ func TestOffsetFetchRequest(t *testing.T) {
 		clientID    string = "healer"
 		topic       string = "test"
 		groupID     string = "hangout"
+		version     uint16
 	)
 	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
 	if err != nil {
@@ -41,7 +42,7 @@ func TestOffsetFetchRequest(t *testing.T) {
 		t.Error("offsetcommit request payload length should be 47")
 	}
 
-	payload := r.Encode()
+	payload := r.Encode(version)
 	if len(payload) != 51 {
 		t.Error("offsetcommit request payload length should be 51")
 	}
