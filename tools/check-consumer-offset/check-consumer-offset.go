@@ -32,7 +32,7 @@ func main() {
 
 	brokers, err := healer.NewBrokers(*brokers)
 	if err != nil {
-		glog.Fatalf("could not create brokers from %s:%s", *brokers, err)
+		glog.Fatalf("could not create brokers from %v: %v", *brokers, err)
 	}
 
 	metadata, err := brokers.RequestMetaData(*clientID, []string{*topic})
@@ -50,7 +50,7 @@ func main() {
 	response, err := brokers.Request(r)
 
 	if err != nil {
-		glog.Fatal("could not get offset fetch response from %s", *brokers)
+		glog.Fatalf("could not get offset fetch response from %s", *brokers)
 	}
 
 	res, err := healer.NewOffsetFetchResponse(response)
