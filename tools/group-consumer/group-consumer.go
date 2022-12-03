@@ -25,6 +25,8 @@ var (
 func main() {
 	flag.Parse()
 
+	defer glog.Flush()
+
 	if *topic == "" {
 		fmt.Println("need topic name")
 		os.Exit(4)
