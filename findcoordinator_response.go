@@ -21,7 +21,7 @@ type FindCoordinatorResponse struct {
 
 // NewFindCoordinatorResponse create a NewFindCoordinatorResponse instance from response payload bytes
 func NewFindCoordinatorResponse(payload []byte, version uint16) (*FindCoordinatorResponse, error) {
-	findCoordinatorResponse := &FindCoordinatorResponse{}
+	r := &FindCoordinatorResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
@@ -29,24 +29,21 @@ func NewFindCoordinatorResponse(payload []byte, version uint16) (*FindCoordinato
 	}
 	offset += 4
 
-	findCoordinatorResponse.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
+	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	findCoordinatorResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
 	offset += 2
 
-	coordinator := Coordinator{}
-	findCoordinatorResponse.Coordinator = coordinator
-
-	coordinator.NodeID = int32(binary.BigEndian.Uint32(payload[offset:]))
+	r.Coordinator.NodeID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	hostLength := int(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
-	coordinator.Host = string(payload[offset : offset+hostLength])
+	r.Coordinator.Host = string(payload[offset : offset+hostLength])
 	offset += hostLength
 
-	coordinator.Port = int32(binary.BigEndian.Uint32(payload[offset:]))
+	r.Coordinator.Port = int32(binary.BigEndian.Uint32(payload[offset:]))
 
-	return findCoordinatorResponse, nil
+	return r, nil
 }
