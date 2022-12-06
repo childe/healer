@@ -6,7 +6,7 @@ import (
 
 // TODO type define ApiKey and change api_XXX to ApiKey type
 
-var (
+const (
 	API_ProduceRequest      uint16 = 0
 	API_FetchRequest        uint16 = 1
 	API_OffsetRequest       uint16 = 2
