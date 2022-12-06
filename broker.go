@@ -424,8 +424,13 @@ func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, e
 	return listGroupsResponse, nil
 }
 
+// requestMetaData use highest available APIVersion, but at least v1, because v0 doesn't return controller_id
+// controller is needed to create topic etc.
 func (broker *Broker) requestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
-	var version uint16 = 1
+	var version uint16 = broker.getHighestAvailableAPIVersion(API_MetadataRequest)
+	if version == 0 {
+		version = 1
+	}
 	metadataRequest := NewMetadataRequest(clientID, version, topics)
 
 	responseBuf, err := broker.Request(metadataRequest)
@@ -433,7 +438,7 @@ func (broker *Broker) requestMetaData(clientID string, topics []string) (*Metada
 		return nil, err
 	}
 
-	return NewMetadataResponse(responseBuf, broker.getHighestAvailableAPIVersion(API_MetadataRequest))
+	return NewMetadataResponse(responseBuf, version)
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
