@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 
 	goflag "flag"
@@ -43,38 +42,21 @@ func main() {
 	}
 
 	var (
-		text     []byte = nil
-		line     []byte = nil
-		isPrefix bool   = true
-		err      error  = nil
+		err        error
+		scanner    = bufio.NewScanner(os.Stdin)
+		returnCode = 0
 	)
-	reader := bufio.NewReader(os.Stdin)
 
-	returnCode := 0
-Main:
-	for {
-		text = nil
-		isPrefix = true
-		for isPrefix {
-			line, isPrefix, err = reader.ReadLine()
-			if err != nil {
-				if err == io.EOF {
-					returnCode = 0
-					break Main
-				}
-				glog.Errorf("readline error:%s", err)
-				returnCode = 5
-				break Main
-			}
-			if text == nil {
-				text = line
-			} else {
-				text = append(text, line...)
-			}
-		}
-		if err = simpleProducer.AddMessage(nil, text); err != nil {
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if err = simpleProducer.AddMessage(nil, line); err != nil {
 			glog.Errorf("add message error: %s", err)
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		glog.Errorf("scan stdin error: %v", err)
+		returnCode = 5
 	}
 
 	simpleProducer.Close()

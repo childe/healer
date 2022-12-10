@@ -78,10 +78,8 @@ func _main() int {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
-		t := scanner.Bytes()
-		msg := make([]byte, len(t))
-		copy(msg, t)
-		producer.AddMessage(nil, msg)
+		line := scanner.Bytes()
+		producer.AddMessage(nil, line)
 	}
 	producer.Close()
 

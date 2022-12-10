@@ -142,6 +142,8 @@ func (p *SimpleProducer) ensureOpen() bool {
 }
 
 func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
+	valueCopy := make([]byte, len(value))
+	copy(valueCopy, value)
 	// TODO put ensureOpen between lock
 	if p.ensureOpen() == false {
 		return SimpleProducerClosedError
@@ -154,7 +156,7 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 		Attributes: 0x00, // compress in upper message set level
 		MagicByte:  0,
 		Key:        key,
-		Value:      value,
+		Value:      valueCopy,
 	}
 	p.messageSetMutex.Lock()
 	p.messageSet = append(p.messageSet, message)
