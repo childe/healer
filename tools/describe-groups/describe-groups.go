@@ -41,7 +41,7 @@ func main() {
 		glog.Errorf("failed to get coordinator broker[%d]", coordinatorResponse.Coordinator.NodeID)
 		os.Exit(5)
 	}
-	glog.Infof("coordinator for group[%s]:%s", groupID, coordinatorBroker.GetAddress())
+	glog.Infof("coordinator for group[%s]:%s", *groupID, coordinatorBroker.GetAddress())
 
 	req := healer.NewDescribeGroupsRequest(*clientID, []string{*groupID})
 

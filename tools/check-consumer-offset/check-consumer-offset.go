@@ -50,7 +50,7 @@ func main() {
 	response, err := brokers.Request(r)
 
 	if err != nil {
-		glog.Fatalf("could not get offset fetch response from %s", *brokers)
+		glog.Fatalf("could not get offset fetch response from %v", *brokers)
 	}
 
 	res, err := healer.NewOffsetFetchResponse(response)

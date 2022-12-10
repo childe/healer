@@ -26,7 +26,7 @@ func main() {
 
 	helper, err := healer.NewHelper(*brokerList, *clientID, brokerConfig)
 	if err != nil {
-		glog.Error("create helper error:%s", err)
+		glog.Errorf("create helper error: %v", err)
 		os.Exit(5)
 	}
 

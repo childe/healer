@@ -11,10 +11,6 @@ var (
 	brokerAddress = flag.String("broker", "127.0.0.1:9092", "<hostname:port,...,hostname:port> The comma separated list of brokers in the Kafka cluster. (default: 127.0.0.1:9092)")
 )
 
-func TestMain() {
-	flag.Parse()
-}
-
 func TestGenSaslHandShakeRequest(t *testing.T) {
 	var (
 		clientID  string = "healer"
@@ -28,7 +24,7 @@ func TestGenSaslHandShakeRequest(t *testing.T) {
 
 	saslHandShakeRequest := healer.NewSaslHandShakeRequest(clientID, mechanism)
 
-	payload = saslHandShakeRequest.Encode()
+	payload = saslHandShakeRequest.Encode(0)
 	if len(payload) != 27 {
 		t.Error("SaslHandShakeRequest payload length should be 27")
 	}
@@ -72,7 +68,7 @@ func TestGenSaslHandShakeRequest(t *testing.T) {
 
 	offsetsRequest := healer.NewOffsetsRequest(topic, []int32{partitionID}, timeValue, offsets, clientID)
 
-	payload = offsetsRequest.Encode()
+	payload = offsetsRequest.Encode(0)
 	if len(payload) != 54 {
 		t.Error("offsets request payload length should be 54")
 	}
