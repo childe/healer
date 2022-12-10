@@ -19,6 +19,7 @@ type SimpleConsumer struct {
 	brokers      *Brokers
 	leaderBroker *Broker
 	coordinator  *Broker
+	paritition   PartitionMetadataInfo
 
 	stop           bool
 	fromBeginning  bool
@@ -43,6 +44,14 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 
 		stopChanForCommit: make(chan bool, 1),
 	}
+
+	go func() {
+		for range time.NewTicker(time.Second * 60 * 1).C {
+			if err := c.refereshPartiton(); err != nil {
+				glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
+			}
+		}
+	}()
 
 	if config.GroupID != "" {
 		var err error
@@ -75,6 +84,21 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 	return NewSimpleConsumerWithBrokers(topic, partitionID, config, brokers), nil
 }
 
+func (c *SimpleConsumer) refereshPartiton() error {
+	metaDataResponse, err := c.brokers.RequestMetaData(c.config.ClientID, []string{c.topic})
+	if err != nil {
+		return err
+	}
+	for _, topic := range metaDataResponse.TopicMetadatas {
+		for _, p := range topic.PartitionMetadatas {
+			if p.PartitionID == c.partitionID {
+				c.paritition = *p
+				return nil
+			}
+		}
+	}
+	return errors.New("partition not found in meetadata response")
+}
 func (c *SimpleConsumer) getCoordinator() error {
 	coordinatorResponse, err := c.brokers.FindCoordinator(c.config.ClientID, c.config.GroupID)
 	if err != nil {
@@ -374,7 +398,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			for {
 				fetchWG.Add(1)
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
-				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes)
+				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.paritition.LeaderEpoch)
 
 				err := c.leaderBroker.requestFetchStreamingly(ctx, r, buffers)
 				if err != nil {
