@@ -20,6 +20,7 @@ type SimpleConsumer struct {
 	leaderBroker *Broker
 	coordinator  *Broker
 	paritition   PartitionMetadataInfo
+	stopChan     chan struct{}
 
 	stop           bool
 	fromBeginning  bool
@@ -42,13 +43,20 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		partitionID: partitionID,
 		brokers:     brokers,
 
+		stopChan:          make(chan struct{}, 0),
 		stopChanForCommit: make(chan bool, 1),
 	}
 
 	go func() {
-		for range time.NewTicker(time.Second * 60 * 1).C {
-			if err := c.refereshPartiton(); err != nil {
-				glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
+		ticker := time.NewTicker(time.Second * 60 * 1)
+		for {
+			select {
+			case <-ticker.C:
+				if err := c.refereshPartiton(); err != nil {
+					glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
+				}
+			case <-c.stopChan:
+				return
 			}
 		}
 	}()
@@ -252,6 +260,7 @@ func (c *SimpleConsumer) Stop() {
 	if c.config.AutoCommit {
 		c.CommitOffset()
 	}
+	c.stopChan <- struct{}{}
 }
 
 // when NOT belong to GroupConsumer
