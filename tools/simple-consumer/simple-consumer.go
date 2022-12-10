@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/signal"
 	"strings"
 
 	goflag "flag"
@@ -36,12 +37,16 @@ func init() {
 
 func main() {
 	flag.Parse()
+	var returnCode = 0
+
+	defer os.Exit(returnCode)
 	defer glog.Flush()
 
 	if *topic == "" {
 		flag.PrintDefaults()
 		fmt.Println("need topic name")
-		os.Exit(4)
+		returnCode = 4
+		return
 	}
 
 	for _, kv := range strings.Split(*config, ",") {
@@ -51,32 +56,47 @@ func main() {
 		t := strings.SplitN(kv, "=", 2)
 		if len(t) != 2 {
 			glog.Errorf("invalid config : %s", kv)
-			os.Exit(4)
+			returnCode = 4
+			return
 		}
 		consumerConfig[t[0]] = t[1]
 	}
 	cConfig, err := healer.GetConsumerConfig(consumerConfig)
 	if err != nil {
 		glog.Errorf("config error : %s", err)
-		os.Exit(4)
+		returnCode = 4
+		return
 	}
 
 	glog.V(10).Infof("config : %+v", cConfig)
 	simpleConsumer, err := healer.NewSimpleConsumer(*topic, int32(*partition), cConfig)
 	if err != nil {
-		glog.Errorf("crate simple consumer error: %s", err)
-		os.Exit(5)
+		glog.Errorf("create simple consumer error: %s", err)
+		returnCode = 5
+		return
 	}
+
+	signalC := make(chan os.Signal, 1)
+	signal.Notify(signalC, os.Interrupt)
+
+	go func() {
+		<-signalC
+		simpleConsumer.Stop()
+		glog.Flush()
+		os.Exit(returnCode)
+	}()
 
 	messages, err := simpleConsumer.Consume(*offset, nil)
 	if err != nil {
-		glog.Fatal(err)
+		glog.Errorf("consumer messages error: %s", err)
+		returnCode = 5
+		return
 	}
 
 	for i := 0; i < *maxMessages; i++ {
 		message := <-messages
 		if message.Error != nil {
-			fmt.Printf("messag error:%s\n", message.Error)
+			fmt.Printf("message error:%s\n", message.Error)
 			break
 		}
 		if *stopOffset > 0 && message.Message.Offset >= *stopOffset {

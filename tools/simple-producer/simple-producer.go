@@ -49,6 +49,9 @@ func main() {
 		err      error  = nil
 	)
 	reader := bufio.NewReader(os.Stdin)
+
+	returnCode := 0
+Main:
 	for {
 		text = nil
 		isPrefix = true
@@ -56,10 +59,12 @@ func main() {
 			line, isPrefix, err = reader.ReadLine()
 			if err != nil {
 				if err == io.EOF {
-					os.Exit(0)
+					returnCode = 0
+					break Main
 				}
 				glog.Errorf("readline error:%s", err)
-				os.Exit(5)
+				returnCode = 5
+				break Main
 			}
 			if text == nil {
 				text = line
@@ -71,4 +76,8 @@ func main() {
 			glog.Errorf("add message error: %s", err)
 		}
 	}
+
+	simpleProducer.Close()
+	glog.Flush()
+	os.Exit(returnCode)
 }
