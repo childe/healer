@@ -204,6 +204,10 @@ type ProducerConfig struct {
 	// TODO
 	Retries          int   `json:"retries,string"`
 	RequestTimeoutMS int32 `json:"request.timeout.ms,string"`
+
+	// producer.AddMessage will use this config to assemble Message
+	// only 0 and 1 is implemented for now
+	HealerMagicByte int `json:"healer.magicbyte,string"`
 }
 
 func DefaultProducerConfig() *ProducerConfig {

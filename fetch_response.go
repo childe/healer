@@ -277,7 +277,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	attributes := binary.BigEndian.Uint16(buf[21:])
 	compress := attributes & 0b11
 	// lastOffsetDelta := binary.BigEndian.Uint32(buf[23:])
-	// baseTimestamp := binary.BigEndian.Uint64(buf[27:])
+	baseTimestamp := binary.BigEndian.Uint64(buf[27:])
+	glog.V(15).Infof("baseTimestamp: %d", baseTimestamp)
 	// maxTimestamp := binary.BigEndian.Uint64(buf[35:])
 	// producerID := binary.BigEndian.Uint64(buf[43:])
 	// producerEpoch := binary.BigEndian.Uint16(buf[51:])

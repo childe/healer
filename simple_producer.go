@@ -154,9 +154,12 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 
 		Crc:        0,    // compute in message encode
 		Attributes: 0x00, // compress in upper message set level
-		MagicByte:  0,
+		MagicByte:  int8(p.config.HealerMagicByte),
 		Key:        key,
 		Value:      valueCopy,
+	}
+	if p.config.HealerMagicByte == 1 {
+		message.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 	}
 	p.messageSetMutex.Lock()
 	p.messageSet = append(p.messageSet, message)
@@ -235,6 +238,9 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 			MagicByte:  0,
 			Key:        nil,
 			Value:      compressed_value,
+		}
+		if p.config.HealerMagicByte == 1 {
+			message.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 		}
 		messageSet = []*Message{message}
 	}

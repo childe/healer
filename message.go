@@ -185,6 +185,9 @@ func (messageSet *MessageSet) Length() int {
 	length := 0
 	for _, message := range *messageSet {
 		length += 26 + len(message.Key) + len(message.Value)
+		if message.MagicByte == 1 {
+			length += 8
+		}
 	}
 	return length
 }
@@ -195,7 +198,11 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 		binary.BigEndian.PutUint64(payload[offset:], uint64(message.Offset))
 		offset += 8
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(14+len(message.Key)+len(message.Value)))
+		messageLength := 14 + len(message.Key) + len(message.Value)
+		if message.MagicByte == 1 {
+			messageLength += 8
+		}
+		binary.BigEndian.PutUint32(payload[offset:], uint32(messageLength))
 		offset += 4
 
 		crcPosition := offset
@@ -206,6 +213,11 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 
 		payload[offset] = byte(message.Attributes)
 		offset++
+
+		if message.MagicByte == 1 {
+			binary.BigEndian.PutUint64(payload[offset:], message.Timestamp)
+			offset += 8
+		}
 
 		if message.Key == nil {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(i))
