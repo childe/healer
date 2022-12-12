@@ -246,7 +246,7 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 	if glog.V(10) {
 		glog.Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
 		api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
-		apiVersion := binary.BigEndian.Uint16(payload[8:])
+		apiVersion := binary.BigEndian.Uint16(payload[6:])
 		correlationID := binary.BigEndian.Uint32(payload[8:])
 		glog.Infof("request length: %d. api: %s(%d). CorrelationID: %d. timeout: %d", len(payload), api, apiVersion, correlationID, timeout)
 	}
