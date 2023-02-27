@@ -47,6 +47,9 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		stopChanForCommit: make(chan bool, 1),
 	}
 
+	if err := c.refereshPartiton(); err != nil {
+		glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
+	}
 	go func() {
 		ticker := time.NewTicker(time.Second * 60 * 1)
 		for {
