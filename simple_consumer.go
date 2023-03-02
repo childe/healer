@@ -19,7 +19,7 @@ type SimpleConsumer struct {
 	brokers      *Brokers
 	leaderBroker *Broker
 	coordinator  *Broker
-	paritition   PartitionMetadataInfo
+	partition    PartitionMetadataInfo
 	stopChan     chan struct{}
 
 	stop           bool
@@ -47,7 +47,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		stopChanForCommit: make(chan bool, 1),
 	}
 
-	if err := c.refereshPartiton(); err != nil {
+	if err := c.refreshPartiton(); err != nil {
 		glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
 	}
 	go func() {
@@ -55,7 +55,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.refereshPartiton(); err != nil {
+				if err := c.refreshPartiton(); err != nil {
 					glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
 				}
 			case <-c.stopChan:
@@ -95,7 +95,7 @@ func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) 
 	return NewSimpleConsumerWithBrokers(topic, partitionID, config, brokers), nil
 }
 
-func (c *SimpleConsumer) refereshPartiton() error {
+func (c *SimpleConsumer) refreshPartiton() error {
 	metaDataResponse, err := c.brokers.RequestMetaData(c.config.ClientID, []string{c.topic})
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (c *SimpleConsumer) refereshPartiton() error {
 	for _, topic := range metaDataResponse.TopicMetadatas {
 		for _, p := range topic.PartitionMetadatas {
 			if p.PartitionID == c.partitionID {
-				c.paritition = *p
+				c.partition = *p
 				return nil
 			}
 		}
@@ -410,7 +410,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 			for {
 				fetchWG.Add(1)
 				r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
-				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.paritition.LeaderEpoch)
+				r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
 
 				err := c.leaderBroker.requestFetchStreamingly(ctx, r, buffers)
 				if err != nil {
