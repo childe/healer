@@ -55,9 +55,10 @@ func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, 
 	}
 	fetchRequest.MaxBytes += maxBytes
 	partitionBlock := &PartitionBlock{
-		Partition:   partitionID,
-		FetchOffset: fetchOffset,
-		MaxBytes:    maxBytes,
+		Partition:          partitionID,
+		CurrentLeaderEpoch: currentLeaderEpoch,
+		FetchOffset:        fetchOffset,
+		MaxBytes:           maxBytes,
 	}
 
 	if value, ok := fetchRequest.Topics[topic]; ok {
