@@ -36,6 +36,7 @@ func init() {
 	rootCmd.AddCommand(getOffsetsCmd)
 	rootCmd.AddCommand(getMetadataCmd)
 	rootCmd.AddCommand(simpleConsumerCmd)
+	rootCmd.AddCommand(simpleProducerCmd)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
