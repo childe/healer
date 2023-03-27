@@ -23,14 +23,14 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		glog.Error(err)
 		os.Exit(1)
 	}
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("brokers", "b", "", "broker list, seperated by comma")
-	rootCmd.PersistentFlags().StringP("client", "c", "", "client name")
+	rootCmd.PersistentFlags().StringP("brokers", "b", "", "(required) broker list, seperated by comma")
+	rootCmd.MarkPersistentFlagRequired("brokers")
+	rootCmd.PersistentFlags().StringP("client", "c", "healer", "client name")
 	rootCmd.PersistentFlags().StringP("topic", "t", "", "topic name")
 
 	rootCmd.AddCommand(getOffsetsCmd)
