@@ -10,5 +10,6 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible
+	github.com/spf13/cobra v1.6.1 // indirect
 	github.com/spf13/pflag v1.0.5
 )
