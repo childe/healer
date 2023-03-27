@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -34,6 +35,9 @@ func init() {
 
 	rootCmd.AddCommand(getOffsetsCmd)
 	rootCmd.AddCommand(getMetadataCmd)
+	rootCmd.AddCommand(simpleConsumerCmd)
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	flag.Parse()
 	defer glog.Flush()
