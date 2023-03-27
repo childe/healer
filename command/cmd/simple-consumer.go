@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
-	"os/signal"
 	"strings"
 
 	"github.com/childe/healer"
@@ -56,9 +54,6 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create simple consumer: %w", err)
 	}
 
-	signalC := make(chan os.Signal, 1)
-	signal.Notify(signalC, os.Interrupt)
-
 	messages, err := simpleConsumer.Consume(offset, nil)
 	if err != nil {
 		glog.Errorf("consumer messages error: %s", err)
@@ -84,10 +79,10 @@ func run(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	getOffsetsCmd.LocalFlags().String("config", "", "XX=YY,AA=ZZ")
-	getOffsetsCmd.LocalFlags().Uint32("partition", 0, "partition id")
-	getOffsetsCmd.LocalFlags().Int64("offset", -1, "the offset to consume from, -2 which means from beginning; while value -1 means from end")
-	getOffsetsCmd.LocalFlags().Int32("max-messages", math.MaxInt32, "the number of messages to output")
-	getOffsetsCmd.LocalFlags().Int64("stopoffset", 0, "consume messages until this point")
-	getOffsetsCmd.LocalFlags().Bool("printoffset", true, "if print offset of each message")
+	simpleConsumerCmd.Flags().String("config", "", "XX=YY,AA=ZZ")
+	simpleConsumerCmd.Flags().Uint32("partition", 0, "partition id")
+	simpleConsumerCmd.Flags().Int64("offset", -1, "the offset to consume from, -2 which means from beginning; while value -1 means from end")
+	simpleConsumerCmd.Flags().Int32("max-messages", math.MaxInt32, "the number of messages to output")
+	simpleConsumerCmd.Flags().Int64("stopoffset", 0, "consume messages until this point")
+	simpleConsumerCmd.Flags().Bool("printoffset", true, "if print offset of each message")
 }
