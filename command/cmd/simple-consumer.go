@@ -18,6 +18,10 @@ var simpleConsumerCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
 		consumerConfig := map[string]interface{}{"bootstrap.servers": brokers}
+		client, err := cmd.Flags().GetString("client")
+		if client != "" {
+			consumerConfig["client.id"] = client
+		}
 		partition, err := cmd.Flags().GetInt32("partition")
 		topic, err := cmd.Flags().GetString("topic")
 		if topic == "" || err != nil {
@@ -46,7 +50,7 @@ var simpleConsumerCmd = &cobra.Command{
 
 		simpleConsumer, err := healer.NewSimpleConsumer(topic, partition, cConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create simple consumer: %w", err)
+			return fmt.Errorf("failed to generate simple consumer: %w", err)
 		}
 
 		messages, err := simpleConsumer.Consume(offset, nil)
@@ -76,7 +80,7 @@ var simpleConsumerCmd = &cobra.Command{
 }
 
 func init() {
-	simpleConsumerCmd.Flags().String("config", "", "XX=YY,AA=ZZ")
+	simpleConsumerCmd.Flags().String("config", "", "XX=YY,AA=ZZ. refer to https://github.com/childe/healer/blob/master/config.go")
 	simpleConsumerCmd.Flags().Uint32("partition", 0, "partition id")
 	simpleConsumerCmd.Flags().Int64("offset", -1, "the offset to consume from, -2 which means from beginning; while value -1 means from end")
 	simpleConsumerCmd.Flags().Int32("max-messages", math.MaxInt32, "the number of messages to output")
