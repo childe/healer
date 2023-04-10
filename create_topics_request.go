@@ -8,7 +8,7 @@ import (
 type CreateTopicsRequest struct {
 	*RequestHeader
 	CreateTopicRequests []*CreateTopicRequest
-	Timeout             int32
+	Timeout             uint32
 }
 
 // Length returns the length of bytes returned by Encode func
@@ -41,7 +41,7 @@ func (r *CreateTopicsRequest) Encode(version uint16) []byte {
 		offset += r.encode(payload[offset:])
 	}
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(r.Timeout))
+	binary.BigEndian.PutUint32(payload[offset:], r.Timeout)
 	//offset += 4
 
 	return payload
@@ -128,7 +128,7 @@ type ConfigEntry struct {
 	ConfigValue string
 }
 
-func NewCreateTopicsRequest(clientID string, timeout int32) *CreateTopicsRequest {
+func NewCreateTopicsRequest(clientID string, timeout uint32) *CreateTopicsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_CreateTopics,
 		APIVersion: 0,

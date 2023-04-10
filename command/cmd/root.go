@@ -37,6 +37,7 @@ func init() {
 	rootCmd.AddCommand(getPendingCmd)
 	rootCmd.AddCommand(simpleConsumerCmd)
 	rootCmd.AddCommand(simpleProducerCmd)
+	rootCmd.AddCommand(createTopicCmd)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
