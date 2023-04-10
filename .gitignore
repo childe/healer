@@ -4,3 +4,4 @@ target/
 vendor/
 /_vendor-*
 .idea
+/docker/healer

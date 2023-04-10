@@ -1,4 +1,4 @@
-.PHONY: all test
+.PHONY: all test docker
 
 all:
 	go build -o tools/bin/getmetadata tools/getmetadata/getmetadata.go
@@ -21,3 +21,7 @@ test:
 
 clean:
 	rm -rf tools/bin/*
+
+docker:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o docker/healer ./command
+	docker build -t healer:latest docker
