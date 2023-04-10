@@ -5,25 +5,23 @@ import (
 	"fmt"
 )
 
-// version 0
+// DescribeConfigsResponse holds the parameters of a describe-configs response.
 type DescribeConfigsResponse struct {
 	CorrelationID  uint32
 	ThrottleTimeMS uint32
-	Resources      []*DescribeConfigsResponseResource
+	Resources      []describeConfigsResponseResource
 }
 
-type DescribeConfigsResponseResource struct {
+type describeConfigsResponseResource struct {
 	ErrorCode     int16
 	ErrorMessage  string
 	ResourceType  uint8
 	ResourceName  string
-	ConfigEntries []*DescribeConfigsResponseConfigEntry
+	ConfigEntries []describeConfigsResponseConfigEntry
 }
 
-func (r *DescribeConfigsResponseResource) decode(payload []byte) (offset int) {
-	var (
-		l int
-	)
+func decodeToDescribeConfigsResponseResource(payload []byte) (r describeConfigsResponseResource, offset int) {
+	var l int
 
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
@@ -40,7 +38,7 @@ func (r *DescribeConfigsResponseResource) decode(payload []byte) (offset int) {
 	}
 
 	r.ResourceType = uint8(payload[offset])
-	offset += 1
+	offset++
 
 	l = int(int16(binary.BigEndian.Uint16(payload[offset:])))
 	offset += 2
@@ -49,19 +47,20 @@ func (r *DescribeConfigsResponseResource) decode(payload []byte) (offset int) {
 		offset += l
 	}
 
-	l = int(binary.BigEndian.Uint16(payload[offset:]))
+	count := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	r.ConfigEntries = make([]*DescribeConfigsResponseConfigEntry, l)
-	for _, c := range r.ConfigEntries {
-		c = &DescribeConfigsResponseConfigEntry{}
-		offset += c.decode(payload[offset:])
+	r.ConfigEntries = make([]describeConfigsResponseConfigEntry, count)
+	for i := range r.ConfigEntries {
+		c, o := decodeToDescribeConfigsResponseConfigEntry(payload[offset:])
+		r.ConfigEntries[i] = c
+		offset += o
 	}
 
 	return
 }
 
-type DescribeConfigsResponseConfigEntry struct {
+type describeConfigsResponseConfigEntry struct {
 	ConfigName  string
 	ConfigValue string
 	ReadOnly    bool
@@ -69,34 +68,30 @@ type DescribeConfigsResponseConfigEntry struct {
 	IsSensitive bool
 }
 
-func (c *DescribeConfigsResponseConfigEntry) decode(payload []byte) (offset int) {
-	var (
-		l int
-	)
-
-	l = int(binary.BigEndian.Uint16(payload))
+func decodeToDescribeConfigsResponseConfigEntry(payload []byte) (r describeConfigsResponseConfigEntry, offset int) {
+	l := int(binary.BigEndian.Uint16(payload))
 	offset += 2
-	c.ConfigName = string(payload[offset : offset+l])
+	r.ConfigName = string(payload[offset : offset+l])
 	offset += l
 
-	l = int(binary.BigEndian.Uint16(payload))
+	l = int(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
-	c.ConfigValue = string(payload[offset : offset+l])
+	r.ConfigValue = string(payload[offset : offset+l])
 	offset += l
 
-	c.ReadOnly = payload[offset] != 0
-	offset += 1
+	r.ReadOnly = payload[offset] != 0
+	offset++
 
-	c.IsDefault = payload[offset] != 0
-	offset += 1
+	r.IsDefault = payload[offset] != 0
+	offset++
 
-	c.IsSensitive = payload[offset] != 0
-	offset += 1
+	r.IsSensitive = payload[offset] != 0
+	offset++
 
 	return
 }
 
-// TODO only return first error
+// NewDescribeConfigsResponse creates a new DescribeConfigsResponse from the given payload
 func NewDescribeConfigsResponse(payload []byte) (*DescribeConfigsResponse, error) {
 	var (
 		err    error = nil
@@ -105,7 +100,7 @@ func NewDescribeConfigsResponse(payload []byte) (*DescribeConfigsResponse, error
 	r := &DescribeConfigsResponse{}
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("describe_config reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return nil, fmt.Errorf("describe_configs reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -118,10 +113,11 @@ func NewDescribeConfigsResponse(payload []byte) (*DescribeConfigsResponse, error
 	count := binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	r.Resources = make([]*DescribeConfigsResponseResource, count)
-	for _, r := range r.Resources {
-		r = &DescribeConfigsResponseResource{}
-		offset += r.decode(payload[offset:])
+	r.Resources = make([]describeConfigsResponseResource, count)
+	for i := range r.Resources {
+		c, o := decodeToDescribeConfigsResponseResource(payload[offset:])
+		r.Resources[i] = c
+		offset += o
 	}
 
 	return r, err

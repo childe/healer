@@ -2,12 +2,27 @@ package healer
 
 import "encoding/binary"
 
-// version0
+// ConvertConfigResourceType convert string to uint8 that's used in DescribeConfigsRequest
+func ConvertConfigResourceType(resourceType string) uint8 {
+	switch resourceType {
+	case "topic":
+		return 2
+	case "broker":
+		return 4
+	case "broker_logger":
+		return 8
+	default:
+		return 0
+	}
+}
+
+// DescribeConfigsRequest holds the request parameters for DescribeConfigsRequest
 type DescribeConfigsRequest struct {
 	*RequestHeader
 	Resources []*DescribeConfigsRequestResource
 }
 
+// DescribeConfigsRequestResource is part of DescribeConfigsRequest
 type DescribeConfigsRequestResource struct {
 	ResourceType uint8
 	ResourceName string
@@ -16,14 +31,18 @@ type DescribeConfigsRequestResource struct {
 
 func (r *DescribeConfigsRequestResource) encode(payload []byte) (offset int) {
 	payload[offset] = r.ResourceType
-	offset += 1
+	offset++
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.ResourceName)))
 	offset += 2
 
 	offset += copy(payload[offset:], r.ResourceName)
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.ConfigNames)))
+	if r.ConfigNames == nil {
+		binary.BigEndian.PutUint32(payload[offset:], 0xffffffff)
+	} else {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.ConfigNames)))
+	}
 	offset += 4
 
 	for _, configName := range r.ConfigNames {
@@ -53,7 +72,7 @@ func (r *DescribeConfigsRequest) Length() int {
 
 	l += 4
 	for _, resource := range r.Resources {
-		l += 1
+		l++
 		l += 2 + len(resource.ResourceName)
 
 		l += 4
