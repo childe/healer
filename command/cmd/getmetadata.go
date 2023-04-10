@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -11,10 +8,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
 var getMetadataCmd = &cobra.Command{
-	Use:   "getoffsets",
-	Short: "get offsets of a topic",
+	Use:   "getmetadata",
+	Short: "get metadata of a cluster. return all topics if topic is not specified",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brorkers, err := cmd.Flags().GetString("brokers")

@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -9,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -17,7 +15,6 @@ var rootCmd = &cobra.Command{
 	Short: "kafka tool. you can use it to consume and produce message, and do kafka admin job",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		print("healer here")
 	},
 }
 
@@ -31,11 +28,18 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("brokers", "b", "", "broker list, seperated by comma")
-	rootCmd.PersistentFlags().StringP("client", "c", "", "client name")
+	rootCmd.PersistentFlags().StringP("brokers", "b", "", "(required) broker list, seperated by comma")
+	rootCmd.PersistentFlags().StringP("client", "c", "healer", "client name")
 	rootCmd.PersistentFlags().StringP("topic", "t", "", "topic name")
 
 	rootCmd.AddCommand(getOffsetsCmd)
+	rootCmd.AddCommand(getMetadataCmd)
+	rootCmd.AddCommand(getPendingCmd)
+	rootCmd.AddCommand(simpleConsumerCmd)
+	rootCmd.AddCommand(simpleProducerCmd)
+	rootCmd.AddCommand(createTopicCmd)
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	flag.Parse()
 	defer glog.Flush()

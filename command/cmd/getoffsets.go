@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
 var getOffsetsCmd = &cobra.Command{
 	Use:   "getoffsets",
 	Short: "get offsets of a topic",
@@ -60,6 +56,6 @@ var getOffsetsCmd = &cobra.Command{
 }
 
 func init() {
-	getOffsetsCmd.LocalFlags().Uint32("offsets", 1, "get how many offsets")
-	getOffsetsCmd.LocalFlags().Int64("timestamp", -1, "-1(latest)/-2(earliest). timestamp of the offsets before that")
+	getOffsetsCmd.Flags().Uint32("offsets", 1, "get how many offsets")
+	getOffsetsCmd.Flags().Int64("timestamp", -1, "-1(latest)/-2(earliest). timestamp of the offsets before that")
 }

@@ -46,7 +46,7 @@ func main() {
 		os.Exit(5)
 	}
 
-	r := healer.NewCreateTopicsRequest(*clientID, int32(*timeout))
+	r := healer.NewCreateTopicsRequest(*clientID, uint32(*timeout))
 
 	replicas := make(map[int32][]int32)
 	if *replicaAssignment != "" {
