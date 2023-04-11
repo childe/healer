@@ -76,8 +76,8 @@ var createTopicCmd = &cobra.Command{
 }
 
 func init() {
-	getOffsetsCmd.Flags().Int32("partitions", -1, "The number of partitions to create in the topic, or -1 if we are either specifying a manual partition assignment or using the default partitions")
-	getOffsetsCmd.Flags().Int16("replication-factor", -1, "The number of replicas to create for each partition in the topic, or -1 if we are either specifying a manual partition assignment or using the default replication factor")
-	getOffsetsCmd.Flags().String("replica-assignment", "", "pid:[replicas],pid:[replicas]...")
-	getOffsetsCmd.Flags().Uint32("timeout", 30000, "How long to wait in milliseconds before timing out the request")
+	createTopicCmd.Flags().Int32("partitions", -1, "The number of partitions to create in the topic, or -1 if we are either specifying a manual partition assignment or using the default partitions")
+	createTopicCmd.Flags().Int16("replication-factor", -1, "The number of replicas to create for each partition in the topic, or -1 if we are either specifying a manual partition assignment or using the default replication factor")
+	createTopicCmd.Flags().String("replica-assignment", "", "pid:[replicas],pid:[replicas]...")
+	createTopicCmd.Flags().Uint32("timeout", 30000, "How long to wait in milliseconds before timing out the request")
 }
