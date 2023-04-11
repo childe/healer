@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/childe/healer"
 	"github.com/spf13/cobra"
@@ -52,7 +51,6 @@ var describeConfigsCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("(decode) describe-configs response error: %w", err)
 		}
-		log.Printf("describe-configs response: %#v", resp)
 
 		b, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(b))
