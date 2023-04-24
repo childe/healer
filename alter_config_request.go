@@ -2,19 +2,20 @@ package healer
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 // AlterConfigsRequest struct holds params in AlterConfigsRequest
 type AlterConfigsRequest struct {
 	*RequestHeader
-	Resources []*AlterConfigsRequestResource
+	Resources []AlterConfigsRequestResource
 }
 
 // AlterConfigsRequestResource is sub struct in AlterConfigsRequest
 type AlterConfigsRequestResource struct {
 	ResourceType  uint8
 	ResourceName  string
-	ConfigEntries []*AlterConfigsRequestConfigEntry
+	ConfigEntries []AlterConfigsRequestConfigEntry
 }
 
 func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
@@ -57,13 +58,47 @@ func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 }
 
 // NewAlterConfigsRequest create a new AlterConfigsRequest
-func NewAlterConfigsRequest(clientID string, resources []*AlterConfigsRequestResource) *AlterConfigsRequest {
+func NewAlterConfigsRequest(clientID string) *AlterConfigsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_AlterConfigs,
 		APIVersion: 0,
 		ClientID:   clientID,
 	}
-	return &AlterConfigsRequest{requestHeader, resources}
+	return &AlterConfigsRequest{requestHeader, nil}
+}
+
+// AddConfig add new config entry to request
+func (r *AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configName, configValue string) error {
+	for i, res := range r.Resources {
+		if res.ResourceType == res.ResourceType && res.ResourceName == resourceName {
+			for _, c := range res.ConfigEntries {
+				if c.ConfigName == configName {
+					if c.ConfigValue != c.ConfigValue {
+						return fmt.Errorf("config %s already exist with different value", configName)
+					}
+					return nil
+				}
+			}
+			e := AlterConfigsRequestConfigEntry{
+				ConfigName:  configName,
+				ConfigValue: configValue,
+			}
+			res.ConfigEntries = append(res.ConfigEntries, e)
+			r.Resources[i] = res
+			return nil
+		}
+	}
+	r.Resources = append(r.Resources, AlterConfigsRequestResource{
+		ResourceType: resourceType,
+		ResourceName: resourceName,
+		ConfigEntries: []AlterConfigsRequestConfigEntry{
+			{
+				ConfigName:  configName,
+				ConfigValue: configValue,
+			},
+		},
+	})
+	return nil
 }
 
 func (r *AlterConfigsRequest) length() int {
@@ -84,7 +119,7 @@ func (r *AlterConfigsRequest) length() int {
 }
 
 // Encode encodes AlterConfigsRequest object to []byte. it implement Request Interface
-func (r *AlterConfigsRequest) Encode() []byte {
+func (r *AlterConfigsRequest) Encode(version uint16) []byte {
 	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)

@@ -39,6 +39,7 @@ func init() {
 	rootCmd.AddCommand(simpleProducerCmd)
 	rootCmd.AddCommand(createTopicCmd)
 	rootCmd.AddCommand(describeConfigsCmd)
+	rootCmd.AddCommand(alterConfigsCmd)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
