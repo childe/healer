@@ -58,8 +58,12 @@ func getOffset(topic, client string) (map[int32]int64, error) {
 	for _, offsetsResponse := range offsetsResponses {
 		for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
 			for _, partitionOffset := range partitionOffsets {
+				if len(partitionOffset.Offsets) == 0 {
+					rst[partitionOffset.Partition] = -1
+					continue
+				}
 				if len(partitionOffset.Offsets) != 1 {
-					return nil, fmt.Errorf("%s[%d] offsets return more than 1 value", topic, partitionOffset.Partition)
+					return nil, fmt.Errorf("%s[%d] offsets length mismatch: %v", topic, partitionOffset.Partition, partitionOffset.Offsets)
 				}
 				rst[partitionOffset.Partition] = partitionOffset.Offsets[0]
 			}
@@ -245,6 +249,9 @@ var getPendingCmd = &cobra.Command{
 
 				for _, partitionID := range partitions {
 					pending := offsets[partitionID] - committedOffsets[partitionID]
+					if offsets[partitionID] == -1 {
+						pending = 0
+					}
 					offsetSum += offsets[partitionID]
 					committedSum += committedOffsets[partitionID]
 					pendingSum += pending
