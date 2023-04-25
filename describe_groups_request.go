@@ -4,20 +4,13 @@ import (
 	"encoding/binary"
 )
 
-/*
-DescribeGroups Request (Version: 0) => [group_ids]
-  group_ids => STRING
-
-FIELDDESCRIPTION
-  group_idsList of groupIds to request metadata for (an empty groupId array will return empty group metadata).
-*/
-
-// version0
+// DescribeGroupsRequest holds the parameters for the DescribeGroups request API
 type DescribeGroupsRequest struct {
 	*RequestHeader
 	Groups []string
 }
 
+// NewDescribeGroupsRequest creates a new DescribeGroupsRequest
 func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_DescribeGroups,
@@ -27,7 +20,7 @@ func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsR
 	return &DescribeGroupsRequest{requestHeader, groups}
 }
 
-func (r *DescribeGroupsRequest) Length() int {
+func (r *DescribeGroupsRequest) length() int {
 	l := r.RequestHeader.length()
 	l += 4
 	for _, group := range r.Groups {
@@ -36,8 +29,9 @@ func (r *DescribeGroupsRequest) Length() int {
 	return l
 }
 
+// Encode encodes the request into byte array, this implements the Request interface
 func (r *DescribeGroupsRequest) Encode(version uint16) []byte {
-	requestLength := r.Length()
+	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)
 	offset := 0
