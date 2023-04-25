@@ -311,7 +311,11 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 
 func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, buffers chan []byte, timeout int) error {
 	if glog.V(10) {
-		glog.Infof("request length: %d. api: %d CorrelationID: %d", len(payload), binary.BigEndian.Uint16(payload[4:]), binary.BigEndian.Uint32(payload[8:]))
+		glog.Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
+		api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
+		apiVersion := binary.BigEndian.Uint16(payload[6:])
+		correlationID := binary.BigEndian.Uint32(payload[8:])
+		glog.Infof("request length: %d. api: %s(%d). CorrelationID: %d. timeout: %d", len(payload), api, apiVersion, correlationID, timeout)
 	}
 
 	for len(payload) > 0 {
