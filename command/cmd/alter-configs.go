@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +30,7 @@ var alterConfigsCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to create crotroller broker: %w", err)
 		}
+		glog.V(5).Infof("controller: %s", controller.GetAddress())
 
 		r := healer.NewAlterConfigsRequest(client)
 		r.AddConfig(healer.ConvertConfigResourceType(resourceType), resourceName, configName, configValue)
