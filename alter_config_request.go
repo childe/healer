@@ -8,7 +8,8 @@ import (
 // AlterConfigsRequest struct holds params in AlterConfigsRequest
 type AlterConfigsRequest struct {
 	*RequestHeader
-	Resources []AlterConfigsRequestResource
+	Resources    []AlterConfigsRequestResource
+	validateOnly bool
 }
 
 // AlterConfigsRequestResource is sub struct in AlterConfigsRequest
@@ -18,7 +19,7 @@ type AlterConfigsRequestResource struct {
 	ConfigEntries []AlterConfigsRequestConfigEntry
 }
 
-func (r *AlterConfigsRequestResource) encode(payload []byte) (offset int) {
+func (r AlterConfigsRequestResource) encode(payload []byte) (offset int) {
 	payload[0] = r.ResourceType
 	offset++
 
@@ -43,7 +44,7 @@ type AlterConfigsRequestConfigEntry struct {
 	ConfigValue string
 }
 
-func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
+func (c AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(c.ConfigName)))
 	offset += 2
 
@@ -58,17 +59,22 @@ func (c *AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 }
 
 // NewAlterConfigsRequest create a new AlterConfigsRequest
-func NewAlterConfigsRequest(clientID string) *AlterConfigsRequest {
+func NewAlterConfigsRequest(clientID string) AlterConfigsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_AlterConfigs,
 		APIVersion: 0,
 		ClientID:   clientID,
 	}
-	return &AlterConfigsRequest{requestHeader, nil}
+	return AlterConfigsRequest{requestHeader, nil, false}
+}
+
+// SetValidateOnly set validateOnly in request
+func (r AlterConfigsRequest) SetValidateOnly(validateOnly bool) {
+	r.validateOnly = validateOnly
 }
 
 // AddConfig add new config entry to request
-func (r *AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configName, configValue string) error {
+func (r AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configName, configValue string) error {
 	for i, res := range r.Resources {
 		if res.ResourceType == res.ResourceType && res.ResourceName == resourceName {
 			for _, c := range res.ConfigEntries {
@@ -101,7 +107,7 @@ func (r *AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, config
 	return nil
 }
 
-func (r *AlterConfigsRequest) length() int {
+func (r AlterConfigsRequest) length() int {
 	l := r.RequestHeader.length()
 
 	l += 4
@@ -115,11 +121,12 @@ func (r *AlterConfigsRequest) length() int {
 			l += 2 + len(configEntry.ConfigValue)
 		}
 	}
+	l++
 	return l
 }
 
 // Encode encodes AlterConfigsRequest object to []byte. it implement Request Interface
-func (r *AlterConfigsRequest) Encode(version uint16) []byte {
+func (r AlterConfigsRequest) Encode(version uint16) []byte {
 	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)
@@ -137,5 +144,10 @@ func (r *AlterConfigsRequest) Encode(version uint16) []byte {
 		offset += r.encode(payload[offset:])
 	}
 
+	if r.validateOnly == true {
+		payload[offset] = 1
+	} else {
+		payload[offset] = 0
+	}
 	return payload
 }
