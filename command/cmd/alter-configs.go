@@ -32,7 +32,7 @@ var alterConfigsCmd = &cobra.Command{
 		}
 		glog.V(5).Infof("controller: %s", controller.GetAddress())
 
-		r := healer.NewAlterConfigsRequest(client)
+		r := healer.NewIncrementalAlterConfigsRequest(client)
 		r.AddConfig(healer.ConvertConfigResourceType(resourceType), resourceName, configName, configValue)
 
 		payload, err := controller.Request(r)
@@ -40,7 +40,7 @@ var alterConfigsCmd = &cobra.Command{
 			return fmt.Errorf("faild to send alter-configs request: %w", err)
 		}
 
-		resp, err := healer.NewAlterConfigsResponse(payload)
+		resp, err := healer.NewIncrementalAlterConfigsResponse(payload, 0)
 		if err != nil {
 			return fmt.Errorf("(decode) alter-configs response error: %w", err)
 		}
