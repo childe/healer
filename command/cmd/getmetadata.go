@@ -15,7 +15,7 @@ var getMetadataCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brorkers, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
-		topic, err := cmd.Flags().GetString("topic")
+		topics, err := cmd.Flags().GetStringSlice("topics")
 		format, err := cmd.Flags().GetString("format")
 
 		brokers, err := healer.NewBrokers(brorkers)
@@ -25,10 +25,10 @@ var getMetadataCmd = &cobra.Command{
 		}
 
 		var metadataResponse *healer.MetadataResponse
-		if topic == "" {
+		if topics == nil {
 			metadataResponse, err = brokers.RequestMetaData(client, nil)
 		} else {
-			metadataResponse, err = brokers.RequestMetaData(client, []string{topic})
+			metadataResponse, err = brokers.RequestMetaData(client, topics)
 		}
 
 		if err != nil {
@@ -70,4 +70,5 @@ func catResponse(metadataResponse *healer.MetadataResponse) {
 
 func init() {
 	getMetadataCmd.Flags().String("format", "json", "default is json, support json, cat")
+	getMetadataCmd.Flags().StringSlice("topics", nil, "topics")
 }
