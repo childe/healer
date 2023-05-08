@@ -25,7 +25,7 @@ var getMetadataCmd = &cobra.Command{
 		}
 
 		var metadataResponse *healer.MetadataResponse
-		if topics == nil {
+		if len(topics) == 0 {
 			metadataResponse, err = brokers.RequestMetaData(client, nil)
 		} else {
 			metadataResponse, err = brokers.RequestMetaData(client, topics)
