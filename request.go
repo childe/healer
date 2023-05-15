@@ -26,6 +26,7 @@ const (
 	API_DescribeConfigs         uint16 = 32
 	API_AlterConfigs            uint16 = 33
 	API_SaslAuthenticate        uint16 = 36
+	API_Delete_Groups           uint16 = 42
 	API_IncrementalAlterConfigs uint16 = 44
 )
 

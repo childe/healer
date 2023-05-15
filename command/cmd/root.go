@@ -41,6 +41,7 @@ func init() {
 	rootCmd.AddCommand(describeConfigsCmd)
 	rootCmd.AddCommand(alterConfigsCmd)
 	rootCmd.AddCommand(describeGroupsCmd)
+	rootCmd.AddCommand(deleteGroupsCmd)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
