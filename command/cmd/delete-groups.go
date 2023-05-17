@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
@@ -22,22 +23,35 @@ var deleteGroupsCmd = &cobra.Command{
 			return fmt.Errorf("failed to get offsets: %w", err)
 		}
 
-		req := healer.NewDeleteGroupsRequest(client, groups)
-		respBody, err := brokers.Request(req)
-		if err != nil {
-			return fmt.Errorf("failed to request delete_groups: %w", err)
-		}
-		resp, err := healer.NewDeleteGroupsResponse(respBody)
+		for _, group := range groups {
+			coordinatorResponse, err := brokers.FindCoordinator(client, group)
+			if err != nil {
+				return err
+			}
 
-		if err != nil {
-			return fmt.Errorf("failed to get delete_groups response: %w", err)
-		}
+			coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+			if err != nil {
+				return err
+			}
+			glog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
 
-		s, err := json.MarshalIndent(resp, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal delete_groups response: %w", err)
+			req := healer.NewDeleteGroupsRequest(client, groups)
+			respBody, err := coordinator.Request(req)
+			if err != nil {
+				return fmt.Errorf("failed to request delete_groups: %w", err)
+			}
+			resp, err := healer.NewDeleteGroupsResponse(respBody)
+
+			if err != nil {
+				return fmt.Errorf("failed to get delete_groups response: %w", err)
+			}
+
+			s, err := json.MarshalIndent(resp, "", "  ")
+			if err != nil {
+				return fmt.Errorf("failed to marshal delete_groups response: %w", err)
+			}
+			fmt.Println(string(s))
 		}
-		fmt.Println(string(s))
 
 		return nil
 	},
