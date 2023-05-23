@@ -15,8 +15,12 @@ type Coordinator struct {
 // FindCoordinatorResponse is the response of findcoordinator request, including correlationID, errorCode, coordinator
 type FindCoordinatorResponse struct {
 	CorrelationID uint32
-	ErrorCode     uint16
+	ErrorCode     int16
 	Coordinator   Coordinator
+}
+
+func (r FindCoordinatorResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
 }
 
 // NewFindCoordinatorResponse create a NewFindCoordinatorResponse instance from response payload bytes
@@ -32,7 +36,7 @@ func NewFindCoordinatorResponse(payload []byte, version uint16) (*FindCoordinato
 	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	r.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
 	r.Coordinator.NodeID = int32(binary.BigEndian.Uint32(payload[offset:]))

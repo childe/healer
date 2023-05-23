@@ -2,24 +2,23 @@ package healer
 
 import "encoding/binary"
 
-type ApiVersionsRequest struct {
+type APIVersionsRequest struct {
 	*RequestHeader
 }
 
-func NewApiVersionsRequest(apiVersion uint16, clientID string) Request {
+func NewApiVersionsRequest(clientID string) Request {
 	requestHeader := &RequestHeader{
-		APIKey:     API_ApiVersions,
-		APIVersion: apiVersion,
-		ClientID:   clientID,
+		APIKey:   API_ApiVersions,
+		ClientID: clientID,
 	}
 
-	return &ApiVersionsRequest{
+	return &APIVersionsRequest{
 		RequestHeader: requestHeader,
 	}
 }
 
 // Encode encodes ApiVersionsRequest to []byte
-func (req *ApiVersionsRequest) Encode(version uint16) []byte {
+func (req *APIVersionsRequest) Encode(version uint16) []byte {
 	payload := make([]byte, req.RequestHeader.length()+4)
 	offset := 0
 

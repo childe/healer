@@ -216,7 +216,7 @@ func (c *SimpleConsumer) getCommitedOffet() {
 	r.AddPartiton(c.topic, c.partitionID)
 
 	var (
-		res         *OffsetFetchResponse
+		res         OffsetFetchResponse
 		coordinator *Broker
 	)
 
@@ -227,18 +227,19 @@ func (c *SimpleConsumer) getCommitedOffet() {
 	}
 
 	for {
-		response, err := coordinator.Request(r)
+		rp, err := coordinator.Request(r)
 		if err != nil {
 			glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
 			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 
-		res, err = NewOffsetFetchResponse(response)
+		resp, err := rp.ReadAndParse()
 		if err != nil {
-			glog.Errorf("decode offset fetch response error:%s", err)
+			glog.Errorf("parse offset fetch response error: %s", err)
 			time.Sleep(500 * time.Millisecond)
 		} else {
+			res = resp.(OffsetFetchResponse)
 			break
 		}
 	}
@@ -281,15 +282,14 @@ func (c *SimpleConsumer) commitOffset() bool {
 	offsetComimtReq.SetRetentionTime(-1)
 	offsetComimtReq.AddPartiton(c.topic, c.partitionID, c.offset, "")
 
-	payload, err := c.coordinator.Request(offsetComimtReq)
+	rp, err := c.coordinator.Request(offsetComimtReq)
 	if err == nil {
-		_, err := NewOffsetCommitResponse(payload)
+		_, err := rp.ReadAndParse()
 		if err == nil {
 			glog.V(5).Infof("commit offset %s [%s][%d]:%d", c.config.GroupID, c.topic, c.partitionID, c.offset)
 			return true
-		} else {
-			glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
 		}
+		glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
 	} else {
 		glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
 	}

@@ -5,19 +5,14 @@ import (
 	"fmt"
 )
 
-//SyncGroup Response (Version: 0) => error_code member_assignment
-//error_code => INT16
-//member_assignment => BYTES
-
-//FIELD	DESCRIPTION
-//error_code	Response error code
-//member_assignment	null
-
-// version 0
 type SyncGroupResponse struct {
 	CorrelationID    uint32
 	ErrorCode        int16
 	MemberAssignment []byte
+}
+
+func (r SyncGroupResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
 }
 
 func NewSyncGroupResponse(payload []byte) (*SyncGroupResponse, error) {

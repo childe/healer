@@ -17,12 +17,15 @@ error_message	Response error message
 sasl_auth_bytes	SASL authentication bytes from server as defined by the SASL mechanism.
 */
 
-// version 0 & 1
 type SaslAuthenticateResponse struct {
 	CorrelationID uint32
 	ErrorCode     int16
 	ErrorMessage  string
 	SaslAuthBytes []byte
+}
+
+func (r SaslAuthenticateResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
 }
 
 func NewSaslAuthenticateResponse(payload []byte) (*SaslAuthenticateResponse, error) {

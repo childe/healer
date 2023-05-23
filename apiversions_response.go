@@ -132,40 +132,44 @@ func (k ApiKey) String() string {
 	}
 }
 
-type ApiVersion struct {
+// APIVersion holds the parameters for a API version struct in the APIVersions response
+type APIVersion struct {
 	apiKey     ApiKey
 	minVersion uint16
 	maxVersion uint16
 }
 
-// version 0
-type ApiVersionsResponse struct {
+// APIVersionsResponse holds the parameters for a APIVersions response
+type APIVersionsResponse struct {
 	CorrelationID uint32
-	ErrorCode     uint16
-	ApiVersions   []*ApiVersion
+	ErrorCode     int16
+	APIVersions   []APIVersion
 }
 
-func NewApiVersionsResponse(payload []byte) (*ApiVersionsResponse, error) {
-	apiVersionsResponse := &ApiVersionsResponse{}
+func (r APIVersionsResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
+}
+
+func newAPIVersionsResponse(payload []byte) (r APIVersionsResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("ApiVersions reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("ApiVersions reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
-	apiVersionsResponse.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
+	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	apiVersionsResponse.ErrorCode = binary.BigEndian.Uint16(payload[offset:])
+	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
 	apiVersionsCount := binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
-	apiVersionsResponse.ApiVersions = make([]*ApiVersion, apiVersionsCount)
+	r.APIVersions = make([]APIVersion, apiVersionsCount)
 
 	for i := uint32(0); i < apiVersionsCount; i++ {
-		apiVersion := &ApiVersion{}
+		apiVersion := APIVersion{}
 		apiVersion.apiKey = ApiKey(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 
@@ -175,8 +179,8 @@ func NewApiVersionsResponse(payload []byte) (*ApiVersionsResponse, error) {
 		apiVersion.maxVersion = binary.BigEndian.Uint16(payload[offset:])
 		offset += 2
 
-		apiVersionsResponse.ApiVersions[i] = apiVersion
+		r.APIVersions[i] = apiVersion
 	}
 
-	return apiVersionsResponse, nil
+	return r, nil
 }

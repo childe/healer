@@ -5,37 +5,6 @@ import (
 	"fmt"
 )
 
-/*
-DescribeGroups Response (Version: 0) => [groups]
-  groups => error_code group_id state protocol_type protocol [members]
-    error_code => INT16
-    group_id => STRING
-    state => STRING
-    protocol_type => STRING
-    protocol => STRING
-    members => member_id client_id client_host member_metadata member_assignment
-      member_id => STRING
-      client_id => STRING
-      client_host => STRING
-      member_metadata => BYTES
-      member_assignment => BYTES
-
-FIELD	DESCRIPTION
-groups	null
-error_code	Response error code
-group_id	The unique group identifier
-state	The current state of the group (one of: Dead, Stable, AwaitingSync, PreparingRebalance, or empty if there is no active group)
-protocol_type	The current group protocol type (will be empty if there is no active group)
-protocol	The current group protocol (only provided if the group is Stable)
-members	Current group members (only provided if the group is not Dead)
-member_id	The member id assigned by the group coordinator or null if joining for the first time.
-client_id	The client id used in the member's latest join group request
-client_host	The client host used in the request session corresponding to the member's join group.
-member_metadata	The metadata corresponding to the current group protocol in use (will only be present if the group is stable).
-member_assignment	The current assignment provided by the group leader (will only be present if the group is stable).
-*/
-
-// version 0
 type MemberDetail struct {
 	MemberID         string
 	ClientID         string
@@ -50,7 +19,7 @@ type GroupDetail struct {
 	State        string
 	ProtocolType string
 	Protocol     string
-	Members      []*MemberDetail
+	Members      []MemberDetail
 }
 
 type DescribeGroupsResponse struct {
@@ -58,17 +27,23 @@ type DescribeGroupsResponse struct {
 	Groups        []*GroupDetail
 }
 
-// TODO only return first error
-func NewDescribeGroupsResponse(payload []byte) (*DescribeGroupsResponse, error) {
+func (r DescribeGroupsResponse) Error() error {
+	for _, group := range r.Groups {
+		if group.ErrorCode != 0 {
+			return getErrorFromErrorCode(group.ErrorCode)
+		}
+	}
+	return nil
+}
+
+func NewDescribeGroupsResponse(payload []byte) (r DescribeGroupsResponse, err error) {
 	var (
-		err    error = nil
 		l      int
 		offset int = 0
 	)
-	r := &DescribeGroupsResponse{}
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("describeGroups reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("describeGroups reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -113,11 +88,9 @@ func NewDescribeGroupsResponse(payload []byte) (*DescribeGroupsResponse, error) 
 		memberCount := int(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 
-		group.Members = make([]*MemberDetail, memberCount)
+		group.Members = make([]MemberDetail, memberCount)
 
 		for i := range group.Members {
-			group.Members[i] = &MemberDetail{}
-
 			l = int(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
 			group.Members[i].MemberID = string(payload[offset : offset+l])

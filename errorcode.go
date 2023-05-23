@@ -26,7 +26,7 @@ func getErrorFromErrorCode(errorcode int16) error {
 }
 
 func init() {
-	for i, _ := range AllError {
+	for i := range AllError {
 		AllError[i] = &Error{
 			Errorcode: i,
 			ErrorMsg:  fmt.Sprintf("NOTDefinedYet%d", i),

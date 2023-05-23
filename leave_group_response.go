@@ -5,10 +5,13 @@ import (
 	"fmt"
 )
 
-// version 0
 type LeaveGroupResponse struct {
 	CorrelationID uint32
 	ErrorCode     int16
+}
+
+func (r LeaveGroupResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
 }
 
 func NewLeaveGroupResponse(payload []byte) (*LeaveGroupResponse, error) {

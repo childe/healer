@@ -101,7 +101,7 @@ func TestRequestApiVersions(t *testing.T) {
 		t.Log("got apiversions response")
 	}
 
-	for _, ApiVersion := range apiVersionsResponse.ApiVersions {
+	for _, ApiVersion := range apiVersionsResponse.APIVersions {
 		t.Logf("broker %s apiKey is %d, minVersion is %d, maxVersion is %d", *brokerAddress, ApiVersion.apiKey, ApiVersion.minVersion, ApiVersion.maxVersion)
 	}
 }

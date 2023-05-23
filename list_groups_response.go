@@ -28,6 +28,10 @@ type ListGroupsResponse struct {
 	Groups        []*Group
 }
 
+func (r ListGroupsResponse) Error() error {
+	return nil
+}
+
 func NewListGroupsResponse(payload []byte) (*ListGroupsResponse, error) {
 	r := &ListGroupsResponse{}
 	offset := 0

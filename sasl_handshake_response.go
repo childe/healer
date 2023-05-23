@@ -5,31 +5,14 @@ import (
 	"fmt"
 )
 
-/*
-SaslHandshake Response (Version: 0) => error_code [enabled_mechanisms]
-  error_code => INT16
-  enabled_mechanisms => STRING
-
-FIELD	DESCRIPTION
-error_code	Response error code
-enabled_mechanisms	Array of mechanisms enabled in the server.
-
-=== === === ===
-
-SaslHandshake Response (Version: 1) => error_code [enabled_mechanisms]
-  error_code => INT16
-  enabled_mechanisms => STRING
-
-FIELD	DESCRIPTION
-error_code	Response error code
-enabled_mechanisms	Array of mechanisms enabled in the server.
-*/
-
-// version 0 & 1
 type SaslHandshakeResponse struct {
 	CorrelationID     uint32
 	ErrorCode         int16
 	EnabledMechanisms []string
+}
+
+func (r SaslHandshakeResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
 }
 
 func NewSaslHandshakeResponse(payload []byte) (*SaslHandshakeResponse, error) {

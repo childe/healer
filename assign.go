@@ -8,7 +8,7 @@ import (
 
 type AssignmentStrategy interface {
 	// generally topicMetadatas is returned by metaDataRequest sent by GroupConsumer
-	Assign([]*Member, []*TopicMetadata) GroupAssignment
+	Assign([]Member, []TopicMetadata) GroupAssignment
 }
 
 type RangeAssignmentStrategy struct {
@@ -85,8 +85,7 @@ func (a ByMemberID) Len() int           { return len(a) }
 func (a ByMemberID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByMemberID) Less(i, j int) bool { return a[i] < a[j] }
 
-func (r *RangeAssignmentStrategy) Assign(
-	members []*Member, topicMetadatas []*TopicMetadata) GroupAssignment {
+func (r *RangeAssignmentStrategy) Assign(members []Member, topicMetadatas []TopicMetadata) GroupAssignment {
 
 	topicPartitionsAssignments := make(map[string]map[string][]int32)
 	for _, topicMetadata := range topicMetadatas {

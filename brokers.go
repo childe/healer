@@ -77,7 +77,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 
 	topics := make([]string, 0)
 	metadataResponse, err := broker.requestMetaData(clientID, topics)
-	if metadataResponse == nil || metadataResponse.Brokers == nil {
+	if len(metadataResponse.Brokers) == 0 {
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 		}
 
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
-		if metadataResponse == nil || metadataResponse.Brokers == nil {
+		if len(metadataResponse.Brokers) == 0 {
 			glog.Errorf("request metadata error: %s", err)
 			broker.Close()
 			continue
@@ -150,7 +150,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 		}
 
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
-		if metadataResponse == nil || metadataResponse.Brokers == nil {
+		if len(metadataResponse.Brokers) == 0 {
 			glog.Errorf("request metadata error: %s", err)
 			continue
 		}
@@ -252,35 +252,32 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	}
 }
 
-func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
-	var (
-		metadataResponse *MetadataResponse
-	)
+func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (r MetadataResponse, err error) {
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			glog.Infof("get broker from %s:%d error: %s", brokerInfo.Host, brokerInfo.Port, err)
 			continue
 		}
-		metadataResponse, err = broker.requestMetaData(clientID, topics)
+		r, err = broker.requestMetaData(clientID, topics)
 
 		if err == nil {
-			return metadataResponse, nil
+			return r, nil
 		}
 
 		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
 		if "*healer.Error" == reflect.TypeOf(err).String() && !err.(*Error).Retriable {
-			return metadataResponse, err
+			return r, err
 		}
 
 		time.Sleep(time.Millisecond * 200)
 	}
 
-	return metadataResponse, &noAvaliableBrokers
+	return r, &noAvaliableBrokers
 }
 
 // RequestOffsets return the offset values array. return all partitions if partitionID < 0
-func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32, timeValue int64, offsets uint32) ([]*OffsetsResponse, error) {
+func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32, timeValue int64, offsets uint32) ([]OffsetsResponse, error) {
 	// have to find which leader own the partition by request metadata
 	// TODO cache
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
@@ -301,7 +298,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 					if err != nil {
 						return nil, err
 					} else {
-						return []*OffsetsResponse{offsetsResponse}, nil
+						return []OffsetsResponse{offsetsResponse}, nil
 					}
 				}
 			}
@@ -318,7 +315,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 			}
 		}
 
-		rst := make([]*OffsetsResponse, 0)
+		rst := make([]OffsetsResponse, 0)
 		for leaderID, partitionIDs := range offsetsRequestsMapping {
 			if leader, err := brokers.GetBroker(leaderID); err != nil {
 				return nil, fmt.Errorf("could not find leader of %s[%v]:%s", topic, partitionIDs, err)
@@ -349,69 +346,40 @@ func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (i
 	return -1, fmt.Errorf("could not find out leader of topic %s", topic)
 }
 
-//func (brokers *Brokers) RequestListGroups(clientID string) (*ListGroupsResponse, error) {
-//for _, brokerInfo := range brokers.brokersInfo {
-//broker, err := brokers.GetBroker(brokerInfo.NodeId)
-//if err != nil {
-//continue
-//}
-//response, err := broker.requestListGroups(clientID)
-//if err != nil {
-//glog.Infof("could not get metadata from %s:%s", broker.address, err)
-//} else {
-//return response, nil
-//}
-//}
-
-//return nil, fmt.Errorf("could not list groups from all brokers")
-//}
-
-func (brokers *Brokers) FindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
+func (brokers *Brokers) FindCoordinator(clientID, groupID string) (r FindCoordinatorResponse, err error) {
+	var broker *Broker
 	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeID)
+		broker, err = brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			glog.Errorf("get broker[%d] error:%s", brokerInfo.NodeID, err)
 			continue
 		}
-		response, err := broker.findCoordinator(clientID, groupID)
+		r, err = broker.findCoordinator(clientID, groupID)
 		if err != nil {
 			glog.Errorf("could not find coordinator from %s:%s", broker.address, err)
 		} else {
-			return response, nil
+			return
 		}
 	}
 
-	return nil, fmt.Errorf("could not find coordinator from all brokers")
+	return FindCoordinatorResponse{}, fmt.Errorf("could not find coordinator from all brokers")
 }
 
-func (brokers *Brokers) RequestDescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
+func (brokers *Brokers) Request(req Request) (Response, error) {
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			continue
 		}
-		response, err := broker.requestDescribeGroups(clientID, groups)
-		if err != nil {
-			glog.Infof("post describe groups request from %s error:%s", broker.address, err)
-		} else {
-			return response, nil
-		}
-	}
-
-	return nil, fmt.Errorf("could not describe groups from all brokers")
-}
-
-func (brokers *Brokers) Request(req Request) ([]byte, error) {
-	for _, brokerInfo := range brokers.brokersInfo {
-		broker, err := brokers.GetBroker(brokerInfo.NodeID)
+		rp, err := broker.Request(req)
 		if err != nil {
 			continue
 		}
-		response, err := broker.Request(req)
+		resp, err := rp.ReadAndParse()
 		if err != nil {
-			glog.Infof("post request[%d] from %s error:%s", req.API(), broker.address, err)
+			continue
 		} else {
-			return response, nil
+			return resp, err
 		}
 	}
 

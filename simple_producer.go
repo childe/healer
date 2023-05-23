@@ -248,12 +248,12 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
 
-	responseBuf, err := p.leader.Request(produceRequest)
+	rp, err := p.leader.RequestAndGet(produceRequest)
 	if err != nil {
 		glog.Errorf("produce request error: %s", err)
 		return err
 	}
-	response, err := NewProduceResponse(responseBuf)
+	response := rp.(ProduceResponse)
 	if glog.V(10) {
 		b, _ := json.Marshal(response)
 		glog.Infof("produces response: %s", b)

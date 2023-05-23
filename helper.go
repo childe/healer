@@ -4,7 +4,7 @@ import "github.com/golang/glog"
 
 type MetaInfo struct {
 	brokers        []*BrokerInfo
-	topicMetadatas []*TopicMetadata
+	topicMetadatas []TopicMetadata
 	//groups         []string
 }
 
@@ -55,18 +55,6 @@ func (h *Helper) UpdateMeta() error {
 }
 
 func (h *Helper) GetGroups() []string {
-	//if h.metaInfo.groups != nil {
-	//return h.metaInfo.groups
-	//}
-
-	//if h.metaInfo.brokers == nil {
-	//err := h.UpdateMeta()
-	//if err != nil {
-	//glog.Errorf("update meta error:%s", err)
-	//return nil
-	//}
-	//}
-
 	err := h.UpdateMeta()
 	if err != nil {
 		glog.Errorf("update meta error:%s", err)

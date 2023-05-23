@@ -13,7 +13,7 @@ type Consumer struct {
 	config *ConsumerConfig
 
 	brokers *Brokers
-	closed bool
+	closed  bool
 
 	simpleConsumers []*SimpleConsumer
 	wg              sync.WaitGroup // wg is used to tell if all consumer has already stopped
@@ -61,7 +61,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 	}
 
 	var (
-		metadataResponse *MetadataResponse = nil
+		metadataResponse MetadataResponse
 		err              error
 		topics           []string = make([]string, 0)
 	)
@@ -77,8 +77,8 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 			break
 		}
 	}
-	if c.closed{
-		return nil,nil
+	if c.closed {
+		return nil, nil
 	}
 
 	c.simpleConsumers = make([]*SimpleConsumer, 0)

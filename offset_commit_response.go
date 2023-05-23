@@ -27,16 +27,25 @@ type OffsetCommitResponse struct {
 	Topics        []*OffsetCommitResponseTopic
 }
 
-func NewOffsetCommitResponse(payload []byte) (*OffsetCommitResponse, error) {
+func (r OffsetCommitResponse) Error() error {
+	for _, topic := range r.Topics {
+		for _, partition := range topic.Partitions {
+			if partition.ErrorCode != 0 {
+				return getErrorFromErrorCode(partition.ErrorCode)
+			}
+		}
+	}
+	return nil
+}
+
+func NewOffsetCommitResponse(payload []byte) (r OffsetCommitResponse, err error) {
 	var (
-		r      *OffsetCommitResponse = &OffsetCommitResponse{}
-		err    error                 = nil
-		offset int                   = 0
-		l      int                   = 0
+		offset int = 0
+		l      int = 0
 	)
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("offsetcommit reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("offsetcommit reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

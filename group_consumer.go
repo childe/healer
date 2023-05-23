@@ -28,8 +28,8 @@ type GroupConsumer struct {
 	coordinator          *Broker
 	generationID         int32
 	memberID             string
-	members              []*Member        // maybe some members consume other topics , but they are in the same group
-	topicMetadatas       []*TopicMetadata // may contain some other topics which are consumed by other process with the same group
+	members              []Member        // maybe some members consume other topics , but they are in the same group
+	topicMetadatas       []TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
 	closed               bool
@@ -94,7 +94,7 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 func (c *GroupConsumer) getTopicPartitionInfo() {
 	// TODO if could not get meta, such as error 5:`There is no leader for this topic-partition as we are in the middle of a leadership election.`
 	var (
-		metaDataResponse *MetadataResponse
+		metaDataResponse MetadataResponse
 		err              error
 		_topics          = map[string]bool{}
 	)
@@ -351,15 +351,14 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 	offsetComimtReq.SetRetentionTime(-1)
 	offsetComimtReq.AddPartiton(topic, partitionID, offset, "")
 
-	payload, err := c.coordinator.Request(offsetComimtReq)
+	rp, err := c.coordinator.Request(offsetComimtReq)
 	if err == nil {
-		_, err := NewOffsetCommitResponse(payload)
+		_, err := rp.ReadAndParse()
 		if err == nil {
 			glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
 			return true
-		} else {
-			glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 		}
+		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 	} else {
 		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 	}
@@ -395,13 +394,13 @@ func (c *GroupConsumer) leave() {
 	}
 	glog.Infof("leave %s from %s", c.memberID, c.config.GroupID)
 	leaveReq := NewLeaveGroupRequest(c.config.ClientID, c.config.GroupID, c.memberID)
-	payload, err := c.coordinator.Request(leaveReq)
+	rp, err := c.coordinator.Request(leaveReq)
 	if err != nil {
 		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
 		return
 	}
 
-	_, err = NewLeaveGroupResponse(payload)
+	_, err = rp.ReadAndParse()
 	if err != nil {
 		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
 	}
@@ -548,7 +547,7 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool) (chan *FullM
 }
 
 // return true if same
-func ifTopicMetadatasSame(a []*TopicMetadata, b []*TopicMetadata) bool {
+func ifTopicMetadatasSame(a []TopicMetadata, b []TopicMetadata) bool {
 	if a == nil && b == nil {
 		return true
 	}

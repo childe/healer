@@ -21,7 +21,7 @@ type Broker struct {
 	nodeID  int32
 
 	conn        net.Conn
-	apiVersions []*ApiVersion
+	apiVersions []APIVersion
 
 	correlationID uint32
 
@@ -62,11 +62,11 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 
 	if config.KafkaVersion == "" || compareKafkaVersion(config.KafkaVersion, "0.10.0.0") >= 0 {
 		clientID := "healer-init"
-		apiVersionsResponse, err := broker.requestApiVersions(clientID)
+		apiVersionsResponse, err := broker.requestAPIVersions(clientID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
 		}
-		broker.apiVersions = apiVersionsResponse.ApiVersions
+		broker.apiVersions = apiVersionsResponse.APIVersions
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal api versions when init broker: %s", err)
 		}
@@ -166,20 +166,17 @@ func (broker *Broker) sendSaslAuthenticate() error {
 
 	payload = saslHandShakeRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate))
 
-	timeout := broker.config.TimeoutMS
-	payload, err = broker.request(saslHandShakeRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate)), timeout)
+	rp, err := broker.Request(saslHandShakeRequest)
 	if err != nil {
 		return err
 	}
-
-	_, err = NewSaslHandshakeResponse(payload)
-	if err != nil {
+	if _, err = rp.ReadAndParse(); err != nil {
 		return err
 	}
 
 	// authenticate
 	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	payload, err = broker.request(saslAuthenticateRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate)), timeout)
+	rp, err = broker.Request(saslAuthenticateRequest)
 	if err != nil {
 		return err
 	}
@@ -225,6 +222,7 @@ func (broker *Broker) ensureOpen() error {
 	return nil
 }
 
+// Request sends a request to the broker and returns a readParser
 func (broker *Broker) Request(r Request) (readParser, error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
@@ -240,7 +238,21 @@ func (broker *Broker) Request(r Request) (readParser, error) {
 		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
 	}
 	version := broker.getHighestAvailableAPIVersion(r.API())
-	return broker.request(r.Encode(version), timeout, version)
+	rp, err := broker.request(r.Encode(version), timeout, version)
+	if err != nil {
+		return nil, fmt.Errorf("requst of %d(%d) to %s error: %w", r.API(), version, broker.GetAddress(), err)
+	}
+
+	return rp, err
+}
+
+// RequestAndGet sends a request to the broker and returns the response
+func (broker *Broker) RequestAndGet(r Request) (Response, error) {
+	if rp, err := broker.Request(r); err != nil {
+		return nil, err
+	} else {
+		return rp.ReadAndParse()
+	}
 }
 
 func (broker *Broker) request(payload []byte, timeout int, version uint16) (readParser, error) {
@@ -357,85 +369,60 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 	}
 }
 
-func (broker *Broker) requestApiVersions(clientID string) (*ApiVersionsResponse, error) {
-	// TODO should always use v0?
-	apiVersionRequest := NewApiVersionsRequest(0, clientID)
-	response, err := broker.Request(apiVersionRequest)
+func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse, err error) {
+	apiVersionRequest := NewApiVersionsRequest(clientID)
+	rp, err := broker.Request(apiVersionRequest)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-	apiVersionsResponse, err := NewApiVersionsResponse(response)
+	resp, err := rp.ReadAndParse()
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-	return apiVersionsResponse, nil
+	return resp.(APIVersionsResponse), nil
 }
 
-func (broker *Broker) requestListGroups(clientID string) (*ListGroupsResponse, error) {
+func (broker *Broker) requestListGroups(clientID string) (r ListGroupsResponse, err error) {
 	request := NewListGroupsRequest(clientID)
 
-	responseBuf, err := broker.Request(request)
+	rp, err := broker.Request(request)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	listGroupsResponse, err := NewListGroupsResponse(responseBuf)
+	resp, err := rp.ReadAndParse()
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	//TODO error info in the response
-	return listGroupsResponse, nil
+	return resp.(ListGroupsResponse), nil
 }
 
-// requestMetaData use highest available APIVersion, but at least v1, because v0 doesn't return controller_id
-// controller is needed to create topic etc.
-func (broker *Broker) requestMetaData(clientID string, topics []string) (*MetadataResponse, error) {
-	var version uint16 = broker.getHighestAvailableAPIVersion(API_MetadataRequest)
-	if version == 0 {
-		version = 1
-	}
+func (broker *Broker) requestMetaData(clientID string, topics []string) (r MetadataResponse, err error) {
+	version := broker.getHighestAvailableAPIVersion(API_MetadataRequest)
 	metadataRequest := NewMetadataRequest(clientID, version, topics)
 
-	responseBuf, err := broker.Request(metadataRequest)
+	rp, err := broker.Request(metadataRequest)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-
-	return NewMetadataResponse(responseBuf, version)
+	resp, err := rp.ReadAndParse()
+	return resp.(MetadataResponse), err
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
-func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int32, timeValue int64, offsets uint32) (*OffsetsResponse, error) {
+func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int32, timeValue int64, offsets uint32) (r OffsetsResponse, err error) {
 	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, clientID)
 
-	responseBuf, err := broker.Request(offsetsRequest)
+	rp, err := broker.Request(offsetsRequest)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-
-	offsetsResponse, err := NewOffsetsResponse(responseBuf)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-
-	return offsetsResponse, nil
-}
-
-func (broker *Broker) requestFindCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
-	findCoordinatorRequest := NewFindCoordinatorRequest(clientID, groupID)
-
-	responseBuf, err := broker.Request(findCoordinatorRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	findCoordinatorResponse, err := NewFindCoordinatorResponse(responseBuf, broker.getHighestAvailableAPIVersion(API_FindCoordinator))
-	if err != nil {
-		return nil, err
-	}
-
-	return findCoordinatorResponse, nil
+	resp, err := rp.ReadAndParse()
+	return resp.(OffsetsResponse), err
 }
 
 func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest, buffers chan []byte) (err error) {
@@ -464,17 +451,21 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 	return broker.requestStreamingly(ctx, payload, buffers, timeout)
 }
 
-func (broker *Broker) findCoordinator(clientID, groupID string) (*FindCoordinatorResponse, error) {
+func (broker *Broker) findCoordinator(clientID, groupID string) (r FindCoordinatorResponse, err error) {
 	request := NewFindCoordinatorRequest(clientID, groupID)
 
-	responseBytes, err := broker.Request(request)
+	rp, err := broker.Request(request)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-	return NewFindCoordinatorResponse(responseBytes, broker.getHighestAvailableAPIVersion(API_FindCoordinator))
+	resp, err := rp.ReadAndParse()
+	if err != nil {
+		return r, err
+	}
+	return resp.(FindCoordinatorResponse), nil
 }
 
-func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (*JoinGroupResponse, error) {
+func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (r JoinGroupResponse, err error) {
 	joinGroupRequest := NewJoinGroupRequest(1, clientID)
 	joinGroupRequest.GroupID = groupID
 	joinGroupRequest.SessionTimeout = sessionTimeoutMS
@@ -484,43 +475,47 @@ func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutM
 	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 	joinGroupRequest.GroupProtocols = gps
 
-	responseBytes, err := broker.Request(joinGroupRequest)
+	rp, err := broker.Request(joinGroupRequest)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	return NewJoinGroupResponse(responseBytes)
-}
-
-func (broker *Broker) requestDescribeGroups(clientID string, groups []string) (*DescribeGroupsResponse, error) {
-	req := NewDescribeGroupsRequest(clientID, groups)
-
-	responseBytes, err := broker.Request(req)
+	resp, err := rp.ReadAndParse()
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	return NewDescribeGroupsResponse(responseBytes)
+	return resp.(JoinGroupResponse), nil
 }
 
-func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string, groupAssignment GroupAssignment) (*SyncGroupResponse, error) {
+func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string, groupAssignment GroupAssignment) (r SyncGroupResponse, err error) {
 	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, groupAssignment)
 
-	responseBytes, err := broker.Request(syncGroupRequest)
+	rp, err := broker.Request(syncGroupRequest)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	return NewSyncGroupResponse(responseBytes)
+	resp, err := rp.ReadAndParse()
+	if err != nil {
+		return r, err
+	}
+
+	return resp.(SyncGroupResponse), nil
 }
 
-func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID int32, memberID string) (*HeartbeatResponse, error) {
-	r := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
+func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID int32, memberID string) (r HeartbeatResponse, err error) {
+	req := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
-	responseBytes, err := broker.Request(r)
+	rp, err := broker.Request(req)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	return NewHeartbeatResponse(responseBytes)
+	resp, err := rp.ReadAndParse()
+	if err != nil {
+		return r, err
+	}
+
+	return resp.(HeartbeatResponse), nil
 }

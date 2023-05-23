@@ -5,27 +5,6 @@ import (
 	"fmt"
 )
 
-/*
-OffsetFetch Response (Version: 0) => [responses]
-  responses => topic [partition_responses]
-    topic => STRING
-    partition_responses => partition offset metadata error_code
-      partition => INT32
-      offset => INT64
-      metadata => NULLABLE_STRING
-      error_code => INT16
-
-
-FIELD	DESCRIPTION
-responses	null
-topic	Name of topic
-partition_responses	null
-partition	Topic partition id
-offset	Last committed message offset.
-metadata	Any associated metadata the client wants to keep.
-error_code	Response error code
-*/
-
 type OffsetFetchResponsePartition struct {
 	PartitionID int32
 	Offset      int64
@@ -41,6 +20,17 @@ type OffsetFetchResponseTopic struct {
 type OffsetFetchResponse struct {
 	CorrelationID uint32
 	Topics        []*OffsetFetchResponseTopic
+}
+
+func (r OffsetFetchResponse) Error() error {
+	for _, topic := range r.Topics {
+		for _, partition := range topic.Partitions {
+			if partition.ErrorCode != 0 {
+				return fmt.Errorf("offsetfetch response error of %s-%d: %w", topic.Topic, partition.PartitionID, getErrorFromErrorCode(partition.ErrorCode))
+			}
+		}
+	}
+	return nil
 }
 
 func NewOffsetFetchResponse(payload []byte) (*OffsetFetchResponse, error) {

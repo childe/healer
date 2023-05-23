@@ -37,16 +37,18 @@ type JoinGroupResponse struct {
 	GroupProtocol string
 	LeaderID      string
 	MemberID      string
-	Members       []*Member
+	Members       []Member
 }
 
-func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
-	var err error = nil
-	r := &JoinGroupResponse{}
+func (r JoinGroupResponse) Error() error {
+	return getErrorFromErrorCode(r.ErrorCode)
+}
+
+func NewJoinGroupResponse(payload []byte) (r JoinGroupResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("joingroup reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("joingroup reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -82,9 +84,8 @@ func NewJoinGroupResponse(payload []byte) (*JoinGroupResponse, error) {
 
 	membersLength := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	r.Members = make([]*Member, membersLength)
+	r.Members = make([]Member, membersLength)
 	for i := 0; i < membersLength; i++ {
-		r.Members[i] = &Member{}
 		l := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 		r.Members[i].MemberID = string(payload[offset : offset+l])

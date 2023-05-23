@@ -16,7 +16,7 @@ type Producer struct {
 	currentProducer    *SimpleProducer
 	currentPartitionID int32
 	brokers            *Brokers
-	topicMeta          *TopicMetadata
+	topicMeta          TopicMetadata
 }
 
 func NewProducer(topic string, config *ProducerConfig) *Producer {

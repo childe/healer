@@ -18,7 +18,12 @@ type MetadataResponse struct {
 	Brokers        []*BrokerInfo
 	ClusterID      string
 	ControllerID   int32
-	TopicMetadatas []*TopicMetadata
+	TopicMetadatas []TopicMetadata
+}
+
+// Error returns the error abstracted from the error code, actually it always returns nil
+func (r MetadataResponse) Error() error {
+	return nil
 }
 
 // BrokerInfo holds all the parameters of broker info, which is used in metadata response
@@ -128,66 +133,64 @@ func decodeToPartitionMetadataInfo(payload []byte, version uint16) (p PartitionM
 }
 
 // NewMetadataResponse decodes a byte slice into a MetadataResponse object.
-func NewMetadataResponse(payload []byte, version uint16) (*MetadataResponse, error) {
+func NewMetadataResponse(payload []byte, version uint16) (r MetadataResponse, err error) {
 	var (
-		err              error
-		metadataResponse = &MetadataResponse{}
-		offset           = 0
+		offset = 0
 	)
 
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("MetadataResponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("MetadataResponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
-	metadataResponse.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
+	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
 	if version == 7 {
-		metadataResponse.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
+		r.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 	}
 
 	// Encode Brokers
 	brokersCount := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	metadataResponse.Brokers = make([]*BrokerInfo, brokersCount)
+	r.Brokers = make([]*BrokerInfo, brokersCount)
 	for i := 0; i < brokersCount; i++ {
 		b, o := decodeToBrokerInfo(payload[offset:], 0)
-		metadataResponse.Brokers[i] = &b
+		r.Brokers[i] = &b
 		offset += o
 	}
 
 	if version == 7 {
 		l := int(binary.BigEndian.Uint16(payload[offset:]))
-		metadataResponse.ClusterID = string(payload[offset : offset+l])
+		r.ClusterID = string(payload[offset : offset+l])
 		offset += 2 + l
 	}
 	// ControllerID
-	metadataResponse.ControllerID = int32(binary.BigEndian.Uint32(payload[offset:]))
+	r.ControllerID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
 	// Encode TopicMetadatas
 	topicMetadatasCount := uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	metadataResponse.TopicMetadatas = make([]*TopicMetadata, topicMetadatasCount)
+	r.TopicMetadatas = make([]TopicMetadata, topicMetadatasCount)
 	for i := uint32(0); i < topicMetadatasCount; i++ {
 		tm, o := decodeToTopicMetadata(payload[offset:], version)
-		metadataResponse.TopicMetadatas[i] = &tm
+		r.TopicMetadatas[i] = tm
 		offset += o
 	}
 	//end encode TopicMetadatas
 
 	// sort by TopicName & PartitionID
-	sort.Slice(metadataResponse.TopicMetadatas, func(i, j int) bool {
-		return metadataResponse.TopicMetadatas[i].TopicName < metadataResponse.TopicMetadatas[j].TopicName
+	sort.Slice(r.TopicMetadatas, func(i, j int) bool {
+		return r.TopicMetadatas[i].TopicName < r.TopicMetadatas[j].TopicName
 	})
-	for _, p := range metadataResponse.TopicMetadatas {
+	for _, p := range r.TopicMetadatas {
 		sort.Slice(p.PartitionMetadatas, func(i, j int) bool {
 			return p.PartitionMetadatas[i].PartitionID < p.PartitionMetadatas[j].PartitionID
 		})
 	}
 
-	return metadataResponse, err
+	return r, err
 }
