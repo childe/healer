@@ -81,7 +81,7 @@ var simpleConsumerCmd = &cobra.Command{
 
 func init() {
 	simpleConsumerCmd.Flags().String("config", "", "XX=YY,AA=ZZ. refer to https://github.com/childe/healer/blob/master/config.go")
-	simpleConsumerCmd.Flags().Uint32("partition", 0, "partition id")
+	simpleConsumerCmd.Flags().Int32("partition", 0, "partition id")
 	simpleConsumerCmd.Flags().Int64("offset", -1, "the offset to consume from, -2 which means from beginning; while value -1 means from end")
 	simpleConsumerCmd.Flags().Int32("max-messages", math.MaxInt32, "the number of messages to output")
 	simpleConsumerCmd.Flags().Int64("stopoffset", 0, "consume messages until this point")
