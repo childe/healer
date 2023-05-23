@@ -31,7 +31,7 @@ var getOffsetsCmd = &cobra.Command{
 			return fmt.Errorf("failed to get offsets: %w", err)
 		}
 
-		rst := make([]*healer.PartitionOffset, 0)
+		rst := make([]healer.PartitionOffset, 0)
 
 		for _, x := range offsetsResponse {
 			for _, partitionOffsetsList := range x.TopicPartitionOffsets {

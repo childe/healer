@@ -119,6 +119,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewDescribeGroupsResponse(data)
 	case API_SyncGroup:
 		return NewSyncGroupResponse(data)
+	case API_DescribeConfigs:
+		return NewDescribeConfigsResponse(data)
 	}
 	return nil, errors.New("unknown api")
 }

@@ -26,7 +26,6 @@ func (a By) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a By) Less(i, j int) bool { return a[i] < a[j] }
 
 func getPartitions(topic, client string) ([]int32, error) {
-	var metadataResponse *healer.MetadataResponse
 	metadataResponse, err := brokers.RequestMetaData(client, []string{topic})
 
 	if err != nil {
@@ -92,18 +91,13 @@ func getCommittedOffset(topic string, partitions []int32, groupID, client string
 		r.AddPartiton(topic, p)
 	}
 
-	response, err := groups[groupID].Request(r)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := healer.NewOffsetFetchResponse(response)
+	resp, err := groups[groupID].RequestAndGet(r)
 	if err != nil {
 		return nil, err
 	}
 
 	rst := make(map[int32]int64)
-	for _, t := range res.Topics {
+	for _, t := range resp.(healer.OffsetFetchResponse).Topics {
 		for _, p := range t.Partitions {
 			rst[p.PartitionID] = p.Offset
 		}
@@ -128,18 +122,13 @@ func getSubscriptionsInGroup(groupID, client string) (map[string]map[int32]strin
 
 	req := healer.NewDescribeGroupsRequest(client, []string{groupID})
 
-	responseBytes, err := groups[groupID].Request(req)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := healer.NewDescribeGroupsResponse(responseBytes)
+	resp, err := groups[groupID].RequestAndGet(req)
 	if err != nil {
 		return nil, err
 	}
 
 	subscriptions := make(map[string]map[int32]string)
-	for _, group := range response.Groups {
+	for _, group := range resp.(healer.DescribeGroupsResponse).Groups {
 		for _, memberDetail := range group.Members {
 			memberID := memberDetail.MemberID
 			if len(memberDetail.MemberAssignment) == 0 {

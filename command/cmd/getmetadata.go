@@ -24,7 +24,7 @@ var getMetadataCmd = &cobra.Command{
 			return fmt.Errorf("failed to get offsets: %w", err)
 		}
 
-		var metadataResponse *healer.MetadataResponse
+		var metadataResponse healer.MetadataResponse
 		if len(topics) == 0 {
 			metadataResponse, err = brokers.RequestMetaData(client, nil)
 		} else {
@@ -43,7 +43,7 @@ var getMetadataCmd = &cobra.Command{
 			}
 			fmt.Println(string(s))
 		case "cat":
-			catResponse(metadataResponse)
+			catResponse(&metadataResponse)
 		}
 
 		return nil

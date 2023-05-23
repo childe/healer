@@ -36,17 +36,12 @@ var deleteGroupsCmd = &cobra.Command{
 			glog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
 
 			req := healer.NewDeleteGroupsRequest(client, groups)
-			respBody, err := coordinator.Request(req)
+			resp, err := coordinator.RequestAndGet(req)
 			if err != nil {
 				return fmt.Errorf("failed to request delete_groups: %w", err)
 			}
-			resp, err := healer.NewDeleteGroupsResponse(respBody)
 
-			if err != nil {
-				return fmt.Errorf("failed to get delete_groups response: %w", err)
-			}
-
-			s, err := json.MarshalIndent(resp, "", "  ")
+			s, err := json.MarshalIndent(resp.(healer.DeleteGroupsResponse), "", "  ")
 			if err != nil {
 				return fmt.Errorf("failed to marshal delete_groups response: %w", err)
 			}

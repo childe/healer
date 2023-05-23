@@ -36,17 +36,12 @@ var describeGroupsCmd = &cobra.Command{
 		glog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
 
 		req := healer.NewDescribeGroupsRequest(client, []string{group})
-		respBody, err := coordinator.Request(req)
+		resp, err := coordinator.RequestAndGet(req)
 		if err != nil {
-			return fmt.Errorf("failed to request describe_groups: %w", err)
-		}
-		resp, err := healer.NewDescribeGroupsResponse(respBody)
-
-		if err != nil {
-			return fmt.Errorf("failed to get describe_groups response: %w", err)
+			return fmt.Errorf("failed to make describe_groups request: %w", err)
 		}
 
-		s, err := json.MarshalIndent(resp, "", "  ")
+		s, err := json.MarshalIndent(resp.(healer.DescribeGroupsResponse), "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal metadata response: %w", err)
 		}

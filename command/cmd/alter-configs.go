@@ -35,17 +35,12 @@ var alterConfigsCmd = &cobra.Command{
 		r := healer.NewIncrementalAlterConfigsRequest(client)
 		r.AddConfig(healer.ConvertConfigResourceType(resourceType), resourceName, configName, configValue)
 
-		payload, err := controller.Request(r)
+		resp, err := controller.RequestAndGet(r)
 		if err != nil {
 			return fmt.Errorf("faild to send alter-configs request: %w", err)
 		}
 
-		resp, err := healer.NewIncrementalAlterConfigsResponse(payload, 0)
-		if err != nil {
-			return fmt.Errorf("(decode) alter-configs response error: %w", err)
-		}
-
-		b, _ := json.MarshalIndent(resp, "", "  ")
+		b, _ := json.MarshalIndent(resp.(healer.AlterConfigsResponse), "", "  ")
 		fmt.Println(string(b))
 		return nil
 	},

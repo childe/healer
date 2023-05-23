@@ -5,11 +5,19 @@ import (
 	"fmt"
 )
 
-// version 0
 type AlterConfigsResponse struct {
 	CorrelationID  uint32
 	ThrottleTimeMS uint32
-	Resources      []*AlterConfigsResponseResource
+	Resources      []AlterConfigsResponseResource
+}
+
+func (r AlterConfigsResponse) Error() error {
+	for _, resource := range r.Resources {
+		if resource.ErrorCode != 0 {
+			return getErrorFromErrorCode(resource.ErrorCode)
+		}
+	}
+	return nil
 }
 
 type AlterConfigsResponseResource struct {
@@ -30,7 +38,7 @@ func (r *AlterConfigsResponseResource) decode(payload []byte) (resourceLength in
 	offset += l
 
 	r.ResourceType = payload[offset]
-	offset += 1
+	offset++
 
 	l = int(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
@@ -39,16 +47,13 @@ func (r *AlterConfigsResponseResource) decode(payload []byte) (resourceLength in
 	return
 }
 
-// TODO only return first error
-func NewAlterConfigsResponse(payload []byte) (*AlterConfigsResponse, error) {
+func NewAlterConfigsResponse(payload []byte) (r AlterConfigsResponse, err error) {
 	var (
-		err    error = nil
-		offset int   = 0
+		offset int = 0
 	)
-	r := &AlterConfigsResponse{}
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("alterconfig reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("alterconfig reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -61,13 +66,10 @@ func NewAlterConfigsResponse(payload []byte) (*AlterConfigsResponse, error) {
 	count := binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	r.Resources = make([]*AlterConfigsResponseResource, count)
-	for _, r := range r.Resources {
-		r = &AlterConfigsResponseResource{}
-		offset += r.decode(payload[offset:])
-		if err == nil && r.ErrorCode != 0 {
-			err = getErrorFromErrorCode(r.ErrorCode)
-		}
+	r.Resources = make([]AlterConfigsResponseResource, count)
+	for i := range r.Resources {
+		rr := &r.Resources[i]
+		offset += rr.decode(payload[offset:])
 	}
 
 	return r, err

@@ -42,17 +42,12 @@ var describeConfigsCmd = &cobra.Command{
 		}
 		r := healer.NewDescribeConfigsRequest(client, resources)
 
-		payload, err := controller.Request(r)
+		resp, err := controller.RequestAndGet(r)
 		if err != nil {
-			return fmt.Errorf("faild to send describe-configs request: %w", err)
+			return fmt.Errorf("faild to make describe-configs request: %w", err)
 		}
 
-		resp, err := healer.NewDescribeConfigsResponse(payload)
-		if err != nil {
-			return fmt.Errorf("(decode) describe-configs response error: %w", err)
-		}
-
-		b, _ := json.MarshalIndent(resp, "", "  ")
+		b, _ := json.MarshalIndent(resp.(healer.DescribeConfigsResponse), "", "  ")
 		fmt.Println(string(b))
 		return nil
 	},

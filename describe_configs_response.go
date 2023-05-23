@@ -12,6 +12,16 @@ type DescribeConfigsResponse struct {
 	Resources      []describeConfigsResponseResource
 }
 
+// FIXME: multiple error code
+func (r DescribeConfigsResponse) Error() error {
+	for _, resource := range r.Resources {
+		if resource.ErrorCode != 0 {
+			return fmt.Errorf("describe configs failed: %s", getErrorFromErrorCode(resource.ErrorCode))
+		}
+	}
+	return nil
+}
+
 type describeConfigsResponseResource struct {
 	ErrorCode     int16
 	ErrorMessage  string

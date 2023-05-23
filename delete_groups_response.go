@@ -15,6 +15,16 @@ type DeleteGroupsResponse struct {
 	} `json:"results"`
 }
 
+// FIXME: multiple error code
+func (r DeleteGroupsResponse) Error() error {
+	for _, result := range r.Results {
+		if result.ErrorCode != 0 {
+			return fmt.Errorf("delete group[%s] failed: %s", result.GroupID, getErrorFromErrorCode(result.ErrorCode))
+		}
+	}
+	return nil
+}
+
 // NewDeleteGroupsResponse creates a new DeleteGroupsResponse from []byte
 func NewDeleteGroupsResponse(payload []byte) (r DeleteGroupsResponse, err error) {
 	offset := 0

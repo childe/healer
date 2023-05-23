@@ -62,14 +62,8 @@ var createTopicCmd = &cobra.Command{
 			r.AddTopic(topic, partitions, replicationFactor)
 		}
 
-		payload, err := controller.Request(r)
-		if err != nil {
-			return fmt.Errorf("faild to send create-topic request: %w", err)
-		}
-
-		_, err = healer.NewCreateTopicsResponse(payload)
-		if err != nil {
-			return fmt.Errorf("(decode) create-topic response error: %w", err)
+		if _, err = controller.Request(r); err != nil {
+			return fmt.Errorf("faild to request create-topic: %w", err)
 		}
 		return nil
 	},
