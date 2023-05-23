@@ -225,7 +225,7 @@ func (broker *Broker) ensureOpen() error {
 	return nil
 }
 
-func (broker *Broker) Request(r Request) ([]byte, error) {
+func (broker *Broker) Request(r Request) (readParser, error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
@@ -239,10 +239,11 @@ func (broker *Broker) Request(r Request) ([]byte, error) {
 	if len(broker.config.TimeoutMSForEachAPI) > int(r.API()) {
 		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
 	}
-	return broker.request(r.Encode(broker.getHighestAvailableAPIVersion(r.API())), timeout)
+	version := broker.getHighestAvailableAPIVersion(r.API())
+	return broker.request(r.Encode(version), timeout, version)
 }
 
-func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
+func (broker *Broker) request(payload []byte, timeout int, version uint16) (readParser, error) {
 	if glog.V(10) {
 		glog.Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
 		api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
@@ -260,53 +261,12 @@ func (broker *Broker) request(payload []byte, timeout int) ([]byte, error) {
 		payload = payload[n:]
 	}
 
-	l := 0
-	responseLengthBuf := make([]byte, 4)
-	for {
-		if timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
-		}
-		length, err := broker.conn.Read(responseLengthBuf[l:])
-		if err != nil {
-			broker.Close()
-			return nil, err
-		}
-
-		if length+l == 4 {
-			break
-		}
-		l += length
+	rp := defaultReadParser{
+		version: version,
+		broker:  *broker,
+		timeout: timeout,
 	}
-
-	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	glog.V(10).Infof("response length in header: %d", responseLength+4)
-	responseBuf := make([]byte, 4+responseLength)
-
-	readLength := 0
-	for {
-		if timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
-		}
-		length, err := broker.conn.Read(responseBuf[4+readLength:])
-		if err != nil {
-			broker.Close()
-			return nil, err
-		}
-
-		readLength += length
-		if readLength > responseLength {
-			return nil, errors.New("fetch more data than needed while read response")
-		}
-		if readLength == responseLength {
-			break
-		}
-	}
-	copy(responseBuf[0:4], responseLengthBuf)
-	if glog.V(10) {
-		glog.Infof("response length: %d. CorrelationID: %d", len(responseBuf), binary.BigEndian.Uint32(responseBuf[4:]))
-	}
-
-	return responseBuf, nil
+	return rp, nil
 }
 
 func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, buffers chan []byte, timeout int) error {
