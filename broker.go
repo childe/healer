@@ -223,7 +223,7 @@ func (broker *Broker) ensureOpen() error {
 }
 
 // Request sends a request to the broker and returns a readParser
-func (broker *Broker) Request(r Request) (readParser, error) {
+func (broker *Broker) Request(r Request) (ReadParser, error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
@@ -238,10 +238,12 @@ func (broker *Broker) Request(r Request) (readParser, error) {
 		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
 	}
 	version := broker.getHighestAvailableAPIVersion(r.API())
-	rp, err := broker.request(r.Encode(version), timeout, version)
+	rp, err := broker.request(r.Encode(version), timeout)
 	if err != nil {
 		return nil, fmt.Errorf("requst of %d(%d) to %s error: %w", r.API(), version, broker.GetAddress(), err)
 	}
+	rp.version = version
+	rp.api = r.API()
 
 	return rp, err
 }
@@ -255,7 +257,7 @@ func (broker *Broker) RequestAndGet(r Request) (Response, error) {
 	}
 }
 
-func (broker *Broker) request(payload []byte, timeout int, version uint16) (readParser, error) {
+func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, error) {
 	if glog.V(10) {
 		glog.Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
 		api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
@@ -268,14 +270,13 @@ func (broker *Broker) request(payload []byte, timeout int, version uint16) (read
 		if err != nil {
 			broker.Close()
 			glog.Error(err)
-			return nil, err
+			return defaultReadParser{}, err
 		}
 		payload = payload[n:]
 	}
 
 	rp := defaultReadParser{
-		version: version,
-		broker:  *broker,
+		broker:  broker,
 		timeout: timeout,
 	}
 	return rp, nil

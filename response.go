@@ -14,15 +14,15 @@ type Response interface {
 	Error() error
 }
 
-// readParser read data from a connection of broker and parse the response
-type readParser interface {
+// ReadParser read data from a connection of broker and parse the response
+type ReadParser interface {
 	Read() ([]byte, error)
 	Parse(data []byte) (Response, error)
 	ReadAndParse() (Response, error)
 }
 
 type defaultReadParser struct {
-	broker  Broker
+	broker  *Broker
 	api     uint16
 	version uint16
 	timeout int
