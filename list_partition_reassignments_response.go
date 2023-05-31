@@ -3,8 +3,6 @@ package healer
 import (
 	"encoding/binary"
 	"fmt"
-
-	"github.com/golang/glog"
 )
 
 // ListPartitionReassignmentsResponse is a response from kafka to list partition reassignments
@@ -27,10 +25,8 @@ type listPartitionReassignmentsTopicBlock struct {
 func decodeToListPartitionReassignmentsTopicBlock(payload []byte) (r listPartitionReassignmentsTopicBlock, offset int) {
 	topicLength, o := binary.Uvarint(payload[offset:])
 	topicLength--
-	glog.Infof("topicName length: %d", topicLength)
 	offset += o
 	r.Name = string(payload[offset : offset+int(topicLength)])
-	glog.Infof("topic name: %s", r.Name)
 	offset += int(topicLength)
 
 	partitionCount, o := binary.Uvarint(payload[offset:])
@@ -110,30 +106,24 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	offset += 4
 
 	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
-	glog.Infof("ListPartitionReassignmentsResponse.CorrelationID: %d", r.CorrelationID)
 	offset += 4
 
 	r.ThrottleTimeMS = int32(binary.BigEndian.Uint32(payload[offset:]))
-	glog.Infof("ListPartitionReassignmentsResponse.ThrottleTimeMS: %d", r.ThrottleTimeMS)
 	offset += 4
 
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
-	glog.Infof("ListPartitionReassignmentsResponse.ErrorCode: %d", r.ErrorCode)
 	offset += 2
 
 	offset++ // I do not know what this byte means, always 0 , additonal byte before ErrorMessage
 
 	length, o := binary.Uvarint(payload[offset:])
 	length--
-	glog.Infof("ListPartitionReassignmentsResponse.ErrorMessage length: %d %d", length, o)
 	offset += o
 	r.ErrorMessage = string(payload[offset : offset+int(length)])
-	glog.Infof("ListPartitionReassignmentsResponse.ErrorMessage: %s", r.ErrorMessage)
 	offset += int(length)
 
 	topicCount, o := binary.Uvarint(payload[offset:])
 	topicCount--
-	glog.Infof("ListPartitionReassignmentsResponse.TopicCount: %d", topicCount)
 	offset += o
 
 	r.Topics = make([]listPartitionReassignmentsTopicBlock, topicCount)
