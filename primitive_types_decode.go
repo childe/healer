@@ -44,3 +44,9 @@ func compactBytes(payload []byte) (r []byte, offset int) {
 	r = payload[o : o+int(length)]
 	return r, o + int(length)
 }
+
+func compactArrayLength(payload []byte) (length uint64, offset int) {
+	length, offset = binary.Uvarint(payload)
+	length--
+	return
+}
