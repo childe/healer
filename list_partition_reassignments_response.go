@@ -23,19 +23,18 @@ type listPartitionReassignmentsTopicBlock struct {
 }
 
 func decodeToListPartitionReassignmentsTopicBlock(payload []byte) (r listPartitionReassignmentsTopicBlock, offset int) {
-	topicLength, o := binary.Uvarint(payload[offset:])
-	topicLength--
+	var o int
+	r.Name, o = compactString(payload[offset:])
 	offset += o
-	r.Name = string(payload[offset : offset+int(topicLength)])
-	offset += int(topicLength)
 
-	partitionCount, o := binary.Uvarint(payload[offset:])
-	partitionCount--
+	partitionCount, o := compactArrayLength(payload[offset:])
 	offset += o
-	r.Partitions = make([]listPartitionReassignmentsPartitionBlock, partitionCount)
-	for i := uint64(0); i < partitionCount; i++ {
-		r.Partitions[i], o = decodeToListPartitionReassignmentsPartitionBlock(payload[offset:])
-		offset += o
+	if partitionCount > 0 {
+		r.Partitions = make([]listPartitionReassignmentsPartitionBlock, partitionCount)
+		for i := uint64(0); i < partitionCount; i++ {
+			r.Partitions[i], o = decodeToListPartitionReassignmentsPartitionBlock(payload[offset:])
+			offset += o
+		}
 	}
 
 	_, o = binary.Uvarint(payload[offset:]) // TAG_BUFFER
@@ -49,14 +48,14 @@ type listPartitionReassignmentsPartitionBlock struct {
 	Replicas         []int32 `json:"replicas"`
 	AddingReplicas   []int32 `json:"adding_replicas"`
 	RemovingReplicas []int32 `json:"removing_replicas"`
+	// TAG_BUFFER interface{}
 }
 
 func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPartitionReassignmentsPartitionBlock, offset int) {
 	r.Pid = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	replicaCount, o := binary.Uvarint(payload[offset:])
-	replicaCount--
+	replicaCount, o := compactArrayLength(payload[offset:])
 	offset += o
 
 	if replicaCount > 0 {
@@ -67,8 +66,7 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 		}
 	}
 
-	addingReplicaCount, o := binary.Uvarint(payload[offset:])
-	addingReplicaCount--
+	addingReplicaCount, o := compactArrayLength(payload[offset:])
 	offset += o
 	if addingReplicaCount > 0 {
 		r.AddingReplicas = make([]int32, addingReplicaCount)
@@ -78,8 +76,7 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 		}
 	}
 
-	removingReplicaCount, o := binary.Uvarint(payload[offset:])
-	removingReplicaCount--
+	removingReplicaCount, o := compactArrayLength(payload[offset:])
 	offset += o
 	if removingReplicaCount > 0 {
 		r.RemovingReplicas = make([]int32, removingReplicaCount)
@@ -88,6 +85,8 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 			offset += 4
 		}
 	}
+	_, o = binary.Uvarint(payload[offset:]) // TAG_BUFFER
+	offset += o
 	return
 }
 
@@ -114,23 +113,22 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
-	offset++ // I do not know what this byte means, always 0 , additonal byte before ErrorMessage
+	offset++ // I do not know what this byte means, always 0x01 , additonal byte before ErrorMessage
 
-	length, o := binary.Uvarint(payload[offset:])
-	length--
-	offset += o
-	r.ErrorMessage = string(payload[offset : offset+int(length)])
-	offset += int(length)
-
-	topicCount, o := binary.Uvarint(payload[offset:])
-	topicCount--
+	var o int
+	r.ErrorMessage, o = compactNullableString(payload[offset:])
 	offset += o
 
-	r.Topics = make([]listPartitionReassignmentsTopicBlock, topicCount)
+	topicCount, o := compactArrayLength(payload[offset:])
+	offset += o
 
-	for i := uint64(0); i < topicCount; i++ {
-		r.Topics[i], o = decodeToListPartitionReassignmentsTopicBlock(payload[offset:])
-		offset += o
+	if topicCount > 0 {
+		r.Topics = make([]listPartitionReassignmentsTopicBlock, topicCount)
+
+		for i := uint64(0); i < topicCount; i++ {
+			r.Topics[i], o = decodeToListPartitionReassignmentsTopicBlock(payload[offset:])
+			offset += o
+		}
 	}
 
 	_, o = binary.Uvarint(payload[offset:]) // TAG_BUFFER
