@@ -121,6 +121,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewSyncGroupResponse(data)
 	case API_DescribeConfigs:
 		return NewDescribeConfigsResponse(data)
+	case API_ListPartitionReassignments:
+		return NewListPartitionReassignmentsResponse(data, p.version)
 	}
 	return nil, errors.New("unknown api")
 }

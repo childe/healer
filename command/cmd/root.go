@@ -42,6 +42,7 @@ func init() {
 	rootCmd.AddCommand(alterConfigsCmd)
 	rootCmd.AddCommand(describeGroupsCmd)
 	rootCmd.AddCommand(deleteGroupsCmd)
+	rootCmd.AddCommand(listPartitionReassignmentsCmd)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
