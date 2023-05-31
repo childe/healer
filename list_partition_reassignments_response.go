@@ -26,13 +26,15 @@ type listPartitionReassignmentsTopicBlock struct {
 
 func decodeToListPartitionReassignmentsTopicBlock(payload []byte) (r listPartitionReassignmentsTopicBlock, offset int) {
 	topicLength, o := binary.Uvarint(payload[offset:])
-	glog.Infof("topic length: %d", topicLength)
+	topicLength--
+	glog.Infof("topicName length: %d", topicLength)
 	offset += o
 	r.Name = string(payload[offset : offset+int(topicLength)])
 	glog.Infof("topic name: %s", r.Name)
 	offset += int(topicLength)
 
 	partitionCount, o := binary.Uvarint(payload[offset:])
+	partitionCount--
 	offset += o
 	r.Partitions = make([]listPartitionReassignmentsPartitionBlock, partitionCount)
 	for i := uint64(0); i < partitionCount; i++ {
@@ -57,32 +59,35 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 	r.Pid = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	replicaCount := int(binary.BigEndian.Uint32(payload[offset:]))
-	offset += 4
+	replicaCount, o := binary.Uvarint(payload[offset:])
+	replicaCount--
+	offset += o
 
 	if replicaCount > 0 {
 		r.Replicas = make([]int32, replicaCount)
-		for i := 0; i < replicaCount; i++ {
+		for i := uint64(0); i < replicaCount; i++ {
 			r.Replicas[i] = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 		}
 	}
 
-	addingReplicaCount := int(binary.BigEndian.Uint32(payload[offset:]))
-	offset += 4
+	addingReplicaCount, o := binary.Uvarint(payload[offset:])
+	addingReplicaCount--
+	offset += o
 	if addingReplicaCount > 0 {
 		r.AddingReplicas = make([]int32, addingReplicaCount)
-		for i := 0; i < addingReplicaCount; i++ {
+		for i := uint64(0); i < addingReplicaCount; i++ {
 			r.AddingReplicas[i] = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 		}
 	}
 
-	removingReplicaCount := int(binary.BigEndian.Uint32(payload[offset:]))
-	offset += 4
+	removingReplicaCount, o := binary.Uvarint(payload[offset:])
+	removingReplicaCount--
+	offset += o
 	if removingReplicaCount > 0 {
 		r.RemovingReplicas = make([]int32, removingReplicaCount)
-		for i := 0; i < removingReplicaCount; i++ {
+		for i := uint64(0); i < removingReplicaCount; i++ {
 			r.RemovingReplicas[i] = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 		}
@@ -105,7 +110,7 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	offset += 4
 
 	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
-	glog.Info(r.CorrelationID)
+	glog.Infof("ListPartitionReassignmentsResponse.CorrelationID: %d", r.CorrelationID)
 	offset += 4
 
 	r.ThrottleTimeMS = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -116,15 +121,18 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	glog.Infof("ListPartitionReassignmentsResponse.ErrorCode: %d", r.ErrorCode)
 	offset += 2
 
+	offset++ // I do not know what this byte means, always 0 , additonal byte before ErrorMessage
+
 	length, o := binary.Uvarint(payload[offset:])
-	glog.Infof("ListPartitionReassignmentsResponse.ErrorMessage length: %d", length)
-	glog.Info(o)
+	length--
+	glog.Infof("ListPartitionReassignmentsResponse.ErrorMessage length: %d %d", length, o)
 	offset += o
 	r.ErrorMessage = string(payload[offset : offset+int(length)])
 	glog.Infof("ListPartitionReassignmentsResponse.ErrorMessage: %s", r.ErrorMessage)
 	offset += int(length)
 
 	topicCount, o := binary.Uvarint(payload[offset:])
+	topicCount--
 	glog.Infof("ListPartitionReassignmentsResponse.TopicCount: %d", topicCount)
 	offset += o
 
