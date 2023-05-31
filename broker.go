@@ -187,15 +187,18 @@ func (broker *Broker) sendSaslAuthenticate() error {
 	return nil
 }
 
+// GetAddress returns the broker address
 func (broker *Broker) GetAddress() string {
 	return broker.address
 }
 
+// Close closes the connection to the broker
 func (broker *Broker) Close() {
 	broker.dead = true
 	broker.conn.Close()
 }
 
+// IsDead returns true if the broker is dead
 func (broker *Broker) IsDead() bool {
 	return broker.dead
 }
@@ -372,11 +375,7 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 
 func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse, err error) {
 	apiVersionRequest := NewApiVersionsRequest(clientID)
-	rp, err := broker.Request(apiVersionRequest)
-	if err != nil {
-		return r, err
-	}
-	resp, err := rp.ReadAndParse()
+	resp, err := broker.RequestAndGet(apiVersionRequest)
 	if err != nil {
 		return r, err
 	}
@@ -386,12 +385,7 @@ func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse
 func (broker *Broker) requestListGroups(clientID string) (r ListGroupsResponse, err error) {
 	request := NewListGroupsRequest(clientID)
 
-	rp, err := broker.Request(request)
-	if err != nil {
-		return r, err
-	}
-
-	resp, err := rp.ReadAndParse()
+	resp, err := broker.RequestAndGet(request)
 	if err != nil {
 		return r, err
 	}
@@ -403,11 +397,10 @@ func (broker *Broker) requestMetaData(clientID string, topics []string) (r Metad
 	version := broker.getHighestAvailableAPIVersion(API_MetadataRequest)
 	metadataRequest := NewMetadataRequest(clientID, version, topics)
 
-	rp, err := broker.Request(metadataRequest)
+	resp, err := broker.RequestAndGet(metadataRequest)
 	if err != nil {
 		return r, err
 	}
-	resp, err := rp.ReadAndParse()
 	return resp.(MetadataResponse), err
 }
 
@@ -415,14 +408,10 @@ func (broker *Broker) requestMetaData(clientID string, topics []string) (r Metad
 func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int32, timeValue int64, offsets uint32) (r OffsetsResponse, err error) {
 	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, clientID)
 
-	rp, err := broker.Request(offsetsRequest)
+	resp, err := broker.RequestAndGet(offsetsRequest)
 	if err != nil {
 		return r, err
 	}
-	if err != nil {
-		return r, err
-	}
-	resp, err := rp.ReadAndParse()
 	return resp.(OffsetsResponse), err
 }
 
@@ -455,11 +444,7 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 func (broker *Broker) findCoordinator(clientID, groupID string) (r FindCoordinatorResponse, err error) {
 	request := NewFindCoordinatorRequest(clientID, groupID)
 
-	rp, err := broker.Request(request)
-	if err != nil {
-		return r, err
-	}
-	resp, err := rp.ReadAndParse()
+	resp, err := broker.RequestAndGet(request)
 	if err != nil {
 		return r, err
 	}
@@ -476,12 +461,7 @@ func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutM
 	joinGroupRequest.AddGroupProtocal(&GroupProtocol{"range", []byte{}})
 	joinGroupRequest.GroupProtocols = gps
 
-	rp, err := broker.Request(joinGroupRequest)
-	if err != nil {
-		return r, err
-	}
-
-	resp, err := rp.ReadAndParse()
+	resp, err := broker.RequestAndGet(joinGroupRequest)
 	if err != nil {
 		return r, err
 	}
@@ -492,12 +472,7 @@ func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutM
 func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string, groupAssignment GroupAssignment) (r SyncGroupResponse, err error) {
 	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, groupAssignment)
 
-	rp, err := broker.Request(syncGroupRequest)
-	if err != nil {
-		return r, err
-	}
-
-	resp, err := rp.ReadAndParse()
+	resp, err := broker.RequestAndGet(syncGroupRequest)
 	if err != nil {
 		return r, err
 	}
@@ -508,12 +483,7 @@ func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID in
 func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID int32, memberID string) (r HeartbeatResponse, err error) {
 	req := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
-	rp, err := broker.Request(req)
-	if err != nil {
-		return r, err
-	}
-
-	resp, err := rp.ReadAndParse()
+	resp, err := broker.RequestAndGet(req)
 	if err != nil {
 		return r, err
 	}

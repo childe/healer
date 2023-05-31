@@ -25,6 +25,15 @@ type Brokers struct {
 	closeChan chan bool
 }
 
+// Close close all brokers
+func (brokers *Brokers) Close() {
+	brokers.closeChan <- true
+	for _, broker := range brokers.brokers {
+		broker.Close()
+	}
+}
+
+// NewBrokersWithConfig create a new broker with config
 func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Brokers, error) {
 	clientID := "healer-newbrokers"
 	for _, brokerAddr := range strings.Split(bootstrapServers, ",") {
@@ -60,6 +69,7 @@ func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Broke
 	return nil, fmt.Errorf("could not get any available broker from %s", bootstrapServers)
 }
 
+// NewBrokers create a new broker with default config
 func NewBrokers(bootstrapServers string) (*Brokers, error) {
 	return NewBrokersWithConfig(bootstrapServers, DefaultBrokerConfig())
 }
@@ -101,6 +111,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	return brokers, nil
 }
 
+// Controller return controller broker id
 func (brokers *Brokers) Controller() int32 {
 	return brokers.controllerID
 }
@@ -212,7 +223,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	}
 }
 
-// GetBroke returns random one broker if nodeID is -1
+// GetBroker returns random one broker if nodeID is -1
 func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	brokers.mutex.Lock()
 	defer brokers.mutex.Unlock()
@@ -365,17 +376,30 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (r FindCoordin
 	return FindCoordinatorResponse{}, fmt.Errorf("could not find coordinator from all brokers")
 }
 
+// ListPartitionReassignments requests ListPartitionReassignments from controller and returns response
+func (brokers *Brokers) ListPartitionReassignments(req ListPartitionReassignmentsRequest) (r ListPartitionReassignmentsResponse, err error) {
+	controller, err := brokers.GetBroker(brokers.Controller())
+	if err != nil {
+		return r, fmt.Errorf("could not create controller broker: %s", err)
+	}
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %s", err)
+	}
+	return resp.(ListPartitionReassignmentsResponse), nil
+}
+
+// Request try to do request from all brokers until get the response
 func (brokers *Brokers) Request(req Request) (Response, error) {
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
 			continue
 		}
-		rp, err := broker.Request(req)
+		resp, err := broker.RequestAndGet(req)
 		if err != nil {
 			continue
 		}
-		resp, err := rp.ReadAndParse()
 		if err != nil {
 			continue
 		} else {
@@ -384,11 +408,4 @@ func (brokers *Brokers) Request(req Request) (Response, error) {
 	}
 
 	return nil, fmt.Errorf("could not request %d from all brokers", req.API())
-}
-
-func (brokers *Brokers) Close() {
-	brokers.closeChan <- true
-	for _, broker := range brokers.brokers {
-		broker.Close()
-	}
 }
