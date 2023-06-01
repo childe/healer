@@ -24,12 +24,11 @@ func (r FindCoordinatorResponse) Error() error {
 }
 
 // NewFindCoordinatorResponse create a NewFindCoordinatorResponse instance from response payload bytes
-func NewFindCoordinatorResponse(payload []byte, version uint16) (*FindCoordinatorResponse, error) {
-	r := &FindCoordinatorResponse{}
+func NewFindCoordinatorResponse(payload []byte, version uint16) (r FindCoordinatorResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("FindCoordinator Response length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("FindCoordinator Response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
