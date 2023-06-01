@@ -319,9 +319,12 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 		// }
 		uncompressedBytesOffset += o
 		message := &Message{
-			Offset: int64(record.offsetDelta) + baseOffset,
-			Key:    record.key,
-			Value:  record.value,
+			Offset:     int64(record.offsetDelta) + baseOffset,
+			Timestamp:  uint64(record.timestampDelta) + baseTimestamp,
+			Attributes: record.attributes,
+			MagicByte:  2,
+			Key:        record.key,
+			Value:      record.value,
 		}
 		if message.Offset >= streamDecoder.startOffset {
 			streamDecoder.messages <- &FullMessage{
