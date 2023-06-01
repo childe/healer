@@ -113,7 +113,7 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
-	offset++ // I do not know what this byte means, always 0x01 , additonal byte before ErrorMessage
+	offset++ // I do not know what this byte means, always 0x01 , additonal byte after ErrorMessage and before Topics
 
 	var o int
 	r.ErrorMessage, o = compactNullableString(payload[offset:])
