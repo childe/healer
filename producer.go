@@ -45,7 +45,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		glog.Error(err)
 		return nil
 	}
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
 	p.refreshCurrentProducer()
 	if p.currentProducer == nil {
 		glog.Errorf("could not get simple producer for the topic, maybe topic does not exist")
