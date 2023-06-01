@@ -16,10 +16,10 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 		brokers, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		timeoutMS, err := cmd.Flags().GetInt32("timeout.ms")
-		topics, err := cmd.Flags().GetStringSlice("topics")
+		// topics, err := cmd.Flags().GetStringSlice("topics")
 
 		config := healer.DefaultBrokerConfig()
-		config.NetConfig.TimeoutMSForEachAPI
+		// config.NetConfig.TimeoutMSForEachAPI
 		bs, err := healer.NewBrokersWithConfig(brokers, config)
 
 		if err != nil {

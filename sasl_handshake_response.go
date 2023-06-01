@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// SaslHandshakeResponse is the response of saslhandshake request
 type SaslHandshakeResponse struct {
 	CorrelationID     uint32
 	ErrorCode         int16
@@ -15,16 +16,13 @@ func (r SaslHandshakeResponse) Error() error {
 	return getErrorFromErrorCode(r.ErrorCode)
 }
 
-func NewSaslHandshakeResponse(payload []byte) (*SaslHandshakeResponse, error) {
-	var (
-		r      = &SaslHandshakeResponse{}
-		offset = 0
-		err    error
-	)
+// NewSaslHandshakeResponse create a NewSaslHandshakeResponse instance from response payload bytes
+func NewSaslHandshakeResponse(payload []byte) (r SaslHandshakeResponse, err error) {
+	var offset = 0
 
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("SaslHandshakeResponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("SaslHandshakeResponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

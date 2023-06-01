@@ -33,16 +33,15 @@ func (r OffsetFetchResponse) Error() error {
 	return nil
 }
 
-func NewOffsetFetchResponse(payload []byte) (*OffsetFetchResponse, error) {
+func NewOffsetFetchResponse(payload []byte) (r OffsetFetchResponse, err error) {
 	var (
-		r      *OffsetFetchResponse = &OffsetFetchResponse{}
-		err    error                = nil
-		offset int                  = 0
-		l      int                  = 0
+		offset int = 0
+		l      int = 0
 	)
+
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("offsetfetch reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("offsetfetch reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

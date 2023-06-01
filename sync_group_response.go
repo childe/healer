@@ -5,23 +5,23 @@ import (
 	"fmt"
 )
 
+// SyncGroupResponse is the response of syncgroup request
 type SyncGroupResponse struct {
-	CorrelationID    uint32
-	ErrorCode        int16
-	MemberAssignment []byte
+	CorrelationID    uint32 `json:"correlation_id"`
+	ErrorCode        int16  `json:"error_code"`
+	MemberAssignment []byte `json:"member_assignment"`
 }
 
 func (r SyncGroupResponse) Error() error {
 	return getErrorFromErrorCode(r.ErrorCode)
 }
 
-func NewSyncGroupResponse(payload []byte) (*SyncGroupResponse, error) {
-	var err error = nil
-	r := &SyncGroupResponse{}
+// NewSyncGroupResponse create a NewSyncGroupResponse instance from response payload bytes
+func NewSyncGroupResponse(payload []byte) (r SyncGroupResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("syncgroup reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("syncgroup reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

@@ -32,13 +32,12 @@ func (r ListGroupsResponse) Error() error {
 	return nil
 }
 
-func NewListGroupsResponse(payload []byte) (*ListGroupsResponse, error) {
-	r := &ListGroupsResponse{}
+func NewListGroupsResponse(payload []byte) (r ListGroupsResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("ListGroups reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("ListGroups reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

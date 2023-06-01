@@ -46,12 +46,10 @@ func decodeToIncrementalAlterConfigsResponseResource(payload []byte, version uin
 
 // NewIncrementalAlterConfigsResponse create a new IncrementalAlterConfigsResponse.
 // This does not return error in the response. user may need to check the error code in the response by themselves.
-func NewIncrementalAlterConfigsResponse(payload []byte, version uint16) (IncrementalAlterConfigsResponse, error) {
+func NewIncrementalAlterConfigsResponse(payload []byte, version uint16) (r IncrementalAlterConfigsResponse, err error) {
 	var (
-		err    error = nil
-		offset int   = 0
+		offset int = 0
 	)
-	r := IncrementalAlterConfigsResponse{}
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
 		return r, fmt.Errorf("alterconfig reseponse length did not match: %d!=%d", responseLength+4, len(payload))

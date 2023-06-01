@@ -5,18 +5,7 @@ import (
 	"fmt"
 )
 
-/*
-SaslAuthenticate Response (Version: 0) => error_code error_message sasl_auth_bytes
-  error_code => INT16
-  error_message => NULLABLE_STRING
-  sasl_auth_bytes => BYTES
-
-FIELD	DESCRIPTION
-error_code	Response error code
-error_message	Response error message
-sasl_auth_bytes	SASL authentication bytes from server as defined by the SASL mechanism.
-*/
-
+// SaslAuthenticateResponse is the response of saslauthenticate request
 type SaslAuthenticateResponse struct {
 	CorrelationID uint32
 	ErrorCode     int16
@@ -28,16 +17,13 @@ func (r SaslAuthenticateResponse) Error() error {
 	return getErrorFromErrorCode(r.ErrorCode)
 }
 
-func NewSaslAuthenticateResponse(payload []byte) (*SaslAuthenticateResponse, error) {
-	var (
-		r      = &SaslAuthenticateResponse{}
-		offset = 0
-		err    error
-	)
+// NewSaslAuthenticateResponse create a NewSaslAuthenticateResponse instance from response payload bytes
+func NewSaslAuthenticateResponse(payload []byte) (r SaslAuthenticateResponse, err error) {
+	var offset = 0
 
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("SaslAuthenticateResponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("SaslAuthenticateResponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -46,9 +32,6 @@ func NewSaslAuthenticateResponse(payload []byte) (*SaslAuthenticateResponse, err
 
 	r.ErrorCode = int16(uint16(binary.BigEndian.Uint16(payload[offset:])))
 	offset += 2
-	if r.ErrorCode != 0 {
-		err = getErrorFromErrorCode(r.ErrorCode)
-	}
 
 	l := int(int16(binary.BigEndian.Uint16(payload[offset:])))
 	offset += 2
