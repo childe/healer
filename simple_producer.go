@@ -159,7 +159,7 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 		Value:      valueCopy,
 	}
 	if p.config.HealerMagicByte == 1 {
-		message.Timestamp = uint64(time.Now().UnixNano() / 1000000)
+		message.Timestamp = uint64(time.Now().UnixMilli())
 	}
 	p.messageSetMutex.Lock()
 	p.messageSet = append(p.messageSet, message)
@@ -225,7 +225,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	if p.compressionValue != 0 {
 		value := make([]byte, messageSet.Length())
 		messageSet.Encode(value, 0)
-		compressed_value, err := p.compressor.Compress(value)
+		compressedValue, err := p.compressor.Compress(value)
 		if err != nil {
 			return fmt.Errorf("compress messageset error:%s", err)
 		}
@@ -235,13 +235,12 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 
 			Crc:        0, // compute in message encode
 			Attributes: 0x00 | p.compressionValue,
-			MagicByte:  0,
+			MagicByte:  int8(p.config.HealerMagicByte),
 			Key:        nil,
-			Value:      compressed_value,
+			Value:      compressedValue,
 		}
 		if p.config.HealerMagicByte == 1 {
-			message.MagicByte = 1
-			message.Timestamp = uint64(time.Now().UnixNano() / 1000000)
+			message.Timestamp = uint64(time.Now().UnixMilli())
 		}
 		messageSet = []*Message{message}
 	}
