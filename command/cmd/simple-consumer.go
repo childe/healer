@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -31,6 +32,7 @@ var simpleConsumerCmd = &cobra.Command{
 		maxMessages, err := cmd.Flags().GetInt32("max-messages")
 		stopOffset, err := cmd.Flags().GetInt64("stopoffset")
 		printOffset, err := cmd.Flags().GetBool("printoffset")
+		jsonFormat, err := cmd.Flags().GetBool("json")
 		config, err := cmd.Flags().GetString("config")
 
 		for _, kv := range strings.Split(config, ",") {
@@ -68,10 +70,20 @@ var simpleConsumerCmd = &cobra.Command{
 			if stopOffset > 0 && message.Message.Offset >= stopOffset {
 				break
 			}
-			if printOffset {
-				fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+
+			if jsonFormat {
+				b, err := json.Marshal(message.Message)
+				if err != nil {
+					fmt.Printf("marshal message error:%s\n", err)
+				} else {
+					fmt.Printf("%s\n", b)
+				}
 			} else {
-				fmt.Printf("%s\n", message.Message.Value)
+				if printOffset {
+					fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+				} else {
+					fmt.Printf("%s\n", message.Message.Value)
+				}
 			}
 		}
 		return nil
@@ -86,4 +98,5 @@ func init() {
 	simpleConsumerCmd.Flags().Int32("max-messages", math.MaxInt32, "the number of messages to output")
 	simpleConsumerCmd.Flags().Int64("stopoffset", 0, "consume messages until this point")
 	simpleConsumerCmd.Flags().Bool("printoffset", true, "if print offset of each message")
+	simpleConsumerCmd.Flags().Bool("json", true, "print message in json format")
 }
