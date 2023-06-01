@@ -240,6 +240,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 			Value:      compressed_value,
 		}
 		if p.config.HealerMagicByte == 1 {
+			message.MagicByte = 1
 			message.Timestamp = uint64(time.Now().UnixNano() / 1000000)
 		}
 		messageSet = []*Message{message}

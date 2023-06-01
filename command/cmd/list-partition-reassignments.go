@@ -16,8 +16,11 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 		brokers, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		timeoutMS, err := cmd.Flags().GetInt32("timeout.ms")
+		topics, err := cmd.Flags().GetStringSlice("topics")
 
-		bs, err := healer.NewBrokers(brokers)
+		config := healer.DefaultBrokerConfig()
+		config.NetConfig.TimeoutMSForEachAPI
+		bs, err := healer.NewBrokersWithConfig(brokers, config)
 
 		if err != nil {
 			return fmt.Errorf("could not create brokers from %s: %w", brokers, err)
@@ -42,4 +45,5 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 
 func init() {
 	listPartitionReassignmentsCmd.Flags().Int32("timeout.ms", 30000, "The time in ms to wait for the request to complete")
+	listPartitionReassignmentsCmd.Flags().StringSlice("topics", nil, "comma splited. A list of topics to list partition reassignments for (an empty list will return reassignments for all topics)")
 }
