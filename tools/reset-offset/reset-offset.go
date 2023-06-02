@@ -184,14 +184,9 @@ func main() {
 		glog.Infof("commit offset [%s][%d]:%d", *topic, partitionID, finalOffset)
 	}
 
-	payload, err := coordinator.Request(offsetComimtReq)
+	_, err = coordinator.RequestAndGet(offsetComimtReq)
 	if err != nil {
 		glog.Infof("commit offset error:%s", err)
 		return
-	}
-
-	_, err = healer.NewOffsetCommitResponse(payload)
-	if err != nil {
-		glog.Errorf("commit offset error:%s", err)
 	}
 }
