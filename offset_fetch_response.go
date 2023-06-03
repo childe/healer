@@ -33,6 +33,7 @@ func (r OffsetFetchResponse) Error() error {
 	return nil
 }
 
+// NewOffsetFetchResponse decodes the response byte array to a OffsetFetchResponse struct
 func NewOffsetFetchResponse(payload []byte) (r OffsetFetchResponse, err error) {
 	var (
 		offset int = 0

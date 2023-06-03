@@ -152,35 +152,25 @@ func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 }
 
 func (broker *Broker) sendSaslAuthenticate() error {
-	var clientID = ""
 	var (
+		clientID   = "healer-sals-authenticate"
 		saslConfig = broker.config.SaslConfig
 		mechanism  = saslConfig.SaslMechanism
 		user       = saslConfig.SaslUser
 		password   = saslConfig.SaslPassword
 
-		payload []byte
-		err     error
+		err error
 	)
+
 	saslHandShakeRequest := NewSaslHandShakeRequest(clientID, mechanism)
-
-	payload = saslHandShakeRequest.Encode(broker.getHighestAvailableAPIVersion(API_SaslAuthenticate))
-
-	rp, err := broker.Request(saslHandShakeRequest)
+	_, err = broker.RequestAndGet(saslHandShakeRequest)
 	if err != nil {
-		return err
-	}
-	if _, err = rp.ReadAndParse(); err != nil {
 		return err
 	}
 
 	// authenticate
 	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	rp, err = broker.Request(saslAuthenticateRequest)
-	if err != nil {
-		return err
-	}
-	_, err = NewSaslAuthenticateResponse(payload)
+	_, err = broker.RequestAndGet(saslAuthenticateRequest)
 	if err != nil {
 		return err
 	}
@@ -227,8 +217,6 @@ func (broker *Broker) ensureOpen() error {
 
 // Request sends a request to the broker and returns a readParser
 func (broker *Broker) Request(r Request) (ReadParser, error) {
-	broker.mux.Lock()
-	defer broker.mux.Unlock()
 
 	if err := broker.ensureOpen(); err != nil {
 		return nil, err
@@ -253,6 +241,9 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 
 // RequestAndGet sends a request to the broker and returns the response
 func (broker *Broker) RequestAndGet(r Request) (Response, error) {
+	broker.mux.Lock()
+	defer broker.mux.Unlock()
+
 	if rp, err := broker.Request(r); err != nil {
 		return nil, err
 	} else {

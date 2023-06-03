@@ -227,21 +227,15 @@ func (c *SimpleConsumer) getCommitedOffet() {
 	}
 
 	for {
-		rp, err := coordinator.Request(r)
+		resp, err := coordinator.RequestAndGet(r)
 		if err != nil {
-			glog.Errorf("request fetch offset of [%s][%d] error:%s", c.topic, c.partitionID, err)
+			glog.Errorf("request fetch offset of [%s][%d] error:%s, sleep 500 ms", c.topic, c.partitionID, err)
 			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 
-		resp, err := rp.ReadAndParse()
-		if err != nil {
-			glog.Errorf("parse offset fetch response error: %s", err)
-			time.Sleep(500 * time.Millisecond)
-		} else {
-			res = resp.(OffsetFetchResponse)
-			break
-		}
+		res = resp.(OffsetFetchResponse)
+		break
 	}
 
 	for _, t := range res.Topics {
@@ -282,17 +276,12 @@ func (c *SimpleConsumer) commitOffset() bool {
 	offsetComimtReq.SetRetentionTime(-1)
 	offsetComimtReq.AddPartiton(c.topic, c.partitionID, c.offset, "")
 
-	rp, err := c.coordinator.Request(offsetComimtReq)
+	_, err := c.coordinator.RequestAndGet(offsetComimtReq)
 	if err == nil {
-		_, err := rp.ReadAndParse()
-		if err == nil {
-			glog.V(5).Infof("commit offset %s [%s][%d]:%d", c.config.GroupID, c.topic, c.partitionID, c.offset)
-			return true
-		}
-		glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
-	} else {
-		glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
+		glog.V(5).Infof("commit offset %s [%s][%d]:%d", c.config.GroupID, c.topic, c.partitionID, c.offset)
+		return true
 	}
+	glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
 	return false
 }
 

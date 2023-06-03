@@ -351,17 +351,12 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 	offsetComimtReq.SetRetentionTime(-1)
 	offsetComimtReq.AddPartiton(topic, partitionID, offset, "")
 
-	rp, err := c.coordinator.Request(offsetComimtReq)
+	_, err := c.coordinator.RequestAndGet(offsetComimtReq)
 	if err == nil {
-		_, err := rp.ReadAndParse()
-		if err == nil {
-			glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
-			return true
-		}
-		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
-	} else {
-		glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
+		glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
+		return true
 	}
+	glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
 	return false
 }
 
@@ -394,15 +389,10 @@ func (c *GroupConsumer) leave() {
 	}
 	glog.Infof("leave %s from %s", c.memberID, c.config.GroupID)
 	leaveReq := NewLeaveGroupRequest(c.config.ClientID, c.config.GroupID, c.memberID)
-	rp, err := c.coordinator.Request(leaveReq)
+	_, err := c.coordinator.RequestAndGet(leaveReq)
 	if err != nil {
 		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
 		return
-	}
-
-	_, err = rp.ReadAndParse()
-	if err != nil {
-		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
 	}
 
 	c.memberID = ""
