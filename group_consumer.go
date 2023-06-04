@@ -373,8 +373,11 @@ func (c *GroupConsumer) restart() {
 }
 
 func (c *GroupConsumer) stop() {
+	glog.Infof("stop group consumer %s", c.config.GroupID)
 	if c.simpleConsumers != nil {
+		glog.Infof("stop %d simple consumers", len(c.simpleConsumers))
 		for _, simpleConsumer := range c.simpleConsumers {
+			glog.Infof("stop simple consumer %s-%d", simpleConsumer.topic, simpleConsumer.partitionID)
 			simpleConsumer.Stop()
 		}
 	}

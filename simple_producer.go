@@ -223,8 +223,10 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	}, 1)
 
 	if p.compressionValue != 0 {
+		// FIXME: compressed message size if larger than before?
 		value := make([]byte, messageSet.Length())
-		messageSet.Encode(value, 0)
+		offset := messageSet.Encode(value, 0)
+		value = value[:offset]
 		compressedValue, err := p.compressor.Compress(value)
 		if err != nil {
 			return fmt.Errorf("compress messageset error:%s", err)

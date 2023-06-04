@@ -93,6 +93,8 @@ func (p defaultReadParser) Read() ([]byte, error) {
 
 func (p defaultReadParser) Parse(data []byte) (Response, error) {
 	switch p.api {
+	case API_Heartbeat:
+		return NewHeartbeatResponse(data)
 	case API_ProduceRequest:
 		return NewProduceResponse(data)
 	case API_MetadataRequest:
