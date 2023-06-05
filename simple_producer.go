@@ -188,7 +188,7 @@ func (p *SimpleProducer) Flush() error {
 
 func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	if glog.V(5) {
-		glog.Infof("produce %d messsages", len(messageSet))
+		glog.Infof("produce %d messsages to %s-%d", len(messageSet), p.topic, p.partition)
 	}
 
 	// TODO if ConnectionsMaxIdleMS is too long , below <- may take too long time ?

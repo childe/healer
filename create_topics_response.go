@@ -5,33 +5,36 @@ import (
 	"fmt"
 )
 
-// CreateTopicsResponse is described in http://kafka.apache.org/protocol.html
-// CreateTopics Response (Version: 0) => [topic_errors]
-//   topic_errors => topic error_code
-//     topic => STRING
-//     error_code => INT16
+// CreateTopicsResponse is response of create_topics request
 type CreateTopicsResponse struct {
 	CorrelationID uint32
-	TopicErrors   []*TopicError
+	TopicErrors   []TopicError
 }
 
-// TopicErrors is sub struct in CreateTopicsResponse
+// TopicError is sub struct in CreateTopicsResponse
 type TopicError struct {
 	Topic     string
 	ErrorCode int16
 }
 
+func (r CreateTopicsResponse) Error() error {
+	for _, e := range r.TopicErrors {
+		if e.ErrorCode != 0 {
+			return getErrorFromErrorCode(e.ErrorCode)
+		}
+	}
+	return nil
+}
+
 // NewCreateTopicsResponse decode binary bytes to CreateTopicsResponse struct
-func NewCreateTopicsResponse(payload []byte) (*CreateTopicsResponse, error) {
+func NewCreateTopicsResponse(payload []byte) (r CreateTopicsResponse, err error) {
 	var (
-		err    error
 		offset int
-		r      = &CreateTopicsResponse{}
 	)
 
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("create_topics reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("create_topics reseponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
@@ -41,10 +44,9 @@ func NewCreateTopicsResponse(payload []byte) (*CreateTopicsResponse, error) {
 	count := int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	r.TopicErrors = make([]*TopicError, count)
+	r.TopicErrors = make([]TopicError, count)
 	for i := range r.TopicErrors {
-		e := &TopicError{}
-		r.TopicErrors[i] = e
+		e := TopicError{}
 
 		l := int(int16(binary.BigEndian.Uint16(payload[offset:])))
 		offset += 2
@@ -53,9 +55,9 @@ func NewCreateTopicsResponse(payload []byte) (*CreateTopicsResponse, error) {
 		offset += l
 
 		e.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
-		if err == nil && e.ErrorCode != 0 {
-			err = getErrorFromErrorCode(e.ErrorCode)
-		}
+		offset += 2
+
+		r.TopicErrors[i] = e
 	}
 
 	return r, err

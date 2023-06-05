@@ -80,13 +80,7 @@ func main() {
 		r.AddReplicaAssignment(*topic, pid, nodes)
 	}
 
-	payload, err := controller.Request(r)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(5)
-	}
-
-	_, err = healer.NewCreateTopicsResponse(payload)
+	_, err = controller.RequestAndGet(r)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(5)

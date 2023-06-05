@@ -125,6 +125,16 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewDescribeConfigsResponse(data)
 	case API_ListPartitionReassignments:
 		return NewListPartitionReassignmentsResponse(data, p.version)
+	case API_ListGroups:
+		return NewListGroupsResponse(data)
+	case API_CreateTopics:
+		return NewCreateTopicsResponse(data)
+	case API_AlterConfigs:
+		return NewAlterConfigsResponse(data)
+	case API_Delete_Groups:
+		return NewDeleteGroupsResponse(data)
+	case API_IncrementalAlterConfigs:
+		return NewIncrementalAlterConfigsResponse(data, p.version)
 	}
 	return nil, errors.New("unknown api")
 }

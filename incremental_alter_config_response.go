@@ -12,6 +12,15 @@ type IncrementalAlterConfigsResponse struct {
 	Resources      []IncrementalAlterConfigsResponseResource `json:"resources"`
 }
 
+func (r IncrementalAlterConfigsResponse) Error() error {
+	for _, e := range r.Resources {
+		if e.ErrorCode != 0 {
+			return getErrorFromErrorCode(e.ErrorCode)
+		}
+	}
+	return nil
+}
+
 // IncrementalAlterConfigsResponseResource is sub struct in AlterConfigsRequest
 type IncrementalAlterConfigsResponseResource struct {
 	ErrorCode    int16  `json:"error_code"`
