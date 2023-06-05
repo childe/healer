@@ -91,13 +91,13 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	}
 
 	headerCount, o := binary.Varint(payload[offset:])
-	if glog.V(15) {
-		glog.Infof("timestampDelta: %d", timestampDelta)
-		glog.Infof("offsetDelta: %d", offsetDelta)
-		glog.Infof("keyLength: %d", keyLength)
-		glog.Infof("valueLen: %d", valueLen)
-		glog.Infof("headerCount: %d", headerCount)
-	}
+	// if glog.V(15) {
+	// 	glog.Infof("timestampDelta: %d", timestampDelta)
+	// 	glog.Infof("offsetDelta: %d", offsetDelta)
+	// 	glog.Infof("keyLength: %d", keyLength)
+	// 	glog.Infof("valueLen: %d", valueLen)
+	// 	glog.Infof("headerCount: %d", headerCount)
+	// }
 	offset += o
 	if headerCount > 0 {
 		record.Headers = make([]RecordHeader, headerCount)

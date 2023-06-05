@@ -309,9 +309,8 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 		select {
 		case <-ctx.Done():
 			glog.Info("stop fetching data from kafka server because caller stop it")
-			return nil
-		default:
-			buffers <- responseLengthBuf[l:length]
+			return ctx.Err()
+		case buffers <- responseLengthBuf[l:length]:
 		}
 
 		if length+l == 4 {
@@ -339,9 +338,8 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 
 		select {
 		case <-ctx.Done():
-			return nil
-		default:
-			buffers <- buf[:length]
+			return ctx.Err()
+		case buffers <- buf[:length]:
 		}
 
 		readLength += length
@@ -407,7 +405,11 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 	defer broker.mux.Unlock()
 	//defer close(buffers)
 	defer func() {
-		buffers <- nil
+		select {
+		case <-ctx.Done():
+			return
+		case buffers <- nil:
+		}
 	}()
 
 	if err = broker.ensureOpen(); err != nil {

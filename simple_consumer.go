@@ -24,7 +24,9 @@ type SimpleConsumer struct {
 
 	stopChan chan struct{}
 	stopWG   sync.WaitGroup
-	ctx      context.Context
+
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	stop           bool
 	fromBeginning  bool
@@ -47,9 +49,9 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 		brokers:     brokers,
 
 		stopChan: make(chan struct{}, 0),
-
-		ctx: context.Background(),
 	}
+	c.ctx = context.Background()
+	c.ctx, c.cancel = context.WithCancel(c.ctx)
 
 	if err := c.refreshPartiton(); err != nil {
 		glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
@@ -263,13 +265,9 @@ func (c *SimpleConsumer) getCommitedOffet() {
 func (c *SimpleConsumer) Stop() {
 	glog.Infof("stopping simple consumer of [%s][%d]", c.topic, c.partitionID)
 	c.stop = true
-	ctx, cancel := context.WithCancel(c.ctx)
-	c.ctx = ctx
-	glog.Info("cancel context")
-	cancel()
-	glog.Info("closing stop channel")
+	c.cancel()
+
 	close(c.stopChan)
-	glog.Info("waiting for go-routines to exit")
 	c.stopWG.Wait()
 
 }
@@ -303,9 +301,7 @@ func (c *SimpleConsumer) commitOffset() bool {
 // else if it has GroupId, it use its own coordinator to commit
 func (c *SimpleConsumer) CommitOffset() {
 	if c.offset == c.offsetCommited {
-		if glog.V(5) {
-			glog.Infof("current offset[%d] of %s[%d] does not change, skip committing", c.offset, c.topic, c.partitionID)
-		}
+		glog.V(5).Infof("current offset[%d] of %s[%d] does not change, skip committing", c.offset, c.topic, c.partitionID)
 		return
 	}
 	offset := c.offset
@@ -392,8 +388,6 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 		}
 	}()
 
-	var err error
-
 	buffers := make(chan []byte, 10)
 	innerMessages := make(chan *FullMessage, 1)
 
@@ -401,13 +395,11 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 		// fetch
 		go func() {
 			c.stopWG.Add(1)
-			glog.Infof("%s-%d fetch goroutine add 1", c.topic, c.partitionID)
 			defer func() {
-				glog.Infof("%s-%d fetch goroutine done", c.topic, c.partitionID)
 				c.stopWG.Done()
 			}()
 
-			glog.V(5).Infof("fetching %s[%d] from offset %d", c.topic, c.partitionID, c.offset)
+			glog.V(10).Infof("fetching %s[%d] from offset %d", c.topic, c.partitionID, c.offset)
 			r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 			r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
 
@@ -421,13 +413,12 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 		//decode
 		go func() {
 			c.stopWG.Add(1)
-			glog.Infof("%s-%d decode goroutine add 1", c.topic, c.partitionID)
 			defer func() {
-				glog.Infof("%s-%d decode goroutine done", c.topic, c.partitionID)
 				c.stopWG.Done()
 			}()
 
 			frsd := fetchResponseStreamDecoder{
+				ctx:      c.ctx,
 				buffers:  buffers,
 				messages: innerMessages,
 				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
@@ -437,45 +428,56 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 		}()
 
 		// consume all messages from one fetch response
-		c.stopWG.Add(1)
-		glog.Infof("%s-%d comsume goroutine add 1", c.topic, c.partitionID)
-		for !c.stop {
-			message := <-innerMessages
-			if message != nil {
-				if message.Error != nil {
-					glog.Errorf("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
-					if message.Error == &maxBytesTooSmall {
-						// TODO user custom config, if maxBytesTooSmall, double it
-						c.config.FetchMaxBytes *= 2
-						glog.Infof("fetch.max.bytes is too small, double it to %d", c.config.FetchMaxBytes)
-					}
-					if message.Error == AllError[1] {
-						c.offset, err = c.getOffset(c.fromBeginning)
-						if err != nil {
-							glog.Errorf("could not get %s[%d] offset:%s", c.topic, c.partitionID, message.Error)
-						}
-					} else if message.Error == AllError[6] {
-						c.leaderBroker.Close()
-						c.leaderBroker = nil
-						for !c.stop {
-							if err = c.getLeaderBroker(); err != nil {
-								glog.Errorf("get leader broker of [%s/%d] error: %s", c.topic, c.partitionID, err)
-							} else {
-								break
-							}
-						}
-					}
-				} else {
-					messages <- message
-					c.offset = message.Message.Offset + 1
-				}
-			} else {
-				glog.V(5).Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
-				break
-			}
-		}
-		glog.Infof("%s-%d consume one loop done", c.topic, c.partitionID)
-		c.stopWG.Done()
+		c.consumeFromOneFetchRequest(innerMessages, messages)
 
 	}
+}
+
+func (c *SimpleConsumer) consumeFromOneFetchRequest(innerMessages chan *FullMessage, messages chan *FullMessage) (err error) {
+	c.stopWG.Add(1)
+	defer func() {
+		c.stopWG.Done()
+	}()
+
+	var message *FullMessage
+	for !c.stop {
+		select {
+		case <-c.ctx.Done():
+			return c.ctx.Err()
+		case message = <-innerMessages:
+		}
+		if message != nil {
+			if message.Error != nil {
+				glog.Errorf("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
+				if message.Error == &maxBytesTooSmall {
+					// TODO user custom config, if maxBytesTooSmall, double it
+					c.config.FetchMaxBytes *= 2
+					glog.Infof("fetch.max.bytes is too small, double it to %d", c.config.FetchMaxBytes)
+				}
+				if message.Error == AllError[1] {
+					c.offset, err = c.getOffset(c.fromBeginning)
+					if err != nil {
+						glog.Errorf("could not get %s[%d] offset:%s", c.topic, c.partitionID, message.Error)
+					}
+				} else if message.Error == AllError[6] {
+					c.leaderBroker.Close()
+					c.leaderBroker = nil
+					for !c.stop {
+						if err = c.getLeaderBroker(); err != nil {
+							glog.Errorf("get leader broker of [%s/%d] error: %s", c.topic, c.partitionID, err)
+						} else {
+							break
+						}
+					}
+				}
+			} else {
+				messages <- message
+				c.offset = message.Message.Offset + 1
+			}
+		} else {
+			glog.V(10).Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
+			break
+		}
+	}
+	return nil
 }
