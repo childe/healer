@@ -328,7 +328,14 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 		return
 	}
 
-	// 49 == length of (batchLength, records count]
+	// 49 is length of (batchLength, records count]
+	if int(batchLength)-49 > streamDecoder.totalLength-streamDecoder.offset {
+		glog.V(15).Infof("limit reader length: %d rest bytes length: %d", int64(batchLength)-49, streamDecoder.totalLength-streamDecoder.offset)
+		n, err = streamDecoder.readAll()
+		offset += n
+		return offset, err
+	}
+
 	r := io.LimitReader(streamDecoder, int64(batchLength)-49)
 	uncompressedBytes, err := uncompress(int8(compress), r)
 	if err != nil {
