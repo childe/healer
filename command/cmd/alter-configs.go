@@ -40,7 +40,7 @@ var alterConfigsCmd = &cobra.Command{
 			return fmt.Errorf("faild to send alter-configs request: %w", err)
 		}
 
-		b, _ := json.MarshalIndent(resp.(healer.AlterConfigsResponse), "", "  ")
+		b, _ := json.MarshalIndent(resp.(healer.IncrementalAlterConfigsResponse), "", "  ")
 		fmt.Println(string(b))
 		return nil
 	},
