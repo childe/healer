@@ -405,8 +405,10 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 
 			err := c.leaderBroker.requestFetchStreamingly(c.ctx, r, buffers)
 			if err != nil {
-				glog.Errorf("fetch error:%s, sleep %d ms", err, c.config.RetryBackOffMS)
-				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+				if err == context.Canceled {
+					return
+				}
+				glog.Errorf("fetch error: %v", err)
 			}
 		}()
 
@@ -424,7 +426,12 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
 			}
 
-			frsd.streamDecode(c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest), c.offset)
+			if err := frsd.streamDecode(c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest), c.offset); err != nil {
+				if err == context.Canceled {
+					return
+				}
+				glog.Errorf("decode fetch response error: %v", err)
+			}
 		}()
 
 		// consume all messages from one fetch response

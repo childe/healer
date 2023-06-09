@@ -180,7 +180,7 @@ func getGroups(groupID string) []string {
 }
 
 var getPendingCmd = &cobra.Command{
-	Use:   "getpending",
+	Use:   "get-pending",
 	Short: "get pending count of a group for a topic",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -316,4 +316,5 @@ func init() {
 	getPendingCmd.Flags().String("group", "", "group name")
 	getPendingCmd.Flags().Bool("total", false, "if print total pending")
 	getPendingCmd.Flags().Bool("header", true, "if print header")
+	getPendingCmd.Flags().StringP("topic", "t", "", "topic name")
 }

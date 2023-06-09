@@ -30,7 +30,6 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringP("brokers", "b", "", "(required) broker list, seperated by comma")
 	rootCmd.PersistentFlags().StringP("client", "c", "healer", "client name")
-	rootCmd.PersistentFlags().StringP("topic", "t", "", "topic name")
 
 	rootCmd.AddCommand(getOffsetsCmd)
 	rootCmd.AddCommand(getMetadataCmd)

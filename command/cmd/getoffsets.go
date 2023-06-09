@@ -9,7 +9,7 @@ import (
 )
 
 var getOffsetsCmd = &cobra.Command{
-	Use:   "getoffsets",
+	Use:   "get-offsets",
 	Short: "get offsets of a topic",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -58,4 +58,5 @@ var getOffsetsCmd = &cobra.Command{
 func init() {
 	getOffsetsCmd.Flags().Uint32("offsets", 1, "get how many offsets")
 	getOffsetsCmd.Flags().Int64("timestamp", -1, "-1(latest)/-2(earliest). timestamp of the offsets before that")
+	getOffsetsCmd.Flags().StringP("topic", "t", "", "topic name")
 }

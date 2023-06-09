@@ -9,7 +9,7 @@ import (
 )
 
 var describeConfigsCmd = &cobra.Command{
-	Use:   "describeconfigs",
+	Use:   "describe-configs",
 	Short: "describe configs",
 
 	RunE: func(cmd *cobra.Command, args []string) error {

@@ -99,4 +99,5 @@ func init() {
 	simpleConsumerCmd.Flags().Int64("stopoffset", 0, "consume messages until this point")
 	simpleConsumerCmd.Flags().Bool("printoffset", true, "if print offset of each message")
 	simpleConsumerCmd.Flags().Bool("json", true, "print message in json format")
+	simpleConsumerCmd.Flags().StringP("topic", "t", "", "topic name")
 }

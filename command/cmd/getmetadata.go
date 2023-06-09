@@ -9,7 +9,7 @@ import (
 )
 
 var getMetadataCmd = &cobra.Command{
-	Use:   "getmetadata",
+	Use:   "get-metadata",
 	Short: "get metadata of a cluster. return all topics if topic is not specified",
 
 	RunE: func(cmd *cobra.Command, args []string) error {

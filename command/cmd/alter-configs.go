@@ -10,7 +10,7 @@ import (
 )
 
 var alterConfigsCmd = &cobra.Command{
-	Use:   "alterconfigs",
+	Use:   "alter-configs",
 	Short: "alter configs",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
