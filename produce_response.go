@@ -39,7 +39,7 @@ func NewProduceResponse(payload []byte) (r ProduceResponse, err error) {
 	)
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("produce reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("produce response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

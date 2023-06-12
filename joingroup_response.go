@@ -48,7 +48,7 @@ func NewJoinGroupResponse(payload []byte) (r JoinGroupResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("joingroup reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("joingroup response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

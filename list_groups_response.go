@@ -37,7 +37,7 @@ func NewListGroupsResponse(payload []byte) (r ListGroupsResponse, err error) {
 	responseLength := int(binary.BigEndian.Uint32(payload))
 
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("ListGroups reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("ListGroups response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

@@ -45,7 +45,7 @@ func NewOffsetCommitResponse(payload []byte) (r OffsetCommitResponse, err error)
 	)
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("offsetcommit reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("offsetcommit response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

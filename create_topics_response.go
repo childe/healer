@@ -34,7 +34,7 @@ func NewCreateTopicsResponse(payload []byte) (r CreateTopicsResponse, err error)
 
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("create_topics reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("create_topics response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

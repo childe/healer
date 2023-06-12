@@ -18,7 +18,7 @@ func NewHeartbeatResponse(payload []byte) (r HeartbeatResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("heartbeat reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("heartbeat response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

@@ -100,7 +100,7 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("ListPartitionReassignments reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("ListPartitionReassignments response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

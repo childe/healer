@@ -102,15 +102,13 @@ func decodeToDescribeConfigsResponseConfigEntry(payload []byte) (r describeConfi
 }
 
 // NewDescribeConfigsResponse creates a new DescribeConfigsResponse from the given payload
-func NewDescribeConfigsResponse(payload []byte) (*DescribeConfigsResponse, error) {
+func NewDescribeConfigsResponse(payload []byte) (r DescribeConfigsResponse, err error) {
 	var (
-		err    error = nil
-		offset int   = 0
+		offset int = 0
 	)
-	r := &DescribeConfigsResponse{}
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return nil, fmt.Errorf("describe_configs reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("describe_configs response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

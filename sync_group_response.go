@@ -21,7 +21,7 @@ func NewSyncGroupResponse(payload []byte) (r SyncGroupResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("syncgroup reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("syncgroup response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

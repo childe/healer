@@ -43,7 +43,7 @@ func NewDescribeGroupsResponse(payload []byte) (r DescribeGroupsResponse, err er
 	)
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("describeGroups reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("describeGroups response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

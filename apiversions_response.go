@@ -154,7 +154,7 @@ func newAPIVersionsResponse(payload []byte) (r APIVersionsResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("ApiVersions reseponse length did not match: %d!=%d", responseLength+4, len(payload))
+		return r, fmt.Errorf("ApiVersions response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 
