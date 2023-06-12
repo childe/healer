@@ -135,6 +135,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewDeleteGroupsResponse(data)
 	case API_IncrementalAlterConfigs:
 		return NewIncrementalAlterConfigsResponse(data, p.version)
+	case API_CreatePartitions:
+		return NewCreatePartitionsResponse(data, p.version)
 	}
 	return nil, errors.New("unknown api")
 }
