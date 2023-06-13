@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
@@ -62,8 +64,11 @@ var createTopicCmd = &cobra.Command{
 			r.AddTopic(topic, partitions, replicationFactor)
 		}
 
-		if _, err = controller.Request(r); err != nil {
-			return fmt.Errorf("faild to request create-topic: %w", err)
+		if resp, err := controller.RequestAndGet(r); err != nil {
+			return fmt.Errorf("failed to create topics: %w", err)
+		} else {
+			b, _ := json.Marshal(resp.(healer.CreateTopicsResponse))
+			glog.Info(string(b))
 		}
 		return nil
 	},

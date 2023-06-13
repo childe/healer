@@ -37,7 +37,7 @@ var alterConfigsCmd = &cobra.Command{
 
 		resp, err := controller.RequestAndGet(r)
 		if err != nil {
-			return fmt.Errorf("faild to send alter-configs request: %w", err)
+			return fmt.Errorf("faild to alter configs: %w", err)
 		}
 
 		b, _ := json.MarshalIndent(resp.(healer.IncrementalAlterConfigsResponse), "", "  ")
