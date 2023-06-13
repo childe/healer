@@ -3,6 +3,7 @@
 package healer
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -82,13 +83,16 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		brokersInfo: make(map[int32]*BrokerInfo),
 		brokers:     make(map[int32]*Broker),
 		mutex:       &sync.Mutex{},
-		closeChan:   make(chan bool, 1),
+		closeChan:   make(chan bool, 0),
 	}
 
 	topics := make([]string, 0)
 	metadataResponse, err := broker.requestMetaData(clientID, topics)
-	if len(metadataResponse.Brokers) == 0 {
+	if err != nil {
 		return nil, err
+	}
+	if len(metadataResponse.Brokers) == 0 {
+		return nil, errors.New("no broers in getmetadata response")
 	}
 
 	brokers.mutex.Lock()
