@@ -10,15 +10,41 @@ type CreatePartitionsRequest struct {
 	ValidateOnly bool                                `json:"validate_only"`
 }
 
+// NewCreatePartitionsRequest creates a new CreatePartitionsRequest.
+func NewCreatePartitionsRequest(clientID string, timeout uint32, validateOnly bool) CreatePartitionsRequest {
+	requestHeader := &RequestHeader{
+		APIKey:     API_CreatePartitions,
+		APIVersion: 0,
+		ClientID:   clientID,
+	}
+
+	return CreatePartitionsRequest{
+		RequestHeader: requestHeader,
+		TimeoutMS:     int32(timeout),
+		ValidateOnly:  validateOnly,
+	}
+}
+
+// AddTopic adds a topic to the request.
+func (r *CreatePartitionsRequest) AddTopic(topic string, count int32, assignments []int32) {
+	r.Topics = append(r.Topics, createPartitionsRequestTopicBlock{
+		Name:        topic,
+		Count:       count,
+		Assignments: assignments,
+	})
+}
+
 type createPartitionsRequestTopicBlock struct {
 	Name        string  `json:"name"`
 	Count       int32   `json:"count"`
 	Assignments []int32 `json:"assignments"`
 }
 
-func (r createPartitionsRequestTopicBlock) encode(payload []byte, version uint16) (offset int) {
-	copy(payload, r.Name)
-	offset += 2 + len(r.Name)
+func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint16) (offset int) {
+	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.Name)))
+	offset += 2
+	copy(payload[offset:], r.Name)
+	offset += len(r.Name)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.Count))
 	offset += 4
@@ -34,7 +60,7 @@ func (r createPartitionsRequestTopicBlock) encode(payload []byte, version uint16
 	return offset
 }
 
-func (r CreatePartitionsRequest) length(version uint16) (length int) {
+func (r *CreatePartitionsRequest) length(version uint16) (length int) {
 	length = r.RequestHeader.length()
 	length += 4
 	for _, topic := range r.Topics {
