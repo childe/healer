@@ -66,7 +66,7 @@ var createPartitionsCmd = &cobra.Command{
 
 func init() {
 	createPartitionsCmd.Flags().StringP("topic", "t", "", "The topic name.")
-	createPartitionsCmd.Flags().String("assignments", "", "The new partition assignments.")
+	createPartitionsCmd.Flags().String("assignments", "", "The new partition assignments. broker_id_for_part1_replica1:broker_id_for_part1_replica2,broker_id_for_part2_replica1:broker_id_for_part2_replica2,... ")
 	createPartitionsCmd.Flags().Int32("count", 0, "The new partition count.")
 	createPartitionsCmd.Flags().Uint32("timeout", 30000, "The time in ms to wait for the partitions to be created.")
 	createPartitionsCmd.Flags().Bool("validate-only", true, "If true, then validate the request, but don't actually increase the number of partitions.")
