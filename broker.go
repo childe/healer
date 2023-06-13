@@ -229,6 +229,7 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
 	}
 	version := broker.getHighestAvailableAPIVersion(r.API())
+	r.SetVersion(version)
 	rp, err := broker.request(r.Encode(version), timeout)
 	if err != nil {
 		return nil, fmt.Errorf("requst of %d(%d) to %s error: %w", r.API(), version, broker.GetAddress(), err)
