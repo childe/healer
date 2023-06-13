@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
@@ -17,7 +19,7 @@ var createPartitionsCmd = &cobra.Command{
 		brokers, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		topic, err := cmd.Flags().GetString("topic")
-		assignments, err := cmd.Flags().GetInt32Slice("assignments")
+		assignments, err := cmd.Flags().GetString("assignments")
 		timeout, err := cmd.Flags().GetUint32("timeout")
 		validateOnly, err := cmd.Flags().GetBool("validate-only")
 		count, err := cmd.Flags().GetInt32("count")
@@ -34,7 +36,23 @@ var createPartitionsCmd = &cobra.Command{
 		}
 
 		r := healer.NewCreatePartitionsRequest(client, timeout, validateOnly)
-		r.AddTopic(topic, count, assignments)
+		partitionAssignments := [][]int32{}
+		if assignments != "" {
+			for i, brokerIDs := range strings.Split(assignments, ",") {
+				if brokerIDs == "" {
+					continue
+				}
+				partitionAssignments = append(partitionAssignments, []int32{})
+				for _, brokerID := range strings.Split(brokerIDs, ":") {
+					if _brokerID, err := strconv.Atoi(brokerID); err == nil {
+						partitionAssignments[i] = append(partitionAssignments[i], int32(_brokerID))
+					} else {
+						return fmt.Errorf("failed to convert %s to int: %w", brokerID, err)
+					}
+				}
+			}
+		}
+		r.AddTopic(topic, count, partitionAssignments)
 
 		if resp, err := controller.RequestAndGet(r); err == nil {
 			b, _ := json.Marshal(resp.(healer.CreatePartitionsResponse))
@@ -48,7 +66,7 @@ var createPartitionsCmd = &cobra.Command{
 
 func init() {
 	createPartitionsCmd.Flags().StringP("topic", "t", "", "The topic name.")
-	createPartitionsCmd.Flags().Int32Slice("assignments", nil, "The new partition assignments.")
+	createPartitionsCmd.Flags().String("assignments", "", "The new partition assignments.")
 	createPartitionsCmd.Flags().Int32("count", 0, "The new partition count.")
 	createPartitionsCmd.Flags().Uint32("timeout", 30000, "The time in ms to wait for the partitions to be created.")
 	createPartitionsCmd.Flags().Bool("validate-only", true, "If true, then validate the request, but don't actually increase the number of partitions.")

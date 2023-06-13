@@ -26,9 +26,9 @@ func NewCreatePartitionsRequest(clientID string, timeout uint32, validateOnly bo
 }
 
 type createPartitionsRequestTopicBlock struct {
-	Name        string                                  `json:"name"`
-	Count       int32                                   `json:"count"`
-	Assignments createPartitionsRequestAssignmentsBlock `json:"assignments"`
+	Name        string                                    `json:"name"`
+	Count       int32                                     `json:"count"`
+	Assignments []createPartitionsRequestAssignmentsBlock `json:"assignments"`
 	// TAG_BUFFER
 }
 
@@ -45,8 +45,8 @@ func (r createPartitionsRequestAssignmentsBlock) encode(payload []byte, version 
 		offset += 4
 	}
 
-	for _, assignment := range r.BrokerIDs {
-		binary.BigEndian.PutUint32(payload[offset:], uint32(assignment))
+	for _, brokerID := range r.BrokerIDs {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(brokerID))
 		offset += 4
 	}
 
@@ -71,7 +71,20 @@ func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint1
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.Count))
 	offset += 4
 
-	offset += r.Assignments.encode(payload[offset:], version)
+	if version == 2 {
+		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Assignments)))
+	} else if version == 0 {
+		binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.Assignments)))
+		offset += 2
+	}
+	for _, assignment := range r.Assignments {
+		offset += assignment.encode(payload[offset:], version)
+	}
+
+	// TAG_BUFFER
+	if version == 2 {
+		offset += binary.PutUvarint(payload[offset:], 0)
+	}
 
 	return offset
 }
@@ -83,7 +96,11 @@ func (r *CreatePartitionsRequest) length(version uint16) (length int) {
 		length += 2 + len(topic.Name)                  // name
 		length += 4                                    // count
 		length += 4                                    // assignments length
-		length += 4 * len(topic.Assignments.BrokerIDs) // assignments
+		for _, assignment := range topic.Assignments { // assignments
+			length += 4
+			length += 4 * len(assignment.BrokerIDs)
+			length++ // TAG_BUFFER
+		}
 	}
 	length += 4 // timeout_ms
 	length++    // validate_only
@@ -94,13 +111,17 @@ func (r *CreatePartitionsRequest) length(version uint16) (length int) {
 }
 
 // AddTopic adds a topic to the request.
-func (r *CreatePartitionsRequest) AddTopic(topic string, count int32, assignments []int32) {
+func (r *CreatePartitionsRequest) AddTopic(topic string, count int32, assignments [][]int32) {
+	a := make([]createPartitionsRequestAssignmentsBlock, 0)
+	for _, brokerIDs := range assignments {
+		a = append(a, createPartitionsRequestAssignmentsBlock{
+			BrokerIDs: brokerIDs,
+		})
+	}
 	r.Topics = append(r.Topics, createPartitionsRequestTopicBlock{
-		Name:  topic,
-		Count: count,
-		Assignments: createPartitionsRequestAssignmentsBlock{
-			BrokerIDs: assignments,
-		},
+		Name:        topic,
+		Count:       count,
+		Assignments: a,
 	})
 }
 
