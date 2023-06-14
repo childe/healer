@@ -72,8 +72,9 @@ func NewCreatePartitionsResponse(payload []byte, version uint16) (r CreatePartit
 			r.Results[i].TopicName = name
 		} else if version == 0 {
 			l := int(binary.BigEndian.Uint16(payload[offset:]))
+			offset += 2
 			r.Results[i].TopicName = string(payload[offset : offset+l])
-			offset += l + 2
+			offset += l
 		}
 
 		r.Results[i].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
@@ -84,11 +85,11 @@ func NewCreatePartitionsResponse(payload []byte, version uint16) (r CreatePartit
 			offset += o
 			r.Results[i].ErrorMessage = msg
 		} else if version == 0 {
-			l := int(binary.BigEndian.Uint16(payload[offset:]))
+			l := int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
 			if l > 0 {
-				r.Results[i].ErrorMessage = string(payload[offset : offset+l])
-				offset += l
+				r.Results[i].ErrorMessage = string(payload[offset : offset+int(l)])
+				offset += int(l)
 			}
 		}
 		// TAG_BUFFER

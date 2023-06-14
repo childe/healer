@@ -1,6 +1,8 @@
 package healer
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 // CreatePartitionsRequest holds the parameters of a create-partitions request.
 type CreatePartitionsRequest struct {
@@ -65,8 +67,7 @@ func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint1
 		offset += 2
 	}
 
-	copy(payload[offset:], r.Name)
-	offset += len(r.Name)
+	offset += copy(payload[offset:], r.Name)
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.Count))
 	offset += 4
@@ -74,8 +75,8 @@ func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint1
 	if version == 2 {
 		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Assignments)))
 	} else if version == 0 {
-		binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.Assignments)))
-		offset += 2
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Assignments)))
+		offset += 4
 	}
 	for _, assignment := range r.Assignments {
 		offset += assignment.encode(payload[offset:], version)
