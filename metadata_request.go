@@ -80,12 +80,11 @@ func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
 	return payload
 }
 
-func NewMetadataRequest(clientID string, version uint16, topics []string) *MetadataRequest {
+func NewMetadataRequest(clientID string, topics []string) *MetadataRequest {
 	r := &MetadataRequest{
 		RequestHeader: &RequestHeader{
-			APIKey:     API_MetadataRequest,
-			APIVersion: version,
-			ClientID:   clientID,
+			APIKey:   API_MetadataRequest,
+			ClientID: clientID,
 		},
 		Topics: topics,
 	}

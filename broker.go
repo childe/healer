@@ -380,8 +380,7 @@ func (broker *Broker) requestListGroups(clientID string) (r ListGroupsResponse, 
 }
 
 func (broker *Broker) requestMetaData(clientID string, topics []string) (r MetadataResponse, err error) {
-	version := broker.getHighestAvailableAPIVersion(API_MetadataRequest)
-	metadataRequest := NewMetadataRequest(clientID, version, topics)
+	metadataRequest := NewMetadataRequest(clientID, topics)
 
 	resp, err := broker.RequestAndGet(metadataRequest)
 	if err != nil {
