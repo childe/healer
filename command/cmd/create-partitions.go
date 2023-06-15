@@ -3,13 +3,85 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/childe/healer"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
+
+// getReplicas returns a list of brokers that used in 1 partition
+func getReplicas(brokerIDs []int32, replicasCount int) (replicas []int32) {
+	exited := map[int32]bool{}
+	for len(replicas) < replicasCount {
+		brokerID := brokerIDs[rand.Intn(len(brokerIDs))]
+		if _, ok := exited[brokerID]; ok {
+			continue
+		}
+		replicas = append(replicas, brokerID)
+		exited[brokerID] = true
+	}
+	return
+}
+
+func genPartitionAssignmentsFromMeta(meta healer.MetadataResponse, count int) (partitionAssignments [][]int32, err error) {
+	if len(meta.TopicMetadatas) != 1 {
+		return nil, fmt.Errorf("topic not found")
+	}
+	needNewCount := count - len(meta.TopicMetadatas[0].PartitionMetadatas)
+	if needNewCount <= 0 {
+		return nil, fmt.Errorf("partition count %d is enough", count)
+	}
+
+	replicasCount := -1
+
+	for _, partitionMetadata := range meta.TopicMetadatas[0].PartitionMetadatas {
+		if replicasCount == -1 {
+			replicasCount = len(partitionMetadata.Replicas)
+		} else {
+			if replicasCount != len(partitionMetadata.Replicas) {
+				return nil, fmt.Errorf("replicas count not equal")
+			}
+		}
+	}
+
+	brokerIDs := []int32{}
+	for _, broker := range meta.Brokers {
+		brokerIDs = append(brokerIDs, broker.NodeID)
+	}
+
+	if len(brokerIDs) < replicasCount {
+		return nil, fmt.Errorf("brokers count %d less than replicas %d", len(brokerIDs), replicasCount)
+	}
+
+	rand.Seed(time.Now().UnixNano())
+
+	partitionAssignments = make([][]int32, needNewCount)
+	for i := 0; i < needNewCount; i++ {
+		partitionAssignments[i] = getReplicas(brokerIDs, replicasCount)
+	}
+
+	return
+}
+func genPartitionAssignments(assignments string) (partitionAssignments [][]int32, err error) {
+	for i, brokerIDs := range strings.Split(assignments, ",") {
+		if brokerIDs == "" {
+			continue
+		}
+		partitionAssignments = append(partitionAssignments, []int32{})
+		for _, brokerID := range strings.Split(brokerIDs, ":") {
+			if _brokerID, err := strconv.Atoi(brokerID); err == nil {
+				partitionAssignments[i] = append(partitionAssignments[i], int32(_brokerID))
+			} else {
+				return nil, fmt.Errorf("failed to convert %s to int: %w", brokerID, err)
+			}
+		}
+	}
+	return
+}
 
 var createPartitionsCmd = &cobra.Command{
 	Use:   "create-partitions",
@@ -23,7 +95,6 @@ var createPartitionsCmd = &cobra.Command{
 		timeout, err := cmd.Flags().GetUint32("timeout")
 		validateOnly, err := cmd.Flags().GetBool("validate-only")
 		count, err := cmd.Flags().GetInt32("count")
-		glog.Infof("brokers: %s, client: %s, topic: %s, assignments: %v, timeout: %d, validate-only: %v", brokers, client, topic, assignments, timeout, validateOnly)
 
 		bs, err := healer.NewBrokers(brokers)
 		if err != nil {
@@ -36,22 +107,23 @@ var createPartitionsCmd = &cobra.Command{
 		}
 
 		r := healer.NewCreatePartitionsRequest(client, timeout, validateOnly)
-		partitionAssignments := [][]int32{}
+		var partitionAssignments [][]int32
 		if assignments != "" {
-			for i, brokerIDs := range strings.Split(assignments, ",") {
-				if brokerIDs == "" {
-					continue
+			partitionAssignments, err = genPartitionAssignments(assignments)
+		} else {
+			if meta, err := bs.RequestMetaData(client, []string{topic}); err == nil {
+				if meta.Error() != nil {
+					return fmt.Errorf("failed to get meta: %w", meta.Error())
 				}
-				partitionAssignments = append(partitionAssignments, []int32{})
-				for _, brokerID := range strings.Split(brokerIDs, ":") {
-					if _brokerID, err := strconv.Atoi(brokerID); err == nil {
-						partitionAssignments[i] = append(partitionAssignments[i], int32(_brokerID))
-					} else {
-						return fmt.Errorf("failed to convert %s to int: %w", brokerID, err)
-					}
-				}
+				partitionAssignments, err = genPartitionAssignmentsFromMeta(meta, int(count))
+			} else {
+				return err
 			}
 		}
+		if err != nil {
+			return err
+		}
+		glog.Infof("new partitionAssignments: %+v", partitionAssignments)
 		r.AddTopic(topic, count, partitionAssignments)
 
 		if resp, err := controller.RequestAndGet(r); err == nil {
