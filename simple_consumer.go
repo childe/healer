@@ -206,6 +206,9 @@ func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
+	if err := offsetsResponse.Error(); err != nil {
+		return -1, err
+	}
 	return int64(offsetsResponse.TopicPartitionOffsets[c.topic][0].Offsets[0]), nil
 }
 
