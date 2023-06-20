@@ -35,9 +35,10 @@ const (
 // healer only implements these versions of the protocol, only version 0 is supported if not defined here
 // It must be sorted from high to low
 var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
-	API_MetadataRequest:  {7, 1},
-	API_FetchRequest:     {10, 0},
-	API_CreatePartitions: {2, 0},
+	API_MetadataRequest:    {7, 1},
+	API_FetchRequest:       {10, 0},
+	API_CreatePartitions:   {2, 0},
+	API_OffsetFetchRequest: {1, 0},
 }
 
 // RequestHeader is the request header, which is used in all requests. It contains apiKey, apiVersion, correlationID, clientID
