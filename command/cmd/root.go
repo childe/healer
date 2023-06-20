@@ -36,6 +36,7 @@ func init() {
 	rootCmd.AddCommand(getPendingCmd)
 	rootCmd.AddCommand(simpleConsumerCmd)
 	rootCmd.AddCommand(simpleProducerCmd)
+	rootCmd.AddCommand(consoleProducerCmd)
 	rootCmd.AddCommand(createTopicCmd)
 	rootCmd.AddCommand(createPartitionsCmd)
 	rootCmd.AddCommand(describeConfigsCmd)
