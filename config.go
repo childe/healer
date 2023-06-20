@@ -32,7 +32,6 @@ type BrokerConfig struct {
 	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string"`
 	TLSEnabled                bool       `json:"tls.enabled,string"`
 	TLS                       *TLSConfig `json:"tls"`
-	KafkaVersion              string     `json:"kafka.version"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
