@@ -73,7 +73,11 @@ func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint1
 	offset += 4
 
 	if version == 2 {
-		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Assignments)))
+		if r.Assignments == nil {
+			offset += binary.PutUvarint(payload[offset:], 0)
+		} else {
+			offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Assignments)))
+		}
 	} else if version == 0 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Assignments)))
 		offset += 4
@@ -114,10 +118,15 @@ func (r *CreatePartitionsRequest) length(version uint16) (length int) {
 // AddTopic adds a topic to the request.
 func (r *CreatePartitionsRequest) AddTopic(topic string, count int32, assignments [][]int32) {
 	a := make([]createPartitionsRequestAssignmentsBlock, 0)
-	for _, brokerIDs := range assignments {
-		a = append(a, createPartitionsRequestAssignmentsBlock{
-			BrokerIDs: brokerIDs,
-		})
+	if assignments == nil {
+		a = nil
+	} else {
+		for _, brokerIDs := range assignments {
+			a = append(a, createPartitionsRequestAssignmentsBlock{
+				BrokerIDs: brokerIDs,
+				// TAG_BUFFER
+			})
+		}
 	}
 	r.Topics = append(r.Topics, createPartitionsRequestTopicBlock{
 		Name:        topic,

@@ -111,19 +111,11 @@ var createPartitionsCmd = &cobra.Command{
 		if assignments != "" {
 			partitionAssignments, err = genPartitionAssignments(assignments)
 		} else {
-			if meta, err := bs.RequestMetaData(client, []string{topic}); err == nil {
-				if meta.Error() != nil {
-					return fmt.Errorf("failed to get meta: %w", meta.Error())
-				}
-				partitionAssignments, err = genPartitionAssignmentsFromMeta(meta, int(count))
-			} else {
-				return err
-			}
+			partitionAssignments = nil
 		}
 		if err != nil {
 			return err
 		}
-		glog.Infof("new partitionAssignments: %+v", partitionAssignments)
 		r.AddTopic(topic, count, partitionAssignments)
 
 		if resp, err := controller.RequestAndGet(r); err == nil {
