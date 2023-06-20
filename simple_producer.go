@@ -2,7 +2,6 @@ package healer
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,42 +9,42 @@ import (
 	"github.com/golang/glog"
 )
 
-var SimpleProducerClosedError = errors.New("simple producer has been closed and failed to open")
+// ErrProducerClosed is returned when adding message while producer is closed
+var ErrProducerClosed = fmt.Errorf("producer closed")
 
-const (
-	_state_init = iota
-	_state_open
-	_state_closed
-)
-
+// SimpleProducer is a simple producer that send message to one topic and partitions with same leader
 type SimpleProducer struct {
 	config *ProducerConfig
 
-	leader    *Broker
+	brokers *Brokers
+	leader  *Broker
+
 	topic     string
 	partition int32
-	state     int
 
 	messageSet MessageSet
 
-	messageSetMutex sync.Locker
-	timer           *time.Timer
-	closeChan       chan bool
+	lock sync.Mutex
+
+	closeChan chan struct{}
+	closed    bool
 
 	compressionValue int8
 	compressor       Compressor
 }
 
 func (p *SimpleProducer) createLeader() (*Broker, error) {
-	brokerConfig := getBrokerConfigFromProducerConfig(p.config)
-	brokers, err := NewBrokersWithConfig(p.config.BootstrapServers, brokerConfig)
-	if err != nil {
-		glog.Errorf("init brokers error: %s", err)
-		return nil, err
+	if p.brokers == nil {
+		brokerConfig := getBrokerConfigFromProducerConfig(p.config)
+		brokers, err := NewBrokersWithConfig(p.config.BootstrapServers, brokerConfig)
+		if err != nil {
+			glog.Errorf("init brokers error: %s", err)
+			return nil, err
+		}
+		p.brokers = brokers
 	}
-	defer brokers.Close()
 
-	leaderID, err := brokers.findLeader(p.config.ClientID, p.topic, p.partition)
+	leaderID, err := p.brokers.findLeader(p.config.ClientID, p.topic, p.partition)
 	if err != nil {
 		glog.Errorf("could not get leader of topic %s[%d]: %s", p.topic, p.partition, err)
 		return nil, err
@@ -53,7 +52,7 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 		glog.V(10).Infof("leader ID of [%s][%d] is %d", p.topic, p.partition, leaderID)
 	}
 
-	leader, err := brokers.NewBroker(leaderID)
+	leader, err := p.brokers.NewBroker(leaderID)
 	if err != nil {
 		glog.Errorf("create leader error: %s", err)
 		return nil, err
@@ -75,10 +74,8 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 		config:    config,
 		topic:     topic,
 		partition: partition,
-		state:     _state_init,
 
-		messageSetMutex: &sync.Mutex{},
-		closeChan:       make(chan bool, 1),
+		closeChan: make(chan struct{}, 0),
 	}
 
 	switch config.CompressionType {
@@ -100,37 +97,18 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *S
 
 	p.messageSet = make([]*Message, 0, config.MessageMaxCount)
 
-	p.ensureOpen()
-
-	return p
-}
-
-func (p *SimpleProducer) ensureOpen() bool {
-	var err error
-	if p.state == _state_open {
-		return true
-	}
-
 	p.leader, err = p.createLeader()
 	if err != nil {
 		glog.Errorf("create producer leader error: %s", err)
-		return false
+		return nil
 	}
-
-	p.state = _state_open
-
-	p.timer = time.NewTimer(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
-	go func() {
-		<-p.timer.C
-		p.Close()
-	}()
 
 	// TODO wait to the next ticker to see if messageSet changes
 	go func() {
-		ticker := time.NewTicker(time.Duration(p.config.FlushIntervalMS) * time.Millisecond).C
+		ticker := time.NewTicker(time.Duration(p.config.FlushIntervalMS) * time.Millisecond)
 		for {
 			select {
-			case <-ticker:
+			case <-ticker.C:
 				p.Flush()
 			case <-p.closeChan:
 				return
@@ -138,16 +116,14 @@ func (p *SimpleProducer) ensureOpen() bool {
 		}
 	}()
 
-	return true
+	return p
 }
 
+// AddMessage add message to message set. If message set is full, send it to kafka synchronously
 func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 	valueCopy := make([]byte, len(value))
 	copy(valueCopy, value)
-	// TODO put ensureOpen between lock
-	if p.ensureOpen() == false {
-		return SimpleProducerClosedError
-	}
+
 	message := &Message{
 		Offset:      0,
 		MessageSize: 0, // compute in message encode
@@ -161,22 +137,28 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 	if p.config.HealerMagicByte == 1 {
 		message.Timestamp = uint64(time.Now().UnixMilli())
 	}
-	p.messageSetMutex.Lock()
+	p.lock.Lock()
+
+	if p.closed {
+		p.lock.Unlock()
+		return ErrProducerClosed
+	}
 	p.messageSet = append(p.messageSet, message)
 	if len(p.messageSet) >= p.config.MessageMaxCount {
 		messageSet := p.messageSet
 		p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-		p.messageSetMutex.Unlock()
+		p.lock.Unlock()
 		p.flush(messageSet)
 	} else {
-		p.messageSetMutex.Unlock()
+		p.lock.Unlock()
 	}
 	return nil
 }
 
+// Flush send all messages to kafka
 func (p *SimpleProducer) Flush() error {
-	p.messageSetMutex.Lock()
-	defer p.messageSetMutex.Unlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 
 	if len(p.messageSet) > 0 {
 		messageSet := p.messageSet
@@ -190,12 +172,6 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	if glog.V(5) {
 		glog.Infof("produce %d messsages to %s-%d", len(messageSet), p.topic, p.partition)
 	}
-
-	// TODO if ConnectionsMaxIdleMS is too long , below <- may take too long time ?
-	if !p.timer.Stop() {
-		<-p.timer.C
-	}
-	p.timer.Reset(time.Duration(p.config.ConnectionsMaxIdleMS) * time.Millisecond)
 
 	produceRequest := &ProduceRequest{
 		RequiredAcks: p.config.Acks,
@@ -266,11 +242,21 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	return err
 }
 
+// Close closes the producer
 func (p *SimpleProducer) Close() {
-	glog.Info("flush before SimpleProducer is closed")
-	p.Flush()
-	glog.Info("SimpleProducer closing")
-	p.state = _state_closed
-	p.closeChan <- true
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	glog.Info("flush before SimpleProducer close")
+	if len(p.messageSet) > 0 {
+		messageSet := p.messageSet
+		p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
+		p.flush(messageSet)
+	}
+
+	glog.Infof("close connection to %s-%d", p.topic, p.partition)
 	p.leader.Close()
+
+	close(p.closeChan)
+	p.closed = true
 }

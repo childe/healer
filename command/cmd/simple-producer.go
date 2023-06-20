@@ -71,6 +71,6 @@ var simpleProducerCmd = &cobra.Command{
 
 func init() {
 	simpleProducerCmd.Flags().String("config", "", "XX=YY,AA=ZZ. refer to https://github.com/childe/healer/blob/master/config.go")
-	simpleProducerCmd.Flags().Uint32("partition", 0, "partition id")
+	simpleProducerCmd.Flags().Int32("partition", 0, "partition id")
 	simpleProducerCmd.Flags().StringP("topic", "t", "", "topic name")
 }
