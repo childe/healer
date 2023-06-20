@@ -31,9 +31,8 @@ type SaslHandShakeRequest struct {
 
 func NewSaslHandShakeRequest(clientID string, mechanism string) *SaslHandShakeRequest {
 	requestHeader := &RequestHeader{
-		APIKey:     API_SaslHandshake,
-		APIVersion: 1,
-		ClientID:   clientID,
+		APIKey:   API_SaslHandshake,
+		ClientID: clientID,
 	}
 	return &SaslHandShakeRequest{requestHeader, mechanism}
 }

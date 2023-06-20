@@ -26,16 +26,13 @@ type Broker struct {
 	correlationID uint32
 
 	mux sync.Mutex
-
-	dead bool
 }
 
 var (
 	errTLSConfig = errors.New("Cert & File & CA must be set")
 )
 
-// NewBroker is used just as bootstrap in NewBrokers.
-// user must always init a Brokers instance by NewBrokers
+// NewBroker is only called in NewBrokers, user must always init a Brokers instance by NewBrokers
 func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, error) {
 	broker := &Broker{
 		config:  config,
@@ -43,22 +40,13 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		nodeID:  nodeID,
 
 		correlationID: 0,
-		dead:          true,
 	}
 
 	conn, err := newConn(address, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to establish connection when init broker: %s", err)
+		return nil, fmt.Errorf("failed to establish connection when init broker [%d]%s: %v", nodeID, address, err)
 	}
 	broker.conn = conn
-	broker.dead = false
-
-	if broker.config.SaslConfig != nil {
-		if err := broker.sendSaslAuthenticate(); err != nil {
-			glog.Errorf("sasl authenticate error : %s", err)
-			return nil, err
-		}
-	}
 
 	clientID := "healer-init"
 	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
@@ -82,6 +70,12 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		glog.Infof("broker %s api versions: %s", address, versions)
 	}
 
+	if broker.config.SaslConfig != nil {
+		if err := broker.sendSaslAuthenticate(); err != nil {
+			glog.Errorf("sasl authenticate to [%d]%s error: %s", nodeID, address, err)
+			return nil, err
+		}
+	}
 	return broker, nil
 }
 
@@ -156,21 +150,25 @@ func (broker *Broker) sendSaslAuthenticate() error {
 		mechanism  = saslConfig.SaslMechanism
 		user       = saslConfig.SaslUser
 		password   = saslConfig.SaslPassword
-
-		err error
 	)
 
 	saslHandShakeRequest := NewSaslHandShakeRequest(clientID, mechanism)
-	_, err = broker.RequestAndGet(saslHandShakeRequest)
+	resp, err := broker.RequestAndGet(saslHandShakeRequest)
 	if err != nil {
 		return err
+	}
+	if resp.Error() != nil {
+		return resp.Error()
 	}
 
 	// authenticate
 	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	_, err = broker.RequestAndGet(saslAuthenticateRequest)
+	resp, err = broker.RequestAndGet(saslAuthenticateRequest)
 	if err != nil {
 		return err
+	}
+	if resp.Error() != nil {
+		return resp.Error()
 	}
 	return nil
 }
@@ -182,44 +180,11 @@ func (broker *Broker) GetAddress() string {
 
 // Close closes the connection to the broker
 func (broker *Broker) Close() {
-	broker.dead = true
 	broker.conn.Close()
-}
-
-// IsDead returns true if the broker is dead
-func (broker *Broker) IsDead() bool {
-	return broker.dead
-}
-
-func (broker *Broker) ensureOpen() error {
-	if broker.dead {
-		glog.Infof("broker %s is dead, (re)open it after sleep 200ms", broker.address)
-		time.Sleep(time.Millisecond * 200)
-		conn, err := newConn(broker.address, broker.config)
-		if err != nil {
-			return fmt.Errorf("could not connect to %s: %w", broker.address, err)
-		}
-
-		broker.conn = conn
-		broker.dead = false
-		broker.correlationID = 0
-
-		if broker.config.SaslConfig != nil {
-			if err := broker.sendSaslAuthenticate(); err != nil {
-				return fmt.Errorf("sasl authenticate error: %w", err)
-			}
-		}
-	}
-	return nil
 }
 
 // Request sends a request to the broker and returns a readParser
 func (broker *Broker) Request(r Request) (ReadParser, error) {
-
-	if err := broker.ensureOpen(); err != nil {
-		return nil, err
-	}
-
 	broker.correlationID++
 	r.SetCorrelationID(broker.correlationID)
 	timeout := broker.config.TimeoutMS
@@ -409,10 +374,6 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 		case buffers <- nil:
 		}
 	}()
-
-	if err = broker.ensureOpen(); err != nil {
-		return err
-	}
 
 	broker.correlationID++
 

@@ -227,31 +227,13 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	}
 }
 
-// GetBroker returns random one broker if nodeID is -1
+// GetBroker returns broker from cache or create a new one
 func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	brokers.mutex.Lock()
 	defer brokers.mutex.Unlock()
 
-	if nodeID == -1 {
-		for _, broker := range brokers.brokers {
-			if broker.dead == false {
-				return broker, nil
-			}
-		}
-		for nodeID, brokerInfo := range brokers.brokersInfo {
-			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.config)
-			if err == nil {
-				brokers.brokers[nodeID] = broker
-				return broker, nil
-			}
-		}
-		return nil, fmt.Errorf("could not get broker from nodeID[%d]", nodeID)
-	}
-
 	if broker, ok := brokers.brokers[nodeID]; ok {
-		if broker.dead == false {
-			return broker, nil
-		}
+		return broker, nil
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {

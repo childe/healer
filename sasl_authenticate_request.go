@@ -28,23 +28,22 @@ type SaslAuthenticateRequest struct {
 	SaslAuthBytes []byte
 }
 
-func NewSaslAuthenticateRequest(clientID string, user, password, typ string) *SaslAuthenticateRequest {
+func NewSaslAuthenticateRequest(clientID string, user, password, typ string) (r SaslAuthenticateRequest) {
 	var saslAuth SaslAuth
 	switch strings.ToLower(typ) {
 	case "plain":
 		saslAuth = NewPlainSasl(user, password)
 	default:
 		glog.Errorf("%s NOT support for now", typ)
-		return nil
+		return r
 	}
 
 	requestHeader := &RequestHeader{
-		APIKey:     API_SaslAuthenticate,
-		APIVersion: 0,
-		ClientID:   clientID,
+		APIKey:   API_SaslAuthenticate,
+		ClientID: clientID,
 	}
 	saslAuthBytes := saslAuth.Encode()
-	return &SaslAuthenticateRequest{requestHeader, saslAuthBytes}
+	return SaslAuthenticateRequest{requestHeader, saslAuthBytes}
 }
 
 func (r *SaslAuthenticateRequest) Length() int {
@@ -52,7 +51,8 @@ func (r *SaslAuthenticateRequest) Length() int {
 	return l + 4 + len(r.SaslAuthBytes)
 }
 
-func (r *SaslAuthenticateRequest) Encode(version uint16) []byte {
+// Encode encodes SaslAuthenticateRequest to []byte
+func (r SaslAuthenticateRequest) Encode(version uint16) []byte {
 	requestLength := r.Length()
 
 	payload := make([]byte, requestLength+4)
