@@ -62,12 +62,11 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 func (p *Producer) refreshTopicMeta() error {
 	for i := 0; i < p.config.FetchTopicMetaDataRetrys; i++ {
 		metadataResponse, err := p.brokers.RequestMetaData(p.config.ClientID, []string{p.topic})
-		if err != nil {
-			glog.Errorf("get topic metadata error: %s", err)
-			continue
+		if err == nil {
+			err = metadataResponse.Error()
 		}
-		if len(metadataResponse.TopicMetadatas) == 0 {
-			glog.Errorf("get topic metadata error: %s", errNoTopicsInMetadata)
+		if err != nil {
+			glog.Errorf("get metadata of %s error: %s", p.topic, err)
 			continue
 		}
 		p.topicMeta = metadataResponse.TopicMetadatas[0]
