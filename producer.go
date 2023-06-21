@@ -10,15 +10,18 @@ import (
 )
 
 type Producer struct {
-	config                    *ProducerConfig
-	topic                     string
-	leaderIDToSimpleProducers map[int32]*SimpleProducer
-	currentProducer           *SimpleProducer
-	currentPartitionID        int32
-	brokers                   *Brokers
-	topicMeta                 TopicMetadata
+	config *ProducerConfig
+	topic  string
+
+	brokers   *Brokers
+	topicMeta TopicMetadata
+
+	pidToSimpleProducers map[int32]*SimpleProducer
+	leaderBrokersMapping map[int32]*Broker
+	currentProducer      *SimpleProducer
 }
 
+// NewProducer creates a new console producer
 func NewProducer(topic string, config *ProducerConfig) *Producer {
 	var err error
 	err = config.checkValid()
@@ -28,9 +31,10 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 	}
 
 	p := &Producer{
-		config:                    config,
-		topic:                     topic,
-		leaderIDToSimpleProducers: make(map[int32]*SimpleProducer),
+		config:               config,
+		topic:                topic,
+		pidToSimpleProducers: make(map[int32]*SimpleProducer),
+		leaderBrokersMapping: make(map[int32]*Broker),
 	}
 
 	brokerConfig := getBrokerConfigFromProducerConfig(config)
@@ -40,7 +44,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		return nil
 	}
 
-	err = p.refreshTopicMeta()
+	err = p.changeCurrentSimpleConsumer()
 	if err != nil {
 		glog.Errorf("get metadata of topic %s error: %v", p.topic, err)
 		return nil
@@ -48,7 +52,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 
 	go func() {
 		for range time.NewTicker(time.Duration(config.MetadataMaxAgeMS) * time.Millisecond).C {
-			err := p.refreshTopicMeta()
+			err := p.changeCurrentSimpleConsumer()
 			if err != nil {
 				glog.Errorf("refresh metadata error in producer %s ticker: %v", p.topic, err)
 			}
@@ -58,8 +62,8 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 	return p
 }
 
-// refresh metadata and currentProducer
-func (p *Producer) refreshTopicMeta() error {
+// update metadata and currentProducer
+func (p *Producer) changeCurrentSimpleConsumer() error {
 	for i := 0; i < p.config.FetchTopicMetaDataRetrys; i++ {
 		metadataResponse, err := p.brokers.RequestMetaData(p.config.ClientID, []string{p.topic})
 		if err == nil {
@@ -79,7 +83,7 @@ func (p *Producer) refreshTopicMeta() error {
 			}
 		}
 		partitionID := validPartitionID[rand.Int31n(int32(len(validPartitionID)))]
-		sp := NewSimpleProducer(p.topic, partitionID, p.config)
+		sp := NewSimpleProducer(p.topic, partitionID, p.config, nil)
 		if sp == nil {
 			glog.Errorf("could not update current simple producer from the %s-%d. use the previous one", p.topic, partitionID)
 			return nil
@@ -97,8 +101,8 @@ func (p *Producer) refreshTopicMeta() error {
 	return fmt.Errorf("failed to get topic meta of %s after %d tries", p.topic, p.config.FetchTopicMetaDataRetrys)
 }
 
-// getLeader return the leader broker id of the partition from metadata cache
-func (p *Producer) getLeader(pid int32) (int32, error) {
+// getLeaderID return the leader broker id of the partition from metadata cache
+func (p *Producer) getLeaderID(pid int32) (int32, error) {
 	for _, partition := range p.topicMeta.PartitionMetadatas {
 		if partition.PartitionID == pid {
 			if partition.PartitionErrorCode == 0 {
@@ -110,6 +114,7 @@ func (p *Producer) getLeader(pid int32) (int32, error) {
 	return -1, fmt.Errorf("partition %s-%d not found in metadata", p.topic, pid)
 }
 
+// getSimpleProducer return the simple producer. if key is nil, return the current simple producer
 func (p *Producer) getSimpleProducer(key []byte) (*SimpleProducer, error) {
 	if key == nil {
 		return p.currentProducer, nil
@@ -117,17 +122,24 @@ func (p *Producer) getSimpleProducer(key []byte) (*SimpleProducer, error) {
 
 	partitionID := int32(murmur.MurmurHash2(key, 0) % uint32(len(p.topicMeta.PartitionMetadatas)))
 
-	leaderID, err := p.getLeader(partitionID)
-	if err != nil {
-		return nil, err
-	}
-
-	if sp, ok := p.leaderIDToSimpleProducers[leaderID]; ok {
+	if sp, ok := p.pidToSimpleProducers[partitionID]; ok {
 		return sp, nil
 	}
 
-	sp := NewSimpleProducer(p.topic, partitionID, p.config)
-	p.leaderIDToSimpleProducers[partitionID] = sp
+	leaderID, err := p.getLeaderID(partitionID)
+	if err != nil {
+		return nil, err
+	}
+	broker, ok := p.leaderBrokersMapping[leaderID]
+	if !ok {
+		broker, err = p.brokers.NewBroker(leaderID)
+		if err != nil {
+			return nil, fmt.Errorf("create broker %d error: %s", leaderID, err)
+		}
+		p.leaderBrokersMapping[leaderID] = broker
+	}
+	sp := NewSimpleProducer(p.topic, partitionID, p.config, broker)
+	p.pidToSimpleProducers[partitionID] = sp
 	return sp, nil
 }
 
@@ -151,7 +163,12 @@ func (p *Producer) AddMessage(key []byte, value []byte) error {
 
 // Close close all simple producers in the console producer
 func (p *Producer) Close() {
-	for _, sp := range p.leaderIDToSimpleProducers {
-		sp.Close()
+	if p.currentProducer != nil {
+		p.currentProducer.Close()
+	}
+	for _, sp := range p.pidToSimpleProducers {
+		if p.currentProducer != sp {
+			sp.Close()
+		}
 	}
 }

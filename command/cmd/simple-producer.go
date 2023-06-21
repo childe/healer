@@ -46,7 +46,7 @@ var simpleProducerCmd = &cobra.Command{
 			return fmt.Errorf("could not generate producer config: %w", err)
 		}
 
-		simpleProducer := healer.NewSimpleProducer(topic, partition, c)
+		simpleProducer := healer.NewSimpleProducer(topic, partition, c, nil)
 
 		if simpleProducer == nil {
 			return errors.New("could not create simpleProducer")

@@ -63,7 +63,7 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 	return leader, err
 }
 
-func NewSimpleProducer(topic string, partition int32, config *ProducerConfig) *SimpleProducer {
+func NewSimpleProducer(topic string, partition int32, config *ProducerConfig, broker *Broker) *SimpleProducer {
 	err := config.checkValid()
 	if err != nil {
 		glog.Errorf("config error: %s", err)
