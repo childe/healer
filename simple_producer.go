@@ -63,7 +63,7 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 	return leader, err
 }
 
-func NewSimpleProducer(topic string, partition int32, config *ProducerConfig, broker *Broker) *SimpleProducer {
+func NewSimpleProducer(topic string, partition int32, config *ProducerConfig, leader *Broker) *SimpleProducer {
 	err := config.checkValid()
 	if err != nil {
 		glog.Errorf("config error: %s", err)
@@ -97,7 +97,11 @@ func NewSimpleProducer(topic string, partition int32, config *ProducerConfig, br
 
 	p.messageSet = make([]*Message, 0, config.MessageMaxCount)
 
-	p.leader, err = p.createLeader()
+	if leader != nil {
+		p.leader = leader
+	} else {
+		p.leader, err = p.createLeader()
+	}
 	if err != nil {
 		glog.Errorf("create producer leader error: %s", err)
 		return nil
