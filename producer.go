@@ -139,6 +139,9 @@ func (p *Producer) getSimpleProducer(key []byte) (*SimpleProducer, error) {
 		p.leaderBrokersMapping[leaderID] = broker
 	}
 	sp := NewSimpleProducer(p.topic, partitionID, p.config, broker)
+	if sp == nil {
+		return nil, fmt.Errorf("could not create simple producer from the %s-%d.", p.topic, partitionID)
+	}
 	p.pidToSimpleProducers[partitionID] = sp
 	return sp, nil
 }
