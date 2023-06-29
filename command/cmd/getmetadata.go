@@ -70,5 +70,5 @@ func catResponse(metadataResponse *healer.MetadataResponse) {
 
 func init() {
 	getMetadataCmd.Flags().String("format", "json", "default is json, support json, cat")
-	getMetadataCmd.Flags().StringSlice("topics", nil, "topics, comma separated")
+	getMetadataCmd.Flags().StringSliceP("topics", "t", nil, "topics, comma separated")
 }
