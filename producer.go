@@ -7,6 +7,7 @@ import (
 
 	"github.com/aviddiviner/go-murmur"
 	"github.com/golang/glog"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Producer struct {
@@ -21,37 +22,50 @@ type Producer struct {
 	currentProducer      *SimpleProducer
 }
 
-// NewProducer creates a new console producer
-func NewProducer(topic string, config *ProducerConfig) *Producer {
-	var err error
-	err = config.checkValid()
-	if err != nil {
-		glog.Errorf("producer config error: %s", err)
-		return nil
+// NewProducer creates a new console producer.
+// config can be a map[string]interface{} or a ProducerConfig, use DefaultProducerConfig if config is nil
+func NewProducer(topic string, config interface{}) (p Producer, err error) {
+	var producerConfig = defaultProducerConfig
+	switch config.(type) {
+	case nil:
+		producerConfig = defaultProducerConfig
+	case map[string]interface{}:
+		if err = mapstructure.WeakDecode(config, &producerConfig); err != nil {
+			return p, fmt.Errorf("decode config error: %w", err)
+		}
+	case ProducerConfig:
+		producerConfig = config.(ProducerConfig)
+	default:
+		return p, fmt.Errorf("producer only accept map[string]interface{} or ProducerConfig")
+	}
+	glog.Infof("producer config: %#v", producerConfig)
+
+	if err = producerConfig.checkValid(); err != nil {
+		return p, err
 	}
 
-	p := &Producer{
-		config:               config,
+	p = Producer{
+		config:               &producerConfig,
 		topic:                topic,
 		pidToSimpleProducers: make(map[int32]*SimpleProducer),
 		leaderBrokersMapping: make(map[int32]*Broker),
 	}
 
-	brokerConfig := getBrokerConfigFromProducerConfig(config)
-	p.brokers, err = NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
+	brokerConfig := getBrokerConfigFromProducerConfig(&producerConfig)
+	p.brokers, err = NewBrokersWithConfig(producerConfig.BootstrapServers, brokerConfig)
 	if err != nil {
-		glog.Errorf("init brokers error: %s", err)
-		return nil
+		err = fmt.Errorf("init brokers error: %w", err)
+		return p, err
 	}
 
 	err = p.changeCurrentSimpleConsumer()
 	if err != nil {
-		glog.Errorf("get metadata of topic %s error: %v", p.topic, err)
-		return nil
+		err = fmt.Errorf("get metadata of topic %s error: %w", p.topic, err)
+		return p, err
 	}
 
 	go func() {
-		for range time.NewTicker(time.Duration(config.MetadataMaxAgeMS) * time.Millisecond).C {
+		for range time.NewTicker(time.Duration(producerConfig.MetadataMaxAgeMS) * time.Millisecond).C {
 			err := p.changeCurrentSimpleConsumer()
 			if err != nil {
 				glog.Errorf("refresh metadata error in producer %s ticker: %v", p.topic, err)
@@ -59,7 +73,7 @@ func NewProducer(topic string, config *ProducerConfig) *Producer {
 		}
 	}()
 
-	return p
+	return p, nil
 }
 
 // update metadata and currentProducer
