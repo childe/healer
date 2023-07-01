@@ -40,16 +40,11 @@ var consoleProducerCmd = &cobra.Command{
 			producerConfig[t[0]] = t[1]
 		}
 
-		c, err := healer.GetProducerConfig(producerConfig)
+		consoleProducer, err := healer.NewProducer(topic, producerConfig)
 		if err != nil {
-			return fmt.Errorf("could not generate producer config: %w", err)
+			return fmt.Errorf("could not create ConsoleProducer: %w", err)
 		}
 
-		consoleProducer := healer.NewProducer(topic, c)
-
-		if consoleProducer == nil {
-			return errors.New("could not create consoleProducer")
-		}
 		defer consoleProducer.Close()
 
 		scanner := bufio.NewScanner(os.Stdin)
