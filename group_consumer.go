@@ -351,7 +351,10 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 	offsetComimtReq.SetRetentionTime(-1)
 	offsetComimtReq.AddPartiton(topic, partitionID, offset, "")
 
-	_, err := c.coordinator.RequestAndGet(offsetComimtReq)
+	resp, err := c.coordinator.RequestAndGet(offsetComimtReq)
+	if err == nil {
+		err = resp.Error()
+	}
 	if err == nil {
 		glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
 		return true
