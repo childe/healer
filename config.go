@@ -6,32 +6,32 @@ import (
 )
 
 type NetConfig struct {
-	ConnectTimeoutMS    int   `json:"connect.timeout.ms,string"`
-	TimeoutMS           int   `json:"timeout.ms,string"`
-	TimeoutMSForEachAPI []int `json:"timeout.ms.for.eachapi"`
-	KeepAliveMS         int   `json:"keepalive.ms,string"`
+	ConnectTimeoutMS    int   `json:"connect.timeout.ms,string" mapstructure:"connect.timeout.ms"`
+	TimeoutMS           int   `json:"timeout.ms,string" mapstructure:"timeout.ms"`
+	TimeoutMSForEachAPI []int `json:"timeout.ms.for.eachapi" mapstructure:"timeout.ms.for.eachapi"`
+	KeepAliveMS         int   `json:"keepalive.ms,string" mapstructure:"keepalive.ms"`
 }
 
 type TLSConfig struct {
-	Cert               string `json:"cert"`
-	Key                string `json:"key"`
-	CA                 string `json:"ca"`
-	InsecureSkipVerify bool   `json:"insecure.skip.verify,string"`
-	ServerName         string `json:"servername"`
+	Cert               string `json:"cert" mapstructure:"cert"`
+	Key                string `json:"key" mapstructure:"key"`
+	CA                 string `json:"ca" mapstructure:"ca"`
+	InsecureSkipVerify bool   `json:"insecure.skip.verify,string" mapstructure:"insecure.skip.verify"`
+	ServerName         string `json:"servername" mapstructure:"servername"`
 }
 
 type SaslConfig struct {
-	SaslMechanism string `json:"sasl.mechanism"`
-	SaslUser      string `json:"sasl.user"`
-	SaslPassword  string `json:"sasl.password"`
+	SaslMechanism string `json:"sasl.mechanism" mapstructure:"sasl.mechanism"`
+	SaslUser      string `json:"sasl.user" mapstructure:"sasl.user"`
+	SaslPassword  string `json:"sasl.password" mapstructure:"sasl.password"`
 }
 
 type BrokerConfig struct {
 	NetConfig
 	*SaslConfig
-	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string"`
-	TLSEnabled                bool       `json:"tls.enabled,string"`
-	TLS                       *TLSConfig `json:"tls"`
+	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
+	TLSEnabled                bool       `json:"tls.enabled,string" mapstructure:"tls.enabled"`
+	TLS                       *TLSConfig `json:"tls" mapstructure:"tls"`
 }
 
 func DefaultBrokerConfig() *BrokerConfig {
@@ -83,24 +83,24 @@ func (c *BrokerConfig) checkValid() error {
 type ConsumerConfig struct {
 	NetConfig
 	*SaslConfig
-	BootstrapServers     string `json:"bootstrap.servers"`
-	ClientID             string `json:"client.id"`
-	GroupID              string `json:"group.id"`
-	RetryBackOffMS       int    `json:"retry.backoff.ms,string"`
-	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms,string"`
-	SessionTimeoutMS     int32  `json:"session.timeout.ms,string"`
-	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms,string"`
-	FetchMaxBytes        int32  `json:"fetch.max.bytes,string"`
-	FetchMinBytes        int32  `json:"fetch.min.bytes,string"`
-	FromBeginning        bool   `json:"from.beginning,string"`
-	AutoCommit           bool   `json:"auto.commit,string"`
-	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string"`
-	OffsetsStorage       int    `json:"offsets.storage,string"`
+	BootstrapServers     string `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
+	ClientID             string `json:"client.id" mapstructure:"client.id"`
+	GroupID              string `json:"group.id" mapstructure:"group.id"`
+	RetryBackOffMS       int    `json:"retry.backoff.ms,string" mapstructure:"retry.backoff.ms"`
+	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
+	SessionTimeoutMS     int32  `json:"session.timeout.ms,string" mapstructure:"session.timeout.ms"`
+	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms,string" mapstructure:"fetch.max.wait.ms"`
+	FetchMaxBytes        int32  `json:"fetch.max.bytes,string" mapstructure:"fetch.max.bytes"`
+	FetchMinBytes        int32  `json:"fetch.min.bytes,string" mapstructure:"fetch.min.bytes"`
+	FromBeginning        bool   `json:"from.beginning,string" mapstructure:"from.beginning"`
+	AutoCommit           bool   `json:"auto.commit,string" mapstructure:"auto.commit"`
+	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string" mapstructure:"auto.commit.interval.ms"`
+	OffsetsStorage       int    `json:"offsets.storage,string" mapstructure:"offsets.storage"`
 
-	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string"`
+	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 
-	TLSEnabled bool       `json:"tls.enabled,string"`
-	TLS        *TLSConfig `json:"tls"`
+	TLSEnabled bool       `json:"tls.enabled,string" mapstructure:"tls.enabled"`
+	TLS        *TLSConfig `json:"tls" mapstructure:"tls"`
 }
 
 func DefaultConsumerConfig() *ConsumerConfig {
@@ -184,33 +184,34 @@ func (config *ConsumerConfig) checkValid() error {
 type ProducerConfig struct {
 	NetConfig
 	*SaslConfig
-	BootstrapServers         string `json:"bootstrap.servers"`
-	ClientID                 string `json:"client.id"`
-	Acks                     int16  `json:"acks,string"`
-	CompressionType          string `json:"compress.type"`
-	BatchSize                int    `json:"batch.size,string"`
-	MessageMaxCount          int    `json:"message.max.count,string"`
-	FlushIntervalMS          int    `json:"flush.interval.ms,string"`
-	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms,string"`
-	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys,string"`
-	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms,string"`
+	BootstrapServers         string `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
+	ClientID                 string `json:"client.id" mapstructure:"client.id"`
+	Acks                     int16  `json:"acks,string" mapstructure:"acks"`
+	CompressionType          string `json:"compress.type" mapstructure:"compress.type"`
+	BatchSize                int    `json:"batch.size,string" mapstructure:"batch.size"`
+	MessageMaxCount          int    `json:"message.max.count,string" mapstructure:"message.max.count"`
+	FlushIntervalMS          int    `json:"flush.interval.ms,string" mapstructure:"flush.interval.ms,string"`
+	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
+	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys,string" mapstructure:"fetch.topic.metadata.retrys"`
+	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms,string" mapstructure:"connections.max.idle.ms"`
 
-	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string"`
+	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 
-	TLSEnabled bool       `json:"tls.enabled,string"`
-	TLS        *TLSConfig `json:"tls"`
+	TLSEnabled bool       `json:"tls.enabled,string" mapstructure:"tls.enabled"`
+	TLS        *TLSConfig `json:"tls" mapstructure:"tls"`
 
 	// TODO
-	Retries          int   `json:"retries,string"`
-	RequestTimeoutMS int32 `json:"request.timeout.ms,string"`
+	Retries          int   `json:"retries,string" mapstructure:"retries"`
+	RequestTimeoutMS int32 `json:"request.timeout.ms,string" mapstructure:"request.timeout.ms"`
 
 	// producer.AddMessage will use this config to assemble Message
 	// only 0 and 1 is implemented for now
-	HealerMagicByte int `json:"healer.magicbyte,string"`
+	HealerMagicByte int `json:"healer.magicbyte,string" mapstructure:"healer.magicbyte"`
 }
 
-func DefaultProducerConfig() *ProducerConfig {
-	return &ProducerConfig{
+// DefaultProducerConfig returns a default ProducerConfig
+func DefaultProducerConfig() ProducerConfig {
+	return ProducerConfig{
 		NetConfig: NetConfig{
 			ConnectTimeoutMS:    30000,
 			TimeoutMS:           30000,
@@ -234,6 +235,8 @@ func DefaultProducerConfig() *ProducerConfig {
 	}
 }
 
+var defaultProducerConfig = DefaultProducerConfig()
+
 func GetProducerConfig(config map[string]interface{}) (*ProducerConfig, error) {
 	b, err := json.Marshal(config)
 	if err != nil {
@@ -241,7 +244,7 @@ func GetProducerConfig(config map[string]interface{}) (*ProducerConfig, error) {
 	}
 
 	c := DefaultProducerConfig()
-	err = json.Unmarshal(b, c)
+	err = json.Unmarshal(b, &c)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +256,7 @@ func GetProducerConfig(config map[string]interface{}) (*ProducerConfig, error) {
 	//}
 	//}
 
-	return c, nil
+	return &c, nil
 }
 
 var (
