@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -48,5 +47,4 @@ func init() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	flag.Parse()
-	defer glog.Flush()
 }
