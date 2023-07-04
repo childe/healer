@@ -30,18 +30,25 @@ func init() {
 	rootCmd.PersistentFlags().StringP("brokers", "b", "", "(required) broker list, seperated by comma")
 	rootCmd.PersistentFlags().StringP("client", "c", "healer", "client name")
 
-	rootCmd.AddCommand(getOffsetsCmd)
 	rootCmd.AddCommand(getMetadataCmd)
+	rootCmd.AddCommand(getOffsetsCmd)
+
 	rootCmd.AddCommand(getPendingCmd)
-	rootCmd.AddCommand(simpleConsumerCmd)
+
+rootCmd.AddCommand(simpleConsumerCmd)
 	rootCmd.AddCommand(simpleProducerCmd)
 	rootCmd.AddCommand(consoleProducerCmd)
+	rootCmd.AddCommand(consoleConsumerCmd)
+
 	rootCmd.AddCommand(createTopicCmd)
 	rootCmd.AddCommand(createPartitionsCmd)
+
 	rootCmd.AddCommand(describeConfigsCmd)
 	rootCmd.AddCommand(alterConfigsCmd)
+
 	rootCmd.AddCommand(describeGroupsCmd)
 	rootCmd.AddCommand(deleteGroupsCmd)
+
 	rootCmd.AddCommand(listPartitionReassignmentsCmd)
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
