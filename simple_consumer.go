@@ -40,6 +40,10 @@ type SimpleConsumer struct {
 	wg *sync.WaitGroup // call wg.Done in defer when Consume return
 }
 
+func (c *SimpleConsumer) String() string {
+	return fmt.Sprintf("simple-consumer %s-%d", c.topic, c.partitionID)
+}
+
 // NewSimpleConsumerWithBrokers create a simple consumer with existing brokers
 func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *ConsumerConfig, brokers *Brokers) *SimpleConsumer {
 	c := &SimpleConsumer{
@@ -369,10 +373,6 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 				}
 			}
 		}()
-	}
-
-	if c.config.AutoCommit {
-		c.CommitOffset()
 	}
 
 	go c.consumeLoop(messages)

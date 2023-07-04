@@ -65,7 +65,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 		err              error
 		topics           []string = make([]string, 0)
 	)
-	for topicName, _ := range c.assign {
+	for topicName := range c.assign {
 		topics = append(topics, topicName)
 	}
 
@@ -86,7 +86,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
 		topicName := topicMetadatas.TopicName
 		var partitions = make([]int, 0)
-		if pids, _ := c.assign[topicName]; pids == nil { // consume all partitions
+		if pids, ok := c.assign[topicName]; ok == false || len(pids) == 0 { // consume all partitions
 			for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 				partitions = append(partitions, int(partitionMetadataInfo.PartitionID))
 			}
@@ -110,6 +110,8 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 			c.simpleConsumers = append(c.simpleConsumers, simpleConsumer)
 		}
 	}
+
+	glog.V(10).Infof("%d simple consumers: %v", len(c.simpleConsumers), c.simpleConsumers)
 
 	var offset int64
 	if c.config.FromBeginning {
