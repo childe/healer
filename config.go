@@ -3,6 +3,9 @@ package healer
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type NetConfig struct {
@@ -237,26 +240,24 @@ func DefaultProducerConfig() ProducerConfig {
 
 var defaultProducerConfig = DefaultProducerConfig()
 
-func GetProducerConfig(config map[string]interface{}) (*ProducerConfig, error) {
-	b, err := json.Marshal(config)
-	if err != nil {
-		return nil, err
+// create ProducerConfig from map or return directly if config is ProducerConfig
+// return defaultProducerConfig if config is nil
+func createProducerConfig(config interface{}) (c ProducerConfig, err error) {
+	switch config.(type) {
+	case nil:
+		return defaultProducerConfig, nil
+	case map[string]interface{}:
+		c = defaultProducerConfig
+		if err := mapstructure.WeakDecode(config, &c); err != nil {
+			return defaultProducerConfig, fmt.Errorf("decode producer config error: %w", err)
+		}
+	case ProducerConfig:
+		c = config.(ProducerConfig)
+	default:
+		return c, fmt.Errorf("producer only accept config from map[string]interface{} or ProducerConfig")
 	}
-
-	c := DefaultProducerConfig()
-	err = json.Unmarshal(b, &c)
-	if err != nil {
-		return nil, err
-	}
-
-	//if len(c.TimeoutMSForEachAPI) == 0 {
-	//c.TimeoutMSForEachAPI = make([]int, 38)
-	//for i := range c.TimeoutMSForEachAPI {
-	//c.TimeoutMSForEachAPI[i] = c.TimeoutMS
-	//}
-	//}
-
-	return &c, nil
+	err = c.checkValid()
+	return c, err
 }
 
 var (
