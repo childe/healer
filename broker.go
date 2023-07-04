@@ -178,6 +178,10 @@ func (broker *Broker) GetAddress() string {
 	return broker.address
 }
 
+func (broker *Broker) String() string {
+	return fmt.Sprintf("[%d]%s", broker.nodeID, broker.address)
+}
+
 // Close closes the connection to the broker
 func (broker *Broker) Close() {
 	broker.conn.Close()
