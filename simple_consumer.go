@@ -354,9 +354,11 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	if c.config.GroupID != "" && (c.offset == -1 || c.offset == -2) {
 		c.getCommitedOffet()
 	}
+	glog.V(5).Infof("[%s][%d] offset: %d (after fetch offset)", c.topic, c.partitionID, c.offset)
 
 	if c.offset == -1 || c.offset == -2 {
 		c.initOffset()
+		glog.V(5).Infof("[%s][%d] offset: %d (after init offset)", c.topic, c.partitionID, c.offset)
 	}
 
 	if c.config.AutoCommit && c.config.GroupID != "" {
