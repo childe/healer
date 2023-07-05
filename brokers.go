@@ -105,8 +105,8 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		}
 	}
 
-	glog.Infof("got %d brokers", len(brokers.brokersInfo))
-	if glog.V(2) {
+	if glog.V(5) {
+		glog.Infof("got %d brokers", len(brokers.brokersInfo))
 		for nodeID, broker := range brokers.brokersInfo {
 			glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
 		}
