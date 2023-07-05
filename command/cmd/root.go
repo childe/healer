@@ -35,10 +35,11 @@ func init() {
 
 	rootCmd.AddCommand(getPendingCmd)
 
-rootCmd.AddCommand(simpleConsumerCmd)
+	rootCmd.AddCommand(simpleConsumerCmd)
 	rootCmd.AddCommand(simpleProducerCmd)
 	rootCmd.AddCommand(consoleProducerCmd)
 	rootCmd.AddCommand(consoleConsumerCmd)
+	rootCmd.AddCommand(groupConsumerCmd)
 
 	rootCmd.AddCommand(createTopicCmd)
 	rootCmd.AddCommand(createPartitionsCmd)
