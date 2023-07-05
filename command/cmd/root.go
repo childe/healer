@@ -31,8 +31,9 @@ func init() {
 	rootCmd.PersistentFlags().StringP("client", "c", "healer", "client name")
 
 	rootCmd.AddCommand(getMetadataCmd)
-	rootCmd.AddCommand(getOffsetsCmd)
 
+	rootCmd.AddCommand(getOffsetsCmd)
+	rootCmd.AddCommand(resetOffsetCmd)
 	rootCmd.AddCommand(getPendingCmd)
 
 	rootCmd.AddCommand(simpleConsumerCmd)
