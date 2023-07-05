@@ -34,33 +34,25 @@ var resetOffsetCmd = &cobra.Command{
 			return fmt.Errorf("could not get metadata: %w", err)
 		}
 
-		// only one topic
-		topicMetadata := metaDataResponse.TopicMetadatas[0]
+		offsetsResponses, err := brokers.RequestOffsets(client, topic, -1, timestamp, 1)
+		if err != nil {
+			return fmt.Errorf("request offsets error: %w. topic: %s, timestmap: %d", err, topic, timestamp)
+		}
 
 		offsets := make(map[int32]int64)
-		for _, partitionMetadata := range topicMetadata.PartitionMetadatas {
-			partitionID := partitionMetadata.PartitionID
-
-			// get offset
-			offsetsResponses, err := brokers.RequestOffsets(client, topic, int32(partitionID), timestamp, 1)
-			if err != nil {
-				return fmt.Errorf("could not get offsets: %w", err)
+		for _, offsetsResponse := range offsetsResponses {
+			if err := offsetsResponse.Error(); err != nil {
+				return fmt.Errorf("request offsets error: %w. topic: %s, timestmap: %d", err, topic, timestamp)
 			}
-			for _, offsetsResponse := range offsetsResponses {
-				if err := offsetsResponse.Error(); err != nil {
-					return fmt.Errorf("could not get offsets: %w", err)
-				}
-				for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
-					for _, partitionOffset := range partitionOffsets {
-						partition := partitionOffset.Partition
-						_offsets := partitionOffset.Offsets
-						if len(_offsets) == 0 {
-							return fmt.Errorf("could not get offsets of %s[%d]", topic, partition)
-						}
-						glog.Infof("%s:%d:%v", topic, partition, _offsets)
-						offset := int64(_offsets[0])
-						offsets[partitionID] = offset
+			for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
+				for _, partitionOffset := range partitionOffsets {
+					partition := partitionOffset.Partition
+					if len(partitionOffset.Offsets) == 0 {
+						return fmt.Errorf("offsets of %s[%d] is blank", topic, partition)
 					}
+					glog.Infof("%s:%d:%v", topic, partition, partitionOffset.Offsets)
+					offset := int64(partitionOffset.Offsets[0])
+					offsets[partition] = offset
 				}
 			}
 		}
