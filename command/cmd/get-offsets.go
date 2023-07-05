@@ -13,16 +13,16 @@ var getOffsetsCmd = &cobra.Command{
 	Short: "get offsets of a topic",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brorkers, err := cmd.Flags().GetString("brokers")
+		bs, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		topic, err := cmd.Flags().GetString("topic")
 		offsets, err := cmd.Flags().GetUint32("offsets")
 		timestamp, err := cmd.Flags().GetInt64("timestamp")
 
-		brokers, err := healer.NewBrokers(brorkers)
+		brokers, err := healer.NewBrokers(bs)
 
 		if err != nil {
-			return fmt.Errorf("failed to create brokers from %s: %w", brorkers, err)
+			return fmt.Errorf("failed to create brokers from %s: %w", bs, err)
 		}
 
 		offsetsResponse, err := brokers.RequestOffsets(client, topic, -1, timestamp, offsets)

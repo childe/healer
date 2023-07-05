@@ -14,11 +14,11 @@ var describeGroupsCmd = &cobra.Command{
 	Short: "describe groups in kafka cluster",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		brorkers, err := cmd.Flags().GetString("brokers")
+		bs, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		group, err := cmd.Flags().GetString("group")
 
-		brokers, err := healer.NewBrokers(brorkers)
+		brokers, err := healer.NewBrokers(bs)
 		if err != nil {
 			return fmt.Errorf("failed to get offsets: %w", err)
 		}
