@@ -212,11 +212,16 @@ func (broker *Broker) RequestAndGet(r Request) (Response, error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
-	if rp, err := broker.Request(r); err != nil {
+	rp, err := broker.Request(r)
+	if err != nil {
 		return nil, err
-	} else {
-		return rp.ReadAndParse()
 	}
+
+	resp, err := rp.ReadAndParse()
+	if err != nil {
+		return nil, err
+	}
+	return resp, resp.Error()
 }
 
 func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, error) {
