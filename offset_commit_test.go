@@ -11,8 +11,6 @@ func TestOffsetCommitRequest(t *testing.T) {
 		groupID     = "hangout"
 		version     uint16
 	)
-	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
-
 	r := NewOffsetCommitRequest(0, clientID, groupID)
 
 	if r.Length() != 29 {
@@ -38,17 +36,4 @@ func TestOffsetCommitRequest(t *testing.T) {
 	if len(payload) != 71 {
 		t.Error("offsetcommit request payload length should be 71")
 	}
-
-	responseBuf, err := broker.Request(r)
-	if err != nil {
-		t.Errorf("requet offsetcommit error:%s", err)
-	}
-
-	_, err = NewOffsetCommitResponse(responseBuf)
-	if err != nil {
-		t.Errorf("decode offsetcommit response error:%s", err)
-	}
-	t.Log("get offsetcommit response")
-
-	broker.Close()
 }

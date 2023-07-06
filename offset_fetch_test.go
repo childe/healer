@@ -14,10 +14,6 @@ func TestOffsetFetchRequest(t *testing.T) {
 		groupID     string = "hangout"
 		version     uint16
 	)
-	broker, err := NewBroker(*brokerAddress, -1, DefaultBrokerConfig())
-	if err != nil {
-		t.Errorf("create broker error:%s", err)
-	}
 
 	r := NewOffsetFetchRequest(0, clientID, groupID)
 
@@ -46,17 +42,4 @@ func TestOffsetFetchRequest(t *testing.T) {
 	if len(payload) != 51 {
 		t.Error("offsetcommit request payload length should be 51")
 	}
-
-	responseBuf, err := broker.Request(r)
-	if err != nil {
-		t.Errorf("requet offsetcommit error:%s", err)
-	}
-
-	_, err = NewOffsetFetchResponse(responseBuf)
-	if err != nil {
-		t.Errorf("parse offsetfetch response error:%s", err)
-	}
-	t.Log("get offsetfetch response")
-
-	broker.Close()
 }

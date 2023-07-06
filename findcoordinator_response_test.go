@@ -20,7 +20,7 @@ func (r FindCoordinatorResponse) decode() []byte {
 
 	size = 2
 	payload = append(payload, make([]byte, size)...)
-	binary.BigEndian.PutUint16(payload[offset:], r.ErrorCode)
+	binary.BigEndian.PutUint16(payload[offset:], uint16(r.ErrorCode))
 	offset += size
 
 	size = 4
@@ -65,9 +65,9 @@ func TestFindcoordinatorResponseDecode(t *testing.T) {
 	if err != nil {
 		t.Errorf("FindCoordinatorResponse encode failed: %v", err)
 	}
-	if reflect.DeepEqual(r, *nr) {
+	if reflect.DeepEqual(r, nr) {
 		t.Logf("FindCoordinatorResponse encode success")
 	} else {
-		t.Errorf("FindCoordinatorResponse encode failed. %v!=%v", r, *nr)
+		t.Errorf("FindCoordinatorResponse encode failed. %v!=%v", r, nr)
 	}
 }
