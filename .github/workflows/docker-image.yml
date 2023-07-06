@@ -23,7 +23,7 @@ jobs:
       run: CGO_ENABLED=0 go build -o docker/healer ./command
 
     - name: Build the Docker image
-      run: docker build . -t rmself/healer:${GITHUB_REF_NAME} docker
+      run: docker build -t rmself/healer:${GITHUB_REF_NAME} docker
 
     - name: Log in to Docker Hub
       run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
