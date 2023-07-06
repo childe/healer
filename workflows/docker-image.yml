@@ -1,0 +1,32 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.20
+
+    - name: Test
+      run: go test -v ./...
+
+    - name: Build
+      run: CGO_ENABLED=0 go build -o docker/healer ./command
+
+    - name: Build the Docker image
+      run: docker build . -t rmself/healer:${GITHUB_REF_NAME} docker
+
+    - name: Log in to Docker Hub
+      run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Push Docker image
+      run: docker push rmself/healer:${GITHUB_REF_NAME}
