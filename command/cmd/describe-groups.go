@@ -41,11 +41,31 @@ var describeGroupsCmd = &cobra.Command{
 			return fmt.Errorf("failed to make describe_groups request: %w", err)
 		}
 
-		s, err := json.MarshalIndent(resp.(healer.DescribeGroupsResponse), "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal metadata response: %w", err)
+		rst := make([]map[string]interface{}, 0)
+		for _, group := range resp.(healer.DescribeGroupsResponse).Groups {
+			members := group.Members
+			for i := range members {
+				e := make(map[string]interface{})
+				e["member_id"] = members[i].MemberID
+				e["client_id"] = members[i].ClientID
+				e["client_host"] = members[i].ClientHost
+
+				memberAssignment, err := healer.NewMemberAssignment(members[i].MemberAssignment)
+				if err != nil {
+					return err
+				}
+				for _, p := range memberAssignment.PartitionAssignments {
+					e["assignments"] = p
+				}
+				rst = append(rst, e)
+			}
 		}
-		fmt.Println(string(s))
+
+		b, err := json.MarshalIndent(rst, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
 
 		return nil
 	},
