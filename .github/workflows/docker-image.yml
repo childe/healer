@@ -30,3 +30,9 @@ jobs:
 
     - name: Push Docker image
       run: docker push rmself/healer:${GITHUB_REF_NAME}
+
+    - name: Tag latest
+      run: docker tag rmself/healer:${GITHUB_REF_NAME} rmself/healer
+
+    - name: Push Docker image
+      run: docker push rmself/healer
