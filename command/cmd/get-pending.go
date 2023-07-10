@@ -205,7 +205,19 @@ var getPendingCmd = &cobra.Command{
 		}
 
 		for i, groupID := range groupIDs {
+			glog.V(5).Infof("%d/%d %s", i, len(groupIDs), groupID)
+			subscriptions, err := getSubscriptionsInGroup(groupID, client)
+			if err != nil {
+				glog.Errorf("get subscriptions of %s error: %s", groupID, err)
+				continue
+			}
+			glog.V(5).Infof("%d topics: %v", len(subscriptions), subscriptions)
+
 			if topic != "" {
+				if _, ok := subscriptions[topic]; !ok {
+					glog.V(10).Infof("topic %s not found in group %s", topic, groupID)
+					continue
+				}
 				var topicName = topic
 				timestamp := time.Now().Unix()
 
@@ -251,15 +263,6 @@ var getPendingCmd = &cobra.Command{
 				}
 				continue
 			}
-
-			glog.V(5).Infof("%d/%d %s", i, len(groupIDs), groupID)
-			subscriptions, err := getSubscriptionsInGroup(groupID, client)
-			if err != nil {
-				glog.Errorf("get subscriptions of %s error: %s", groupID, err)
-				continue
-			}
-
-			glog.V(5).Infof("%d topics", len(subscriptions))
 
 			for topicName, v := range subscriptions {
 				glog.V(5).Infof("topic: %s", topicName)
