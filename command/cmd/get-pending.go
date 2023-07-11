@@ -107,16 +107,21 @@ func getCommittedOffset(topic string, partitions []int32, groupID, client string
 
 // topicName -> partitionID -> memberID
 func getSubscriptionsInGroup(groupID, client string) (map[string]map[int32]string, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in getSubscriptionsInGroup", r)
+		}
+	}()
 	if _, ok := groups[groupID]; !ok {
 		coordinatorResponse, err := brokers.FindCoordinator(client, groupID)
 		if err != nil {
-			glog.Fatalf("could not find coordinator: %s", err)
+			return nil, fmt.Errorf("could not find coordinator of %s: %s", groupID, err)
 		}
 		coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
 		if err != nil {
-			glog.Fatalf("get broker error: %s", err)
+			return nil, fmt.Errorf("get broker error: %s", err)
 		}
-		glog.V(5).Infof("coordinator of %s:%s", groupID, coordinator.GetAddress())
+		glog.V(5).Infof("coordinator of %s: %s", groupID, coordinator)
 		groups[groupID] = coordinator
 	}
 
