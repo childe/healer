@@ -27,20 +27,44 @@ var describeLogdirs = &cobra.Command{
 			return err
 		}
 
-		req := healer.NewDescribeLogDirsRequest(client, nil)
-
+		leaderPartitions := make(map[int32]map[string]map[int32]struct{})
 		for _, topic := range meta.TopicMetadatas {
+			topicName := topic.TopicName
 			for _, partition := range topic.PartitionMetadatas {
-				req.AddTopicPartition(topic.TopicName, partition.PartitionID)
+				for _, b := range partition.Replicas {
+					pid := partition.PartitionID
+					if _, ok := leaderPartitions[b]; !ok {
+						leaderPartitions[b] = make(map[string]map[int32]struct{})
+					}
+					if _, ok := leaderPartitions[b][topic.TopicName]; !ok {
+						leaderPartitions[b][topicName] = make(map[int32]struct{})
+					}
+					leaderPartitions[b][topicName][pid] = struct{}{}
+				}
 			}
 		}
-		resp, err := bs.Request(req)
 
-		if err != nil {
-			return fmt.Errorf("failed to do DescribeLogdirs request: %w", err)
+		rst := make(map[int32]healer.DescribeLogDirsResponse)
+		for b, topicPartitions := range leaderPartitions {
+			req := healer.NewDescribeLogDirsRequest(client, nil)
+			for topicName, partitions := range topicPartitions {
+				for pid := range partitions {
+					req.AddTopicPartition(topicName, pid)
+				}
+			}
+
+			broker, err := bs.GetBroker(b)
+			if err != nil {
+				return fmt.Errorf("failed to get broker %d: %w", b, err)
+			}
+			resp, err := broker.RequestAndGet(req)
+			if err != nil {
+				return fmt.Errorf("failed to do DescribeLogdirs request to %s: %w", broker, err)
+			}
+			rst[b] = resp.(healer.DescribeLogDirsResponse)
 		}
 
-		s, err := json.MarshalIndent(resp, "", "  ")
+		s, err := json.MarshalIndent(rst, "", "  ")
 		if err != nil {
 			return err
 		}
