@@ -384,12 +384,10 @@ func (brokers *Brokers) Request(req Request) (Response, error) {
 		}
 		resp, err := broker.RequestAndGet(req)
 		if err != nil {
-			continue
-		}
-		if err != nil {
+			glog.Infof("request %d from %s error: %s", req.API(), broker.address, err)
 			continue
 		} else {
-			return resp, err
+			return resp, nil
 		}
 	}
 
