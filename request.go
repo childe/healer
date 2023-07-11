@@ -25,6 +25,7 @@ const (
 	API_CreateTopics               uint16 = 19
 	API_DescribeConfigs            uint16 = 32
 	API_AlterConfigs               uint16 = 33
+	API_DescribeLogDirs            uint16 = 35
 	API_SaslAuthenticate           uint16 = 36
 	API_CreatePartitions           uint16 = 37
 	API_Delete_Groups              uint16 = 42
