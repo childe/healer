@@ -20,7 +20,7 @@ var deleteGroupsCmd = &cobra.Command{
 
 		brokers, err := healer.NewBrokers(bootStrapBrokers)
 		if err != nil {
-			return fmt.Errorf("failed to get offsets: %w", err)
+			return err
 		}
 
 		for _, group := range groups {

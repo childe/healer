@@ -47,7 +47,7 @@ var describeGroupsCmd = &cobra.Command{
 
 		brokers, err := healer.NewBrokers(bs)
 		if err != nil {
-			return fmt.Errorf("failed to get offsets: %w", err)
+			return err
 		}
 
 		coordinatorResponse, err := brokers.FindCoordinator(client, group)
