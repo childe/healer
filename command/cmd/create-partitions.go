@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -9,7 +8,6 @@ import (
 	"time"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
@@ -118,10 +116,8 @@ var createPartitionsCmd = &cobra.Command{
 		}
 		r.AddTopic(topic, count, partitionAssignments)
 
-		if resp, err := controller.RequestAndGet(r); err == nil {
-			b, _ := json.Marshal(resp.(healer.CreatePartitionsResponse))
-			glog.Info(string(b))
-		} else {
+		_, err = controller.RequestAndGet(r)
+		if err != nil {
 			return fmt.Errorf("failed to create partitions: %w", err)
 		}
 		return nil
