@@ -31,10 +31,6 @@ var getMetadataCmd = &cobra.Command{
 			metadataResponse, err = brokers.RequestMetaData(client, topics)
 		}
 
-		if err != nil {
-			return fmt.Errorf("failed to get metadata response: %w", err)
-		}
-
 		switch format {
 		case "json":
 			s, err := json.MarshalIndent(metadataResponse, "", "  ")

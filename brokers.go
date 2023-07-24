@@ -5,7 +5,6 @@ package healer
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -263,10 +262,9 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (r Met
 		}
 
 		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
-		if "*healer.Error" == reflect.TypeOf(err).String() && !err.(*Error).Retriable {
-			return r, err
+		if e, ok := err.(*Error); ok {
+			return r, e
 		}
-
 		time.Sleep(time.Millisecond * 200)
 	}
 
