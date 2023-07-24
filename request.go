@@ -7,30 +7,31 @@ import (
 // TODO type define ApiKey and change api_XXX to ApiKey type
 
 const (
-	API_ProduceRequest             uint16 = 0
-	API_FetchRequest               uint16 = 1
-	API_OffsetRequest              uint16 = 2
-	API_MetadataRequest            uint16 = 3
-	API_OffsetCommitRequest        uint16 = 8
-	API_OffsetFetchRequest         uint16 = 9
-	API_FindCoordinator            uint16 = 10
-	API_JoinGroup                  uint16 = 11
-	API_Heartbeat                  uint16 = 12
-	API_LeaveGroup                 uint16 = 13
-	API_SyncGroup                  uint16 = 14
-	API_DescribeGroups             uint16 = 15
-	API_ListGroups                 uint16 = 16
-	API_SaslHandshake              uint16 = 17
-	API_ApiVersions                uint16 = 18
-	API_CreateTopics               uint16 = 19
-	API_DescribeConfigs            uint16 = 32
-	API_AlterConfigs               uint16 = 33
-	API_DescribeLogDirs            uint16 = 35
-	API_SaslAuthenticate           uint16 = 36
-	API_CreatePartitions           uint16 = 37
-	API_Delete_Groups              uint16 = 42
-	API_IncrementalAlterConfigs    uint16 = 44
-	API_ListPartitionReassignments uint16 = 46
+	API_ProduceRequest              uint16 = 0
+	API_FetchRequest                uint16 = 1
+	API_OffsetRequest               uint16 = 2
+	API_MetadataRequest             uint16 = 3
+	API_OffsetCommitRequest         uint16 = 8
+	API_OffsetFetchRequest          uint16 = 9
+	API_FindCoordinator             uint16 = 10
+	API_JoinGroup                   uint16 = 11
+	API_Heartbeat                   uint16 = 12
+	API_LeaveGroup                  uint16 = 13
+	API_SyncGroup                   uint16 = 14
+	API_DescribeGroups              uint16 = 15
+	API_ListGroups                  uint16 = 16
+	API_SaslHandshake               uint16 = 17
+	API_ApiVersions                 uint16 = 18
+	API_CreateTopics                uint16 = 19
+	API_DescribeConfigs             uint16 = 32
+	API_AlterConfigs                uint16 = 33
+	API_DescribeLogDirs             uint16 = 35
+	API_SaslAuthenticate            uint16 = 36
+	API_CreatePartitions            uint16 = 37
+	API_Delete_Groups               uint16 = 42
+	API_IncrementalAlterConfigs     uint16 = 44
+	API_AlterPartitionReassignments uint16 = 45
+	API_ListPartitionReassignments  uint16 = 46
 )
 
 // healer only implements these versions of the protocol, only version 0 is supported if not defined here

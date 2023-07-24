@@ -123,6 +123,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewSyncGroupResponse(data)
 	case API_DescribeConfigs:
 		return NewDescribeConfigsResponse(data)
+	case API_AlterPartitionReassignments:
+		return NewAlterPartitionReassignmentsResponse(data, p.version)
 	case API_ListPartitionReassignments:
 		return NewListPartitionReassignmentsResponse(data, p.version)
 	case API_ListGroups:
