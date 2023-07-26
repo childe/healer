@@ -45,5 +45,5 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 
 func init() {
 	listPartitionReassignmentsCmd.Flags().Int32("timeout.ms", 30000, "The time in ms to wait for the request to complete")
-	listPartitionReassignmentsCmd.Flags().StringSlice("topics", nil, "comma splited. A list of topics to list partition reassignments for (an empty list will return reassignments for all topics)")
+	listPartitionReassignmentsCmd.Flags().StringSliceP("topics", "t", nil, "comma splited. A list of topics to list partition reassignments for (an empty list will return reassignments for all topics)")
 }
