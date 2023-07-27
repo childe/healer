@@ -261,10 +261,10 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (r Met
 			return r, nil
 		}
 
-		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
-		if e, ok := err.(*Error); ok {
-			return r, e
+		if errors.As(err, &AllError[0]) {
+			return r, err
 		}
+		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
 		time.Sleep(time.Millisecond * 200)
 	}
 
