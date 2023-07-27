@@ -13,20 +13,36 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 	Short: "list partition reassignments",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+		type tp struct {
+			Topic     string `json:"topic"`
+			Partition int32  `json:"partition"`
+		}
+
 		brokers, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		timeoutMS, err := cmd.Flags().GetInt32("timeout.ms")
-		// topics, err := cmd.Flags().GetStringSlice("topics")
+		topicsJSONStr, err := cmd.Flags().GetString("topics")
 
-		config := healer.DefaultBrokerConfig()
-		// config.NetConfig.TimeoutMSForEachAPI
-		bs, err := healer.NewBrokersWithConfig(brokers, config)
+		bs, err := healer.NewBrokers(brokers)
 
 		if err != nil {
 			return fmt.Errorf("could not create brokers from %s: %w", brokers, err)
 		}
 
 		req := healer.NewListPartitionReassignments(client, timeoutMS)
+		if topicsJSONStr != "" {
+			topics := make([]tp, 0)
+			if err = json.Unmarshal([]byte(topicsJSONStr), &topics); err != nil {
+				return fmt.Errorf("could not unmarshal topics: %w", err)
+			}
+
+			for _, topic := range topics {
+				topicName := topic.Topic
+				partitionID := topic.Partition
+
+				req.AddTP(topicName, partitionID)
+			}
+		}
 		resp, err := bs.ListPartitionReassignments(req)
 
 		if err != nil {
@@ -45,5 +61,5 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 
 func init() {
 	listPartitionReassignmentsCmd.Flags().Int32("timeout.ms", 30000, "The time in ms to wait for the request to complete")
-	listPartitionReassignmentsCmd.Flags().StringSliceP("topics", "t", nil, "comma splited. A list of topics to list partition reassignments for (an empty list will return reassignments for all topics)")
+	listPartitionReassignmentsCmd.Flags().StringP("topics", "t", "", `json format reassignments. {[{"topic":"test","partition":0}]`)
 }
