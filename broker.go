@@ -334,31 +334,30 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse, err error) {
 	apiVersionRequest := NewApiVersionsRequest(clientID)
 	resp, err := broker.RequestAndGet(apiVersionRequest)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(APIVersionsResponse); ok {
+		return v, err
 	}
-	return resp.(APIVersionsResponse), nil
+	return r, err
 }
 
 func (broker *Broker) requestListGroups(clientID string) (r ListGroupsResponse, err error) {
 	request := NewListGroupsRequest(clientID)
 
 	resp, err := broker.RequestAndGet(request)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(ListGroupsResponse); ok {
+		return v, err
 	}
-
-	return resp.(ListGroupsResponse), nil
+	return r, err
 }
 
 func (broker *Broker) requestMetaData(clientID string, topics []string) (r MetadataResponse, err error) {
 	metadataRequest := NewMetadataRequest(clientID, topics)
 
 	resp, err := broker.RequestAndGet(metadataRequest)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(MetadataResponse); ok {
+		return v, err
 	}
-	return resp.(MetadataResponse), err
+	return r, err
 }
 
 // RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
@@ -366,10 +365,10 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int3
 	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, clientID)
 
 	resp, err := broker.RequestAndGet(offsetsRequest)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(OffsetsResponse); ok {
+		return v, err
 	}
-	return resp.(OffsetsResponse), err
+	return r, err
 }
 
 func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest, buffers chan []byte) (err error) {
@@ -401,10 +400,10 @@ func (broker *Broker) findCoordinator(clientID, groupID string) (r FindCoordinat
 	request := NewFindCoordinatorRequest(clientID, groupID)
 
 	resp, err := broker.RequestAndGet(request)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(FindCoordinatorResponse); ok {
+		return v, err
 	}
-	return resp.(FindCoordinatorResponse), nil
+	return r, err
 }
 
 func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutMS int32, memberID, protocolType string, gps []*GroupProtocol) (r JoinGroupResponse, err error) {
@@ -418,31 +417,28 @@ func (broker *Broker) requestJoinGroup(clientID, groupID string, sessionTimeoutM
 	joinGroupRequest.GroupProtocols = gps
 
 	resp, err := broker.RequestAndGet(joinGroupRequest)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(JoinGroupResponse); ok {
+		return v, err
 	}
-
-	return resp.(JoinGroupResponse), nil
+	return r, err
 }
 
 func (broker *Broker) requestSyncGroup(clientID, groupID string, generationID int32, memberID string, groupAssignment GroupAssignment) (r SyncGroupResponse, err error) {
 	syncGroupRequest := NewSyncGroupRequest(clientID, groupID, generationID, memberID, groupAssignment)
 
 	resp, err := broker.RequestAndGet(syncGroupRequest)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(SyncGroupResponse); ok {
+		return v, err
 	}
-
-	return resp.(SyncGroupResponse), nil
+	return r, err
 }
 
 func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID int32, memberID string) (r HeartbeatResponse, err error) {
 	req := NewHeartbeatRequest(clientID, groupID, generationID, memberID)
 
 	resp, err := broker.RequestAndGet(req)
-	if err != nil {
-		return r, err
+	if v, ok := resp.(HeartbeatResponse); ok {
+		return v, err
 	}
-
-	return resp.(HeartbeatResponse), nil
+	return r, err
 }
