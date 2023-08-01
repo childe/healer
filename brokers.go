@@ -373,6 +373,19 @@ func (brokers *Brokers) ListPartitionReassignments(req ListPartitionReassignment
 	return resp.(ListPartitionReassignmentsResponse), nil
 }
 
+// AlterPartitionReassignments requests AlterPartitionReassignments from controller and returns response
+func (brokers *Brokers) AlterPartitionReassignments(req *AlterPartitionReassignmentsRequest) (r *AlterPartitionReassignmentsResponse, err error) {
+	controller, err := brokers.GetBroker(brokers.Controller())
+	if err != nil {
+		return r, fmt.Errorf("could not create controller broker: %w", err)
+	}
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %s", err)
+	}
+	return resp.(*AlterPartitionReassignmentsResponse), nil
+}
+
 // Request try to do request from all brokers until get the response
 func (brokers *Brokers) Request(req Request) (Response, error) {
 	for _, brokerInfo := range brokers.brokersInfo {
