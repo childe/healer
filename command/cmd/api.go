@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -39,6 +38,7 @@ var apiCmd = &cobra.Command{
 				c.String(http.StatusInternalServerError, err.Error())
 				return
 			}
+			defer bs.Close()
 			topics := c.QueryArray("topics")
 			resp, err := bs.RequestMetaData("healer-api", topics)
 			if err != nil {
@@ -61,27 +61,22 @@ var apiCmd = &cobra.Command{
 				c.String(http.StatusInternalServerError, err.Error())
 				return
 			}
-			timeout := c.Query("timeout")
-			assign := c.Query("assign")
-			reassignments := make([]reassignment, 0)
-			err = json.Unmarshal([]byte(assign), &reassignments)
-			if err != nil {
-				c.String(http.StatusBadRequest, fmt.Sprintf("assign value error: %s", err))
-			}
-			controller, err := bs.GetBroker(bs.Controller())
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-			}
+			defer bs.Close()
 
+			timeout := c.Query("timeout")
 			timeoutMS, err := strconv.Atoi(timeout)
 			if err != nil {
 				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
+			}
+			reassignments := make([]reassignment, 0)
+			if err := c.BindJSON(&reassignments); err != nil {
+				c.String(http.StatusBadRequest, fmt.Sprintf("reassignments value error: %s", err))
 			}
 			req := healer.NewAlterPartitionReassignmentsRequest(int32(timeoutMS))
 			for _, v := range reassignments {
 				req.AddAssignment(v.Topic, v.Partition, v.Replicas)
 			}
-			resp, err := controller.RequestAndGet(&req)
+			resp, err := bs.AlterPartitionReassignments(&req)
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 			}

@@ -44,19 +44,15 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 			return fmt.Errorf("failed to create brokers from %s", brokers)
 		}
 
-		controller, err := bs.GetBroker(bs.Controller())
-		if err != nil {
-			return fmt.Errorf("failed to create crotroller broker: %w", err)
-		}
-
 		req := healer.NewAlterPartitionReassignmentsRequest(timeout)
 		for _, v := range reassignments {
 			req.AddAssignment(v.Topic, v.Partition, v.Replicas)
 		}
-		resp, err := controller.RequestAndGet(&req)
+		resp, err := bs.AlterPartitionReassignments(&req)
 		if err != nil {
 			return err
 		}
+
 		b, _ := json.MarshalIndent(resp, "", "  ")
 		glog.Info(string(b))
 
