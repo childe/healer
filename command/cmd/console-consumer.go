@@ -41,17 +41,13 @@ var consoleConsumerCmd = &cobra.Command{
 			}
 			consumerConfig[t[0]] = t[1]
 		}
-		cConfig, err := healer.GetConsumerConfig(consumerConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create config: %w", err)
-		}
 
 		var (
 			consumer *healer.Consumer
 		)
 
 		if len(partitions) == 0 {
-			if consumer, err = healer.NewConsumer(cConfig, topic); err != nil {
+			if consumer, err = healer.NewConsumer(consumerConfig, topic); err != nil {
 				return err
 			}
 		} else {
@@ -60,7 +56,7 @@ var consoleConsumerCmd = &cobra.Command{
 			for _, pid := range partitions {
 				assign[topic] = append(assign[topic], pid)
 			}
-			if consumer, err = healer.NewConsumer(cConfig); err != nil {
+			if consumer, err = healer.NewConsumer(consumerConfig); err != nil {
 				return err
 			}
 			consumer.Assign(assign)

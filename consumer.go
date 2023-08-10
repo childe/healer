@@ -10,7 +10,7 @@ import (
 // Consumer instance is built to consume messages from kafka broker
 type Consumer struct {
 	assign map[string][]int
-	config *ConsumerConfig
+	config ConsumerConfig
 
 	brokers *Brokers
 	closed  bool
@@ -19,9 +19,14 @@ type Consumer struct {
 	wg              sync.WaitGroup // wg is used to tell if all consumer has already stopped
 }
 
-func NewConsumer(config *ConsumerConfig, topics ...string) (*Consumer, error) {
-	brokerConfig := getBrokerConfigFromConsumerConfig(config)
-	brokers, err := NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
+// NewConsumer creates a new consumer instance
+func NewConsumer(config interface{}, topics ...string) (*Consumer, error) {
+	cfg, err := createConsumerConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	brokerConfig := getBrokerConfigFromConsumerConfig(cfg)
+	brokers, err := NewBrokersWithConfig(cfg.BootstrapServers, brokerConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +37,7 @@ func NewConsumer(config *ConsumerConfig, topics ...string) (*Consumer, error) {
 	}
 
 	c := &Consumer{
-		config: config,
+		config: cfg,
 		assign: assign,
 
 		brokers: brokers,
@@ -41,6 +46,8 @@ func NewConsumer(config *ConsumerConfig, topics ...string) (*Consumer, error) {
 	return c, nil
 }
 
+// Subscribe subscribes to the given list of topics, consume all the partitions of the topics.
+// Do not call this after calling Consume
 func (c *Consumer) Subscribe(topics ...string) {
 	c.assign = make(map[string][]int)
 	for _, topic := range topics {
@@ -48,10 +55,13 @@ func (c *Consumer) Subscribe(topics ...string) {
 	}
 }
 
+// Assign assigns the given partitions to the consumer, the consumer will only consume the given partitions
+// Do not call this after calling Consume
 func (c *Consumer) Assign(topicPartitons map[string][]int) {
 	c.assign = topicPartitons
 }
 
+// Consume consumes messages from kafka broker, returns a channel of messages
 func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, error) {
 	var messages chan *FullMessage
 	if messageChan == nil {

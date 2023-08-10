@@ -1,7 +1,6 @@
 package healer
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -50,7 +49,7 @@ func DefaultBrokerConfig() *BrokerConfig {
 	}
 }
 
-func getBrokerConfigFromConsumerConfig(c *ConsumerConfig) *BrokerConfig {
+func getBrokerConfigFromConsumerConfig(c ConsumerConfig) *BrokerConfig {
 	b := DefaultBrokerConfig()
 	b.NetConfig = c.NetConfig
 	b.TLSEnabled = c.TLSEnabled
@@ -106,8 +105,8 @@ type ConsumerConfig struct {
 	TLS        *TLSConfig `json:"tls" mapstructure:"tls"`
 }
 
-func DefaultConsumerConfig() *ConsumerConfig {
-	c := &ConsumerConfig{
+func DefaultConsumerConfig() ConsumerConfig {
+	c := ConsumerConfig{
 		NetConfig: NetConfig{
 			ConnectTimeoutMS:    30000,
 			TimeoutMS:           30000,
@@ -141,34 +140,30 @@ func DefaultConsumerConfig() *ConsumerConfig {
 	return c
 }
 
-func GetConsumerConfig(config map[string]interface{}) (*ConsumerConfig, error) {
-	b, err := json.Marshal(config)
-	if err != nil {
-		return nil, err
-	}
+var defaultConsumerConfig = DefaultConsumerConfig()
 
-	c := DefaultConsumerConfig()
-	err = json.Unmarshal(b, c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(c.TimeoutMSForEachAPI) == 0 {
-		c.TimeoutMSForEachAPI = make([]int, 38)
-		for i := range c.TimeoutMSForEachAPI {
-			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
+// create ConsumerConfig from map or return directly if config is ConsumerConfig
+// return defaultConsumerConfig if config is nil
+func createConsumerConfig(config interface{}) (c ConsumerConfig, err error) {
+	switch config.(type) {
+	case nil:
+		return defaultConsumerConfig, nil
+	case map[string]interface{}:
+		c = defaultConsumerConfig
+		if err := mapstructure.WeakDecode(config, &c); err != nil {
+			return defaultConsumerConfig, fmt.Errorf("decode consumer config error: %w", err)
 		}
-		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
-		c.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
-		c.TimeoutMSForEachAPI[API_FetchRequest] = c.TimeoutMS + int(c.FetchMaxWaitMS)
+	case ConsumerConfig:
+		c = config.(ConsumerConfig)
+	default:
+		return c, fmt.Errorf("consumer only accept config from map[string]interface{} or ConsumerConfig")
 	}
-
-	return c, nil
+	return c, err
 }
 
 var (
-	emptyGroupID                 = errors.New("group.id is empty")
-	invallidOffsetsStorageConfig = errors.New("offsets.storage must be 0 or 1")
+	errEmptyGroupID                 = errors.New("group.id is empty")
+	errInvallidOffsetsStorageConfig = errors.New("offsets.storage must be 0 or 1")
 )
 
 func (config *ConsumerConfig) checkValid() error {
@@ -176,14 +171,15 @@ func (config *ConsumerConfig) checkValid() error {
 		return bootstrapServersNotSet
 	}
 	if config.GroupID == "" {
-		return emptyGroupID
+		return errEmptyGroupID
 	}
 	if config.OffsetsStorage != 0 && config.OffsetsStorage != 1 {
-		return invallidOffsetsStorageConfig
+		return errInvallidOffsetsStorageConfig
 	}
 	return nil
 }
 
+// ProducerConfig is the config for producer
 type ProducerConfig struct {
 	NetConfig
 	*SaslConfig

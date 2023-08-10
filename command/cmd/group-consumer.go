@@ -46,12 +46,8 @@ var groupConsumerCmd = &cobra.Command{
 			}
 			consumerConfig[t[0]] = t[1]
 		}
-		cConfig, err := healer.GetConsumerConfig(consumerConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create config: %w", err)
-		}
 
-		consumer, err := healer.NewGroupConsumer(topic, cConfig)
+		consumer, err := healer.NewGroupConsumer(topic, consumerConfig)
 		if err != nil {
 			return err
 		}
