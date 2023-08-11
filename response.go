@@ -141,6 +141,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewCreatePartitionsResponse(data, p.version)
 	case API_DescribeLogDirs:
 		return NewDescribeLogDirsResponse(data, p.version)
+	case API_ElectLeaders:
+		return NewElectLeadersResponse(data, p.version)
 	}
 	return nil, errors.New("unknown api")
 }
