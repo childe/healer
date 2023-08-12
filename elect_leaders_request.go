@@ -15,6 +15,17 @@ type TopicPartition struct {
 	Partitions []int32 `json:"partitions"`
 }
 
+// NewElectLeadersRequest returns a new ElectLeadersRequest
+func NewElectLeadersRequest(timeoutMS int32) ElectLeadersRequest {
+	return ElectLeadersRequest{
+		RequestHeader: &RequestHeader{
+			APIKey: API_ElectLeaders,
+		},
+		Topics:    make([]*TopicPartition, 0),
+		TimeoutMS: timeoutMS,
+	}
+}
+
 // Add adds a topic partition to the request, it does not check if the topic partition already exists
 func (r *ElectLeadersRequest) Add(topic string, pid int32) {
 	for _, t := range r.Topics {
@@ -68,6 +79,7 @@ func (r *ElectLeadersRequest) Encode(version uint16) []byte {
 		binary.BigEndian.PutUint32(payload, uint32(offset-4))
 	}()
 
+	offset = 4
 	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Topics)))

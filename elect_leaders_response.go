@@ -60,10 +60,12 @@ func newPartitionResult(payload []byte, offset int, version uint16) (r *Partitio
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 
-	length := int(binary.BigEndian.Uint16(payload[offset:]))
+	length := int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
-	r.ErrorMessage = string(payload[offset : offset+length])
-	offset += length
+	if length > 0 {
+		r.ErrorMessage = string(payload[offset : offset+int(length)])
+		offset += int(length)
+	}
 
 	return r, offset
 }
@@ -71,7 +73,12 @@ func newPartitionResult(payload []byte, offset int, version uint16) (r *Partitio
 // NewElectLeadersResponse creates a new ElectLeadersResponse.
 func NewElectLeadersResponse(payload []byte, version uint16) (r *ElectLeadersResponse, err error) {
 	r = &ElectLeadersResponse{}
-	offset := 0
+
+	responseLength := int(binary.BigEndian.Uint32(payload))
+	if responseLength+4 != len(payload) {
+		return r, fmt.Errorf("response length did not match: %d != %d", responseLength+4, len(payload))
+	}
+	offset := 4
 	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
