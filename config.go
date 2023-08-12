@@ -128,7 +128,7 @@ func DefaultConsumerConfig() ConsumerConfig {
 	}
 
 	if c.TimeoutMSForEachAPI == nil {
-		c.TimeoutMSForEachAPI = make([]int, 38)
+		c.TimeoutMSForEachAPI = make([]int, 68)
 		for i := range c.TimeoutMSForEachAPI {
 			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
 		}
