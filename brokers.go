@@ -382,9 +382,22 @@ func (brokers *Brokers) AlterPartitionReassignments(req *AlterPartitionReassignm
 	}
 	resp, err := controller.RequestAndGet(req)
 	if err != nil {
-		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %w", err)
+		return r, fmt.Errorf("could not get AlterPartitionReassignments response from controller: %w", err)
 	}
 	return resp.(*AlterPartitionReassignmentsResponse), nil
+}
+
+// ElectLeaders requests ElectLeaders from controller and returns response
+func (brokers *Brokers) ElectLeaders(req *ElectLeadersRequest) (r *ElectLeadersResponse, err error) {
+	controller, err := brokers.GetBroker(brokers.Controller())
+	if err != nil {
+		return r, fmt.Errorf("could not create controller broker: %w", err)
+	}
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return r, fmt.Errorf("could not get ElectLeaders response from controller: %w", err)
+	}
+	return resp.(*ElectLeadersResponse), nil
 }
 
 // Request try to do request from all brokers until get the response
