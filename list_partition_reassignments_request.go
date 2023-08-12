@@ -31,7 +31,7 @@ func NewListPartitionReassignments(clientID string, timeoutMS int32) ListPartiti
 }
 
 // AddTP adds a topic/partition to the request
-func (r ListPartitionReassignmentsRequest) AddTP(topicName string, pid int32) {
+func (r *ListPartitionReassignmentsRequest) AddTP(topicName string, pid int32) {
 	for i := range r.Topics {
 		topic := &r.Topics[i]
 		if topic.Name == topicName {
@@ -70,39 +70,42 @@ func (r ListPartitionReassignmentsRequest) length() int {
 }
 
 // Encode encodes a ListPartitionReassignmentsRequest into a byte array.
-// FIXME: TaggedFields is not encoded
 func (r ListPartitionReassignmentsRequest) Encode(version uint16) []byte {
 	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)
 	offset := 0
+	defer func() {
+		binary.BigEndian.PutUint32(payload, uint32(offset-4))
+	}()
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
 	offset += r.RequestHeader.Encode(payload[offset:])
+	offset++ // TaggedFields
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.TimeoutMS))
 	offset += 4
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Topics)))
-	offset += 4
+	if r.Topics == nil {
+		offset += binary.PutUvarint(payload[offset:], 0)
+	} else {
+		offset += binary.PutUvarint(payload[offset:], uint64(1+len(r.Topics)))
+	}
 
 	for _, topic := range r.Topics {
-		binary.BigEndian.PutUint16(payload[offset:], uint16(len(topic.Name)))
-		offset += 2
+		offset += binary.PutUvarint(payload[offset:], uint64(1+len(topic.Name)))
 		offset += copy(payload[offset:], topic.Name)
 
-		binary.BigEndian.PutUint32(payload[offset:], uint32(len(topic.Partitions)))
-		offset += 4
+		offset += binary.PutUvarint(payload[offset:], uint64(1+len(topic.Partitions)))
 
 		for _, pid := range topic.Partitions {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(pid))
 			offset += 4
 		}
-		offset += binary.PutUvarint(payload[offset:], 0)
+		offset++ // TaggedFields
 	}
-	offset += binary.PutUvarint(payload[offset:], 0)
+	offset++ // TaggedFields
 
-	return payload
+	return payload[:offset]
 }
