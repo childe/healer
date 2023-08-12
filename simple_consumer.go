@@ -15,7 +15,7 @@ import (
 type SimpleConsumer struct {
 	topic       string
 	partitionID int32
-	config      *ConsumerConfig
+	config      ConsumerConfig
 
 	brokers      *Brokers
 	leaderBroker *Broker
@@ -45,7 +45,7 @@ func (c *SimpleConsumer) String() string {
 }
 
 // NewSimpleConsumerWithBrokers create a simple consumer with existing brokers
-func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *ConsumerConfig, brokers *Brokers) *SimpleConsumer {
+func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config ConsumerConfig, brokers *Brokers) *SimpleConsumer {
 	c := &SimpleConsumer{
 		config:      config,
 		topic:       topic,
@@ -94,17 +94,17 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config *Consu
 }
 
 // NewSimpleConsumer create a simple consumer
-func NewSimpleConsumer(topic string, partitionID int32, config *ConsumerConfig) (*SimpleConsumer, error) {
-	var err error
+func NewSimpleConsumer(topic string, partitionID int32, config interface{}) (*SimpleConsumer, error) {
+	cfg, err := createConsumerConfig(config)
 
-	brokerConfig := getBrokerConfigFromConsumerConfig(config)
+	brokerConfig := getBrokerConfigFromConsumerConfig(cfg)
 
-	brokers, err := NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
+	brokers, err := NewBrokersWithConfig(cfg.BootstrapServers, brokerConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewSimpleConsumerWithBrokers(topic, partitionID, config, brokers), nil
+	return NewSimpleConsumerWithBrokers(topic, partitionID, cfg, brokers), nil
 }
 
 func (c *SimpleConsumer) refreshPartiton() error {

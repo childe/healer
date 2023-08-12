@@ -23,7 +23,7 @@ type GroupConsumer struct {
 	topic         string
 	correlationID uint32
 
-	config *ConsumerConfig
+	config ConsumerConfig
 
 	coordinator          *Broker
 	generationID         int32
@@ -49,23 +49,24 @@ type GroupConsumer struct {
 }
 
 // NewGroupConsumer cretae a new GroupConsumer
-func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, error) {
-	if err := config.checkValid(); err != nil {
+func NewGroupConsumer(topic string, config interface{}) (*GroupConsumer, error) {
+	cfg, err := createConsumerConfig(config)
+	if err := cfg.checkValid(); err != nil {
 		return nil, err
 	}
-	if config.ClientID == "" {
+	if cfg.ClientID == "" {
 		ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
 		hostname, err := os.Hostname()
 		if err != nil {
 			glog.Infof("could not get hostname for clientID: %s", err)
-			config.ClientID = fmt.Sprintf("%s-%s", config.GroupID, ts)
+			cfg.ClientID = fmt.Sprintf("%s-%s", cfg.GroupID, ts)
 		} else {
-			config.ClientID = fmt.Sprintf("%s-%s-%s", config.GroupID, ts, hostname)
+			cfg.ClientID = fmt.Sprintf("%s-%s-%s", cfg.GroupID, ts, hostname)
 		}
 	}
 
-	brokerConfig := getBrokerConfigFromConsumerConfig(config)
-	brokers, err := NewBrokersWithConfig(config.BootstrapServers, brokerConfig)
+	brokerConfig := getBrokerConfigFromConsumerConfig(cfg)
+	brokers, err := NewBrokersWithConfig(cfg.BootstrapServers, brokerConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func NewGroupConsumer(topic string, config *ConsumerConfig) (*GroupConsumer, err
 		brokers:       brokers,
 		topic:         topic,
 		correlationID: 0,
-		config:        config,
+		config:        cfg,
 
 		mutex:              &sync.Mutex{},
 		assignmentStrategy: &RangeAssignmentStrategy{},

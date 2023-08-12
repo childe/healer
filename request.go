@@ -29,6 +29,7 @@ const (
 	API_SaslAuthenticate            uint16 = 36
 	API_CreatePartitions            uint16 = 37
 	API_Delete_Groups               uint16 = 42
+	API_ElectLeaders                uint16 = 43
 	API_IncrementalAlterConfigs     uint16 = 44
 	API_AlterPartitionReassignments uint16 = 45
 	API_ListPartitionReassignments  uint16 = 46

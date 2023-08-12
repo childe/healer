@@ -13,7 +13,7 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 	Short: "list partition reassignments",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		type tp struct {
+		type topicPartition struct {
 			Topic     string `json:"topic"`
 			Partition int32  `json:"partition"`
 		}
@@ -21,28 +21,34 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 		brokers, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		timeoutMS, err := cmd.Flags().GetInt32("timeout.ms")
-		topicsJSONStr, err := cmd.Flags().GetString("topics")
 
-		bs, err := healer.NewBrokers(brokers)
+		config := healer.DefaultBrokerConfig()
+		config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
+		config.NetConfig.TimeoutMSForEachAPI[healer.API_ListPartitionReassignments] = int(timeoutMS)
+		bs, err := healer.NewBrokersWithConfig(brokers, config)
 
 		if err != nil {
 			return fmt.Errorf("could not create brokers from %s: %w", brokers, err)
 		}
 
+		dataJSONStr, err := cmd.Flags().GetString("data")
+		if err != nil {
+			return err
+		}
+
 		req := healer.NewListPartitionReassignments(client, timeoutMS)
-		if topicsJSONStr != "" {
-			topics := make([]tp, 0)
-			if err = json.Unmarshal([]byte(topicsJSONStr), &topics); err != nil {
-				return fmt.Errorf("could not unmarshal topics: %w", err)
+		if dataJSONStr != "" {
+			topicPartitions := make([]topicPartition, 0)
+			err = json.Unmarshal([]byte(dataJSONStr), &topicPartitions)
+			if err != nil {
+				return err
 			}
 
-			for _, topic := range topics {
-				topicName := topic.Topic
-				partitionID := topic.Partition
-
-				req.AddTP(topicName, partitionID)
+			for _, v := range topicPartitions {
+				req.AddTP(v.Topic, v.Partition)
 			}
 		}
+
 		resp, err := bs.ListPartitionReassignments(req)
 
 		if err != nil {
@@ -61,5 +67,5 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 
 func init() {
 	listPartitionReassignmentsCmd.Flags().Int32("timeout.ms", 30000, "The time in ms to wait for the request to complete")
-	listPartitionReassignmentsCmd.Flags().StringP("topics", "t", "", `json format reassignments. {[{"topic":"test","partition":0}]`)
+	listPartitionReassignmentsCmd.Flags().StringP("data", "d", "", `json format data. [{"topic":"test","partition":0},{"topic":"test","partition":2}]`)
 }

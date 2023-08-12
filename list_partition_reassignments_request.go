@@ -53,7 +53,7 @@ func (r *ListPartitionReassignmentsRequest) AddTP(topicName string, pid int32) {
 	})
 }
 
-func (r *ListPartitionReassignmentsRequest) length() int {
+func (r ListPartitionReassignmentsRequest) length() int {
 	requestLength := r.RequestHeader.length()
 	requestLength += 4 // TimeoutMS
 	requestLength += 4 // len(Topics)
@@ -70,30 +70,34 @@ func (r *ListPartitionReassignmentsRequest) length() int {
 }
 
 // Encode encodes a ListPartitionReassignmentsRequest into a byte array.
-// FIXME: TaggedFields is not encoded
 func (r ListPartitionReassignmentsRequest) Encode(version uint16) []byte {
 	requestLength := r.length()
 
 	payload := make([]byte, requestLength+4)
-	offset := 4
+	offset := 0
 	defer func() {
 		binary.BigEndian.PutUint32(payload, uint32(offset-4))
 	}()
 
-	offset += r.RequestHeader.Encode(payload[offset:])
+	offset += 4
 
+	offset += r.RequestHeader.Encode(payload[offset:])
 	offset++ // TaggedFields
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.TimeoutMS))
 	offset += 4
 
-	offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Topics)))
+	if r.Topics == nil {
+		offset += binary.PutUvarint(payload[offset:], 0)
+	} else {
+		offset += binary.PutUvarint(payload[offset:], uint64(1+len(r.Topics)))
+	}
 
 	for _, topic := range r.Topics {
-		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(topic.Name)))
+		offset += binary.PutUvarint(payload[offset:], uint64(1+len(topic.Name)))
 		offset += copy(payload[offset:], topic.Name)
 
-		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(topic.Partitions)))
+		offset += binary.PutUvarint(payload[offset:], uint64(1+len(topic.Partitions)))
 
 		for _, pid := range topic.Partitions {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(pid))
@@ -101,7 +105,6 @@ func (r ListPartitionReassignmentsRequest) Encode(version uint16) []byte {
 		}
 		offset++ // TaggedFields
 	}
-
 	offset++ // TaggedFields
 
 	return payload[:offset]

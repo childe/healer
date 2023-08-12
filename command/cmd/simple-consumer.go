@@ -45,12 +45,8 @@ var simpleConsumerCmd = &cobra.Command{
 			}
 			consumerConfig[t[0]] = t[1]
 		}
-		cConfig, err := healer.GetConsumerConfig(consumerConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create config: %w", err)
-		}
 
-		simpleConsumer, err := healer.NewSimpleConsumer(topic, partition, cConfig)
+		simpleConsumer, err := healer.NewSimpleConsumer(topic, partition, consumerConfig)
 		if err != nil {
 			return fmt.Errorf("failed to generate simple consumer: %w", err)
 		}

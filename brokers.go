@@ -204,7 +204,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 		if err == nil {
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d), error: :%s", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d), error: :%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 		}
 	} else {
 		glog.Infof("could not get broker info with nodeID[%d], referesh medadata", nodeID)
@@ -219,7 +219,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 		if err == nil {
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%s", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 		}
 	} else {
 		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
@@ -241,7 +241,7 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 			brokers.brokers[nodeID] = broker
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%s", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 		}
 	} else {
 		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
@@ -277,7 +277,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	// TODO cache
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
 	if err != nil {
-		return nil, fmt.Errorf("could not get metadata of topic[%s]:%s", topic, err)
+		return nil, fmt.Errorf("could not get metadata of topic[%s]:%w", topic, err)
 	}
 
 	// TODO only one topic
@@ -287,7 +287,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 		for _, x := range topicMetadata.PartitionMetadatas {
 			if partitionID == x.PartitionID {
 				if leader, err := brokers.GetBroker(x.Leader); err != nil {
-					return nil, fmt.Errorf("could not find leader of %s[%d]:%s", topic, partitionID, err)
+					return nil, fmt.Errorf("could not find leader of %s[%d]:%w", topic, partitionID, err)
 				} else {
 					offsetsResponse, err := leader.requestOffsets(clientID, topic, []int32{partitionID}, timeValue, offsets)
 					if err != nil {
@@ -313,7 +313,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 		rst := make([]OffsetsResponse, 0)
 		for leaderID, partitionIDs := range offsetsRequestsMapping {
 			if leader, err := brokers.GetBroker(leaderID); err != nil {
-				return nil, fmt.Errorf("could not find leader of %s[%v]:%s", topic, partitionIDs, err)
+				return nil, fmt.Errorf("could not find leader of %s[%v]:%w", topic, partitionIDs, err)
 			} else {
 				offsetsResponse, err := leader.requestOffsets(clientID, topic, partitionIDs, timeValue, offsets)
 				if err != nil {
@@ -329,7 +329,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (int32, error) {
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
 	if err != nil {
-		return -1, fmt.Errorf("could not get metadata of topic %s: %s", topic, err)
+		return -1, fmt.Errorf("could not get metadata of topic %s: %w", topic, err)
 	}
 
 	partitionMetadatas := metadataResponse.TopicMetadatas[0].PartitionMetadatas
@@ -341,6 +341,7 @@ func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (i
 	return -1, fmt.Errorf("could not find out leader of topic %s", topic)
 }
 
+// FindCoordinator try to requests FindCoordinator from all brokers and returns response
 func (brokers *Brokers) FindCoordinator(clientID, groupID string) (r FindCoordinatorResponse, err error) {
 	var broker *Broker
 	for _, brokerInfo := range brokers.brokersInfo {
@@ -364,13 +365,26 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (r FindCoordin
 func (brokers *Brokers) ListPartitionReassignments(req ListPartitionReassignmentsRequest) (r ListPartitionReassignmentsResponse, err error) {
 	controller, err := brokers.GetBroker(brokers.Controller())
 	if err != nil {
-		return r, fmt.Errorf("could not create controller broker: %s", err)
+		return r, fmt.Errorf("could not create controller broker: %w", err)
 	}
 	resp, err := controller.RequestAndGet(req)
 	if err != nil {
-		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %s", err)
+		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %w", err)
 	}
 	return resp.(ListPartitionReassignmentsResponse), nil
+}
+
+// AlterPartitionReassignments requests AlterPartitionReassignments from controller and returns response
+func (brokers *Brokers) AlterPartitionReassignments(req *AlterPartitionReassignmentsRequest) (r *AlterPartitionReassignmentsResponse, err error) {
+	controller, err := brokers.GetBroker(brokers.Controller())
+	if err != nil {
+		return r, fmt.Errorf("could not create controller broker: %w", err)
+	}
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %w", err)
+	}
+	return resp.(*AlterPartitionReassignmentsResponse), nil
 }
 
 // Request try to do request from all brokers until get the response

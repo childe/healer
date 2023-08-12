@@ -44,19 +44,15 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 			return fmt.Errorf("failed to create brokers from %s", brokers)
 		}
 
-		controller, err := bs.GetBroker(bs.Controller())
-		if err != nil {
-			return fmt.Errorf("failed to create crotroller broker: %w", err)
-		}
-
 		req := healer.NewAlterPartitionReassignmentsRequest(timeout)
 		for _, v := range reassignments {
 			req.AddAssignment(v.Topic, v.Partition, v.Replicas)
 		}
-		resp, err := controller.RequestAndGet(&req)
+		resp, err := bs.AlterPartitionReassignments(&req)
 		if err != nil {
 			return err
 		}
+
 		b, _ := json.MarshalIndent(resp, "", "  ")
 		glog.Info(string(b))
 
@@ -65,7 +61,7 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 }
 
 func init() {
-	alterPartitionReassignmentsCmd.Flags().StringP("reassignments", "r", "", `json format reassignments. {[{"topic":"test","partition":0,"replicas":[1,2,3]}]`)
+	alterPartitionReassignmentsCmd.Flags().StringP("reassignments", "r", "", `json format reassignments. [{"topic":"test","partition":0,"replicas":[1,2,3]}]`)
 	alterPartitionReassignmentsCmd.Flags().Int32("timeout", 30000, "timeout in ms")
 	rootCmd.AddCommand(alterPartitionReassignmentsCmd)
 }
