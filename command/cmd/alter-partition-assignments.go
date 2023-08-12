@@ -61,7 +61,7 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 }
 
 func init() {
-	alterPartitionReassignmentsCmd.Flags().StringP("reassignments", "r", "", `json format reassignments. {[{"topic":"test","partition":0,"replicas":[1,2,3]}]`)
+	alterPartitionReassignmentsCmd.Flags().StringP("reassignments", "r", "", `json format reassignments. [{"topic":"test","partition":0,"replicas":[1,2,3]}]`)
 	alterPartitionReassignmentsCmd.Flags().Int32("timeout", 30000, "timeout in ms")
 	rootCmd.AddCommand(alterPartitionReassignmentsCmd)
 }

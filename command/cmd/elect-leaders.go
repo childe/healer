@@ -59,6 +59,6 @@ var electLeadersCmd = &cobra.Command{
 }
 
 func init() {
-	electLeadersCmd.Flags().StringP("data", "d", "", `json format data. {[{"topic":"test","partition":0},{"topic":"test","partition":2}]`)
+	electLeadersCmd.Flags().StringP("data", "d", "", `json format data. [{"topic":"test","partition":0},{"topic":"test","partition":2}]`)
 	rootCmd.AddCommand(electLeadersCmd)
 }
