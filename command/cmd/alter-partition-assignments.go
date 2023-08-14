@@ -19,32 +19,27 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 			Partition int32   `json:"partition"`
 			Replicas  []int32 `json:"replicas"`
 		}
-
-		brokers, err := cmd.Flags().GetString("brokers")
-		// client, err := cmd.Flags().GetString("client")
-
 		reassignmentsJSONStr, err := cmd.Flags().GetString("reassignments")
 		if err != nil {
 			return err
 		}
-
 		reassignments := make([]reassignment, 0)
 		err = json.Unmarshal([]byte(reassignmentsJSONStr), &reassignments)
 		if err != nil {
 			return err
 		}
 
-		timeout, err := cmd.Flags().GetInt32("timeout")
-		if err != nil {
-			return err
-		}
-
-		bs, err := healer.NewBrokers(brokers)
+		brokers, err := cmd.Flags().GetString("brokers")
+		timeoutMS, err := cmd.Flags().GetInt32("timeout.ms")
+		config := healer.DefaultBrokerConfig()
+		config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
+		config.NetConfig.TimeoutMSForEachAPI[healer.API_AlterPartitionReassignments] = int(timeoutMS)
+		bs, err := healer.NewBrokersWithConfig(brokers, config)
 		if err != nil {
 			return fmt.Errorf("failed to create brokers from %s", brokers)
 		}
 
-		req := healer.NewAlterPartitionReassignmentsRequest(timeout)
+		req := healer.NewAlterPartitionReassignmentsRequest(timeoutMS)
 		for _, v := range reassignments {
 			req.AddAssignment(v.Topic, v.Partition, v.Replicas)
 		}
@@ -62,6 +57,6 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 
 func init() {
 	alterPartitionReassignmentsCmd.Flags().StringP("reassignments", "r", "", `json format reassignments. [{"topic":"test","partition":0,"replicas":[1,2,3]}]`)
-	alterPartitionReassignmentsCmd.Flags().Int32("timeout", 30000, "timeout in ms")
+	alterPartitionReassignmentsCmd.Flags().Int32("timeout.ms", 30000, "timeout in ms")
 	rootCmd.AddCommand(alterPartitionReassignmentsCmd)
 }
