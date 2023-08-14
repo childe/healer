@@ -193,7 +193,9 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 	r.SetCorrelationID(broker.correlationID)
 	timeout := broker.config.TimeoutMS
 	if len(broker.config.TimeoutMSForEachAPI) > int(r.API()) {
-		timeout = broker.config.TimeoutMSForEachAPI[r.API()]
+		if broker.config.TimeoutMSForEachAPI[r.API()] > 0 {
+			timeout = broker.config.TimeoutMSForEachAPI[r.API()]
+		}
 	}
 	version := broker.getHighestAvailableAPIVersion(r.API())
 	r.SetVersion(version)
