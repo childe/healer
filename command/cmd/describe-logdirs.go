@@ -75,7 +75,7 @@ var describeLogdirs = &cobra.Command{
 }
 
 func init() {
-	describeLogdirs.Flags().StringSliceP("topics", "t", nil, "comma splited. A list of topics to list partition reassignments for (an empty list will return reassignments for all topics)")
+	describeLogdirs.Flags().StringSliceP("topics", "t", nil, "comma splited. A list of topics to list partition reassignments for (an empty list will return for all topics)")
 
 	rootCmd.AddCommand(describeLogdirs)
 }
