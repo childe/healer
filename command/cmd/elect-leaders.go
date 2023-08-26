@@ -60,6 +60,6 @@ var electLeadersCmd = &cobra.Command{
 
 func init() {
 	electLeadersCmd.Flags().StringP("data", "d", "", `json format data. [{"topic":"test","partition":0},{"topic":"test","partition":2}]`)
-	electLeadersCmd.Flags().Int32("timeout.ms", 0, `The time in ms to wait for the response.`)
+	electLeadersCmd.Flags().Int32("timeout.ms", 30000, `The time in ms to wait for the response.`)
 	rootCmd.AddCommand(electLeadersCmd)
 }
