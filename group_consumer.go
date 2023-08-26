@@ -51,6 +51,9 @@ type GroupConsumer struct {
 // NewGroupConsumer cretae a new GroupConsumer
 func NewGroupConsumer(topic string, config interface{}) (*GroupConsumer, error) {
 	cfg, err := createConsumerConfig(config)
+	if err != nil {
+		return nil, err
+	}
 	if err := cfg.checkValid(); err != nil {
 		return nil, err
 	}
