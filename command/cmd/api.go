@@ -181,6 +181,43 @@ var apiCmd = &cobra.Command{
 			c.JSON(http.StatusOK, resp)
 		})
 
+		router.POST("/list-partition-reassignments", func(c *gin.Context) {
+			type reassignment struct {
+				Topic     string `json:"topic"`
+				Partition int32  `json:"partition"`
+			}
+
+			bootstrapServers := c.Query("bootstrap")
+			bs, err := healer.NewBrokers(bootstrapServers)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			defer bs.Close()
+
+			timeout := c.Query("timeout")
+			timeoutMS, err := strconv.Atoi(timeout)
+			if err != nil {
+				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
+				return
+			}
+			reassignments := make([]reassignment, 0)
+			if err := c.BindJSON(&reassignments); err != nil {
+				c.String(http.StatusBadRequest, fmt.Sprintf("reassignments value error: %s", err))
+				return
+			}
+			req := healer.NewListPartitionReassignmentsRequest("healer", int32(timeoutMS))
+			for _, v := range reassignments {
+				req.AddTP(v.Topic, v.Partition)
+			}
+			resp, err := bs.ListPartitionReassignments(req)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			c.JSON(http.StatusOK, resp)
+		})
+
 		router.Run(fullAddress)
 		return nil
 	},
