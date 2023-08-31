@@ -16,8 +16,8 @@ type ListPartitionReassignmentsRequest struct {
 	// TaggedFields interface{}
 }
 
-// NewListPartitionReassignments creates a new ListPartitionReassignmentsRequest
-func NewListPartitionReassignments(clientID string, timeoutMS int32) ListPartitionReassignmentsRequest {
+// NewListPartitionReassignmentsRequest creates a new ListPartitionReassignmentsRequest
+func NewListPartitionReassignmentsRequest(clientID string, timeoutMS int32) ListPartitionReassignmentsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_ListPartitionReassignments,
 		APIVersion: 0,

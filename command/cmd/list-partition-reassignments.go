@@ -36,7 +36,7 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 			return err
 		}
 
-		req := healer.NewListPartitionReassignments(client, timeoutMS)
+		req := healer.NewListPartitionReassignmentsRequest(client, timeoutMS)
 		if dataJSONStr != "" {
 			topicPartitions := make([]topicPartition, 0)
 			err = json.Unmarshal([]byte(dataJSONStr), &topicPartitions)
