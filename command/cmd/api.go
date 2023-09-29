@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -42,6 +43,10 @@ var apiCmd = &cobra.Command{
 			topics := c.QueryArray("topics")
 			resp, err := bs.RequestMetaData("healer-api", topics)
 			if err != nil {
+				if errors.As(err, &healer.AllError[0]) {
+					c.JSON(http.StatusOK, resp)
+					return
+				}
 				c.String(http.StatusInternalServerError, err.Error())
 				return
 			}
