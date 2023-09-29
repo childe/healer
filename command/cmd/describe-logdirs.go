@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
+	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
@@ -59,7 +60,7 @@ var describeLogdirs = &cobra.Command{
 			}
 			resp, err := broker.RequestAndGet(req)
 			if err != nil {
-				return fmt.Errorf("failed to do DescribeLogdirs request to %s: %w", broker, err)
+				glog.Errorf("error from %s: %v", broker, err)
 			}
 			rst[b] = resp.(healer.DescribeLogDirsResponse)
 		}
