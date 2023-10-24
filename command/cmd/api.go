@@ -223,6 +223,48 @@ var apiCmd = &cobra.Command{
 			c.JSON(http.StatusOK, resp)
 		})
 
+		router.POST("/create-partitions", func(c *gin.Context) {
+			bootstrapServers := c.Query("bootstrap")
+			bs, err := healer.NewBrokers(bootstrapServers)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			defer bs.Close()
+
+			count := c.Query("count")
+			countI, err := strconv.Atoi(count)
+			if err != nil {
+				c.String(http.StatusBadRequest, fmt.Sprintf("count value error: %s", err))
+				return
+			}
+
+			timeout := c.Query("timeout")
+			timeoutMS, err := strconv.Atoi(timeout)
+			if err != nil {
+				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
+				return
+			}
+
+			topic := c.Query("topic")
+
+			req := healer.NewCreatePartitionsRequest("healer", uint32(timeoutMS), false)
+			req.AddTopic(topic, int32(countI), nil)
+
+			controller, err := bs.GetBroker(bs.Controller())
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			resp, err := controller.RequestAndGet(req)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			c.JSON(http.StatusOK, resp)
+		})
+
 		router.Run(fullAddress)
 		return nil
 	},
