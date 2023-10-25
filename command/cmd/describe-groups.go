@@ -23,6 +23,9 @@ func parseGroupDetail(group *healer.GroupDetail) (map[string]interface{}, error)
 		e["client_id"] = group.Members[i].ClientID
 		e["client_host"] = group.Members[i].ClientHost
 
+		if len(group.Members[i].MemberMetadata) == 0 {
+			continue
+		}
 		memberAssignment, err := healer.NewMemberAssignment(group.Members[i].MemberAssignment)
 		if err != nil {
 			return nil, err
