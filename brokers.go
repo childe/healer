@@ -91,7 +91,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		return nil, err
 	}
 	if len(metadataResponse.Brokers) == 0 {
-		return nil, errors.New("no broers in getmetadata response")
+		return nil, errors.New("no brokers in getmetadata response")
 	}
 
 	brokers.mutex.Lock()
