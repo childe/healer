@@ -277,7 +277,9 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	// TODO cache
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
 	if err != nil {
-		return nil, fmt.Errorf("could not get metadata of topic[%s]:%w", topic, err)
+		if !errors.As(err, &AllError[0]) {
+			return nil, fmt.Errorf("could not get metadata of topic[%s]: %w", topic, err)
+		}
 	}
 
 	// TODO only one topic
@@ -285,6 +287,10 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 
 	if partitionID >= 0 {
 		for _, x := range topicMetadata.PartitionMetadatas {
+			if x.Leader == -1 {
+				glog.Infof("partition %d of topic %s has no leader, skip it", x.PartitionID, topic)
+				continue
+			}
 			if partitionID == x.PartitionID {
 				if leader, err := brokers.GetBroker(x.Leader); err != nil {
 					return nil, fmt.Errorf("could not find leader of %s[%d]:%w", topic, partitionID, err)
@@ -303,6 +309,10 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 		// try to get all partition offsets
 		offsetsRequestsMapping := make(map[int32][]int32, 0) //nodeID: partitionIDs
 		for _, x := range topicMetadata.PartitionMetadatas {
+			if x.Leader == -1 {
+				glog.Infof("partition %d of topic %s has no leader, skip it", x.PartitionID, topic)
+				continue
+			}
 			if _, ok := offsetsRequestsMapping[x.Leader]; ok {
 				offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionID)
 			} else {
