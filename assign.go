@@ -89,9 +89,14 @@ func (r *RangeAssignmentStrategy) Assign(members []Member, topicMetadatas []Topi
 
 	topicPartitionsAssignments := make(map[string]map[string][]int32)
 	for _, topicMetadata := range topicMetadatas {
-		partitions := make([]int32, len(topicMetadata.PartitionMetadatas))
-		for i, p := range topicMetadata.PartitionMetadatas {
-			partitions[i] = p.PartitionID
+		partitions := make([]int32, 0, len(topicMetadata.PartitionMetadatas))
+		for _, p := range topicMetadata.PartitionMetadatas {
+			if p.PartitionErrorCode != 0 {
+				err := getErrorFromErrorCode(p.PartitionErrorCode)
+				glog.Infof("%s-%d has problem: %v, skip it", topicMetadata.TopicName, p.PartitionID, err)
+				continue
+			}
+			partitions = append(partitions, p.PartitionID)
 		}
 		sort.Sort(ByPartitionID(partitions))
 
