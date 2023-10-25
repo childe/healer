@@ -96,11 +96,10 @@ func NewGroupConsumer(topic string, config interface{}) (*GroupConsumer, error) 
 
 // request metadata and set partition metadat to group-consumer. only leader should request this
 func (c *GroupConsumer) getTopicPartitionInfo() {
-	// TODO if could not get meta, such as error 5:`There is no leader for this topic-partition as we are in the middle of a leadership election.`
 	var (
 		metaDataResponse MetadataResponse
 		err              error
-		_topics          = map[string]bool{}
+		_topics          = map[string]bool{} //FIXME: use map[string]struct{}, this indicates _topics is set
 	)
 	for _, member := range c.members {
 		protocolMetadata := NewProtocolMetadata(member.MemberMetadata)
@@ -118,6 +117,10 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 		if err == nil {
 			break
 		} else {
+			if err == AllError[5] {
+				glog.Infof("some leader(s) of partition(s) of topic[%s] is(are) not available, ignore this and go on", c.topics)
+				break
+			}
 			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topics, err)
 			time.Sleep(1000 * time.Millisecond)
 		}
