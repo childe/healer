@@ -23,12 +23,14 @@ func parseGroupDetail(group *healer.GroupDetail) (map[string]interface{}, error)
 		e["client_id"] = group.Members[i].ClientID
 		e["client_host"] = group.Members[i].ClientHost
 
-		memberAssignment, err := healer.NewMemberAssignment(group.Members[i].MemberAssignment)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range memberAssignment.PartitionAssignments {
-			e["assignments"] = p
+		if len(group.Members[i].MemberAssignment) != 0 {
+			memberAssignment, err := healer.NewMemberAssignment(group.Members[i].MemberAssignment)
+			if err != nil {
+				return nil, err
+			}
+			for _, p := range memberAssignment.PartitionAssignments {
+				e["assignments"] = p
+			}
 		}
 		members = append(members, e)
 	}
