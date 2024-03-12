@@ -16,9 +16,15 @@ var resetOffsetCmd = &cobra.Command{
 		bs, err := cmd.Flags().GetString("brokers")
 		client, err := cmd.Flags().GetString("client")
 		topic, err := cmd.Flags().GetString("topic")
+		partitions, err := cmd.Flags().GetInt32Slice("partitions")
 		group, err := cmd.Flags().GetString("group")
 		offsetsStorage, err := cmd.Flags().GetString("offset.storage")
 		timestamp, err := cmd.Flags().GetInt64("timestamp")
+
+		userCustomPartitions := make(map[int32]struct{})
+		for _, partition := range partitions {
+			userCustomPartitions[partition] = struct{}{}
+		}
 
 		brokers, err := healer.NewBrokers(bs)
 
@@ -84,6 +90,11 @@ var resetOffsetCmd = &cobra.Command{
 		offsetComimtReq.SetGenerationID(-1)
 		offsetComimtReq.SetRetentionTime(-1)
 		for partitionID, offset := range offsets {
+			if len(userCustomPartitions) > 0 {
+				if _, ok := userCustomPartitions[partitionID]; !ok {
+					continue
+				}
+			}
 			offsetComimtReq.AddPartiton(topic, partitionID, offset, "")
 			glog.Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
 		}
@@ -98,6 +109,7 @@ var resetOffsetCmd = &cobra.Command{
 
 func init() {
 	resetOffsetCmd.Flags().StringP("topic", "t", "", "topic name")
+	resetOffsetCmd.Flags().Int32SliceP("partitions", "p", nil, "partitions. all partitions if not set")
 	resetOffsetCmd.Flags().StringP("group", "g", "", "group name")
 	resetOffsetCmd.Flags().Int64("timestamp", 0, "-2 to start offset, -1 to end offset")
 	resetOffsetCmd.Flags().String("offsets.storage", "kafka", "kafka or zookeeper")
