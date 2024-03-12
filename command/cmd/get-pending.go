@@ -321,7 +321,7 @@ var getPendingCmd = &cobra.Command{
 }
 
 func init() {
-	getPendingCmd.Flags().String("group", "", "group name")
+	getPendingCmd.Flags().StringP("group", "g", "", "group name")
 	getPendingCmd.Flags().Bool("total", false, "if print total pending")
 	getPendingCmd.Flags().Bool("header", true, "if print header")
 	getPendingCmd.Flags().StringP("topic", "t", "", "topic name")
