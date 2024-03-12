@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var resetOffsetCmd = &cobra.Command{
@@ -56,7 +56,7 @@ var resetOffsetCmd = &cobra.Command{
 					if len(partitionOffset.Offsets) == 0 {
 						return fmt.Errorf("offsets of %s[%d] is blank", topic, partition)
 					}
-					glog.Infof("%s:%d:%v", topic, partition, partitionOffset.Offsets)
+					klog.Infof("%s:%d:%v", topic, partition, partitionOffset.Offsets)
 					offset := int64(partitionOffset.Offsets[0])
 					offsets[partition] = offset
 				}
@@ -74,7 +74,7 @@ var resetOffsetCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not get broker[%d]:%s", coordinatorResponse.Coordinator.NodeID, err)
 		}
-		glog.Infof("coordinator for group[%s]:%s", group, coordinator)
+		klog.Infof("coordinator for group[%s]:%s", group, coordinator)
 
 		// 4. commit
 		var (
@@ -96,7 +96,7 @@ var resetOffsetCmd = &cobra.Command{
 				}
 			}
 			offsetComimtReq.AddPartiton(topic, partitionID, offset, "")
-			glog.Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
+			klog.Infof("commit offset [%s][%d]:%d", topic, partitionID, offset)
 		}
 
 		_, err = coordinator.RequestAndGet(offsetComimtReq)

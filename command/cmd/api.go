@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func metadata() {}
-
 var apiCmd = &cobra.Command{
 	Use:   "api",
 	Short: "support http api",
@@ -20,6 +18,10 @@ var apiCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		address, _ := cmd.Flags().GetString("address")
 		port, _ := cmd.Flags().GetInt32("port")
+		client, _ := cmd.Flags().GetString("client")
+		if len(client) == 0 {
+			client = "healer"
+		}
 
 		fullAddress := fmt.Sprintf("%s:%d", address, port)
 		router := gin.Default()
@@ -71,7 +73,7 @@ var apiCmd = &cobra.Command{
 					ConfigNames:  nil,
 				},
 			}
-			r := healer.NewDescribeConfigsRequest("healer-api", resources)
+			r := healer.NewDescribeConfigsRequest(client, resources)
 
 			controller, err := bs.GetBroker(bs.Controller())
 			if err != nil {
@@ -104,7 +106,7 @@ var apiCmd = &cobra.Command{
 					ConfigNames:  []string{config},
 				},
 			}
-			r := healer.NewDescribeConfigsRequest("healer-api", resources)
+			r := healer.NewDescribeConfigsRequest(client, resources)
 
 			controller, err := bs.GetBroker(bs.Controller())
 			if err != nil {
@@ -132,7 +134,7 @@ var apiCmd = &cobra.Command{
 			config := c.Param("config")
 			value := c.Param("value")
 
-			r := healer.NewIncrementalAlterConfigsRequest("healer-api")
+			r := healer.NewIncrementalAlterConfigsRequest(client)
 			r.AddConfig(healer.ConvertConfigResourceType("topic"), topic, config, value)
 
 			controller, err := bs.GetBroker(bs.Controller())
@@ -155,20 +157,24 @@ var apiCmd = &cobra.Command{
 				Replicas  []int32 `json:"replicas"`
 			}
 
-			bootstrapServers := c.Query("bootstrap")
-			bs, err := healer.NewBrokers(bootstrapServers)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			defer bs.Close()
-
 			timeout := c.Query("timeout")
 			timeoutMS, err := strconv.Atoi(timeout)
 			if err != nil {
 				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
 				return
 			}
+
+			bootstrapServers := c.Query("bootstrap")
+			config := healer.DefaultBrokerConfig()
+			config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
+			config.NetConfig.TimeoutMSForEachAPI[healer.API_AlterPartitionReassignments] = timeoutMS
+			bs, err := healer.NewBrokersWithConfig(bootstrapServers, config)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			defer bs.Close()
+
 			reassignments := make([]reassignment, 0)
 			if err := c.BindJSON(&reassignments); err != nil {
 				c.String(http.StatusBadRequest, fmt.Sprintf("reassignments value error: %s", err))
@@ -192,26 +198,29 @@ var apiCmd = &cobra.Command{
 				Partition int32  `json:"partition"`
 			}
 
-			bootstrapServers := c.Query("bootstrap")
-			bs, err := healer.NewBrokers(bootstrapServers)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			defer bs.Close()
-
 			timeout := c.Query("timeout")
 			timeoutMS, err := strconv.Atoi(timeout)
 			if err != nil {
 				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
 				return
 			}
+
+			config := healer.DefaultBrokerConfig()
+			config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
+			config.NetConfig.TimeoutMSForEachAPI[healer.API_ListPartitionReassignments] = timeoutMS
+			bootstrapServers := c.Query("bootstrap")
+			bs, err := healer.NewBrokersWithConfig(bootstrapServers, config)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			defer bs.Close()
 			reassignments := make([]reassignment, 0)
 			if err := c.BindJSON(&reassignments); err != nil {
 				c.String(http.StatusBadRequest, fmt.Sprintf("reassignments value error: %s", err))
 				return
 			}
-			req := healer.NewListPartitionReassignmentsRequest("healer", int32(timeoutMS))
+			req := healer.NewListPartitionReassignmentsRequest(client, int32(timeoutMS))
 			for _, v := range reassignments {
 				req.AddTP(v.Topic, v.Partition)
 			}
@@ -248,7 +257,7 @@ var apiCmd = &cobra.Command{
 
 			topic := c.Query("topic")
 
-			req := healer.NewCreatePartitionsRequest("healer", uint32(timeoutMS), false)
+			req := healer.NewCreatePartitionsRequest(client, uint32(timeoutMS), false)
 			req.AddTopic(topic, int32(countI), nil)
 
 			controller, err := bs.GetBroker(bs.Controller())

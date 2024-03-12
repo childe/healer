@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var simpleConsumerCmd = &cobra.Command{
@@ -53,7 +53,7 @@ var simpleConsumerCmd = &cobra.Command{
 
 		messages, err := simpleConsumer.Consume(offset, nil)
 		if err != nil {
-			glog.Errorf("consumer messages error: %s", err)
+			klog.Errorf("consumer messages error: %s", err)
 			return err
 		}
 

@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"flag"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -53,7 +51,4 @@ func init() {
 
 	rootCmd.AddCommand(listPartitionReassignmentsCmd)
 
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-
-	flag.Parse()
 }

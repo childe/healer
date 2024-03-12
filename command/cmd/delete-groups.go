@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var deleteGroupsCmd = &cobra.Command{
@@ -33,7 +33,7 @@ var deleteGroupsCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			glog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
+			klog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
 
 			req := healer.NewDeleteGroupsRequest(client, groups)
 			resp, err := coordinator.RequestAndGet(req)

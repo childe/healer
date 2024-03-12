@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 func parseGroupDetail(group *healer.GroupDetail) (map[string]interface{}, error) {
@@ -62,7 +62,7 @@ var describeGroupsCmd = &cobra.Command{
 			return err
 		}
 
-		glog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
+		klog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
 
 		req := healer.NewDescribeGroupsRequest(client, []string{group})
 		resp, err := coordinator.RequestAndGet(req)

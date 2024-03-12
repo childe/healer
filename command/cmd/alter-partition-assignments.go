@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var alterPartitionReassignmentsCmd = &cobra.Command{
@@ -49,7 +49,7 @@ var alterPartitionReassignmentsCmd = &cobra.Command{
 		}
 
 		b, _ := json.MarshalIndent(resp, "", "  ")
-		glog.Info(string(b))
+		klog.Info(string(b))
 
 		return nil
 	},

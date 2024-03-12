@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var describeLogdirs = &cobra.Command{
@@ -60,7 +60,7 @@ var describeLogdirs = &cobra.Command{
 			}
 			resp, err := broker.RequestAndGet(req)
 			if err != nil {
-				glog.Errorf("error from %s: %v", broker, err)
+				klog.Errorf("error from %s: %v", broker, err)
 			}
 			rst[b] = resp.(healer.DescribeLogDirsResponse)
 		}

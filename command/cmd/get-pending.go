@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -82,7 +82,7 @@ func getCommittedOffset(topic string, partitions []int32, groupID, client string
 		if err != nil {
 			return nil, err
 		}
-		glog.V(5).Infof("coordinator of %s: %s", groupID, coordinator.GetAddress())
+		klog.V(5).Infof("coordinator of %s: %s", groupID, coordinator.GetAddress())
 		groups[groupID] = coordinator
 	}
 
@@ -121,7 +121,7 @@ func getSubscriptionsInGroup(groupID, client string) (map[string]map[int32]strin
 		if err != nil {
 			return nil, fmt.Errorf("get broker error: %s", err)
 		}
-		glog.V(5).Infof("coordinator of %s: %s", groupID, coordinator)
+		klog.V(5).Infof("coordinator of %s: %s", groupID, coordinator)
 		groups[groupID] = coordinator
 	}
 
@@ -203,24 +203,22 @@ var getPendingCmd = &cobra.Command{
 		helper = healer.NewHelperFromBrokers(brokers, client)
 
 		groupIDs := getGroups(groupID)
-		if glog.V(5) {
-			for i, group := range groupIDs {
-				glog.Infof("%d/%d %s", i, len(groupIDs), group)
-			}
+		for i, group := range groupIDs {
+			klog.V(5).Infof("%d/%d %s", i, len(groupIDs), group)
 		}
 
 		for i, groupID := range groupIDs {
-			glog.V(5).Infof("%d/%d %s", i, len(groupIDs), groupID)
+			klog.V(5).Infof("%d/%d %s", i, len(groupIDs), groupID)
 			subscriptions, err := getSubscriptionsInGroup(groupID, client)
 			if err != nil {
-				glog.Errorf("get subscriptions of %s error: %s", groupID, err)
+				klog.Errorf("get subscriptions of %s error: %s", groupID, err)
 				continue
 			}
-			glog.V(5).Infof("%d topics: %v", len(subscriptions), subscriptions)
+			klog.V(5).Infof("%d topics: %v", len(subscriptions), subscriptions)
 
 			if topic != "" {
 				if _, ok := subscriptions[topic]; !ok {
-					glog.V(10).Infof("topic %s not found in group %s", topic, groupID)
+					klog.V(10).Infof("topic %s not found in group %s", topic, groupID)
 					continue
 				}
 				var topicName = topic
@@ -228,18 +226,18 @@ var getPendingCmd = &cobra.Command{
 
 				offsets, err := getOffset(topicName, client)
 				if err != nil {
-					glog.Errorf("get offsets error: %s", err)
+					klog.Errorf("get offsets error: %s", err)
 					continue
 				}
 
 				partitions, err := getPartitions(topicName, client)
 				if err != nil {
-					glog.Errorf("get partitions of %s error: %s", topicName, err)
+					klog.Errorf("get partitions of %s error: %s", topicName, err)
 					continue
 				}
 				committedOffsets, err := getCommittedOffset(topicName, partitions, groupID, client)
 				if err != nil {
-					glog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
+					klog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
 					continue
 				}
 
@@ -270,7 +268,7 @@ var getPendingCmd = &cobra.Command{
 			}
 
 			for topicName, v := range subscriptions {
-				glog.V(5).Infof("topic: %s", topicName)
+				klog.V(5).Infof("topic: %s", topicName)
 				if topic != "" && topicName != topic {
 					continue
 				}
@@ -279,18 +277,18 @@ var getPendingCmd = &cobra.Command{
 
 				offsets, err := getOffset(topicName, client)
 				if err != nil {
-					glog.Errorf("get offsets error: %s", err)
+					klog.Errorf("get offsets error: %s", err)
 					continue
 				}
 
 				partitions, err := getPartitions(topicName, client)
 				if err != nil {
-					glog.Errorf("get partitions of %s error: %s", topicName, err)
+					klog.Errorf("get partitions of %s error: %s", topicName, err)
 					continue
 				}
 				committedOffsets, err := getCommittedOffset(topicName, partitions, groupID, client)
 				if err != nil {
-					glog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
+					klog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
 					continue
 				}
 

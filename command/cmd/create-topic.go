@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/childe/healer"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var createTopicCmd = &cobra.Command{
@@ -68,7 +68,7 @@ var createTopicCmd = &cobra.Command{
 			return fmt.Errorf("failed to create topics: %w", err)
 		} else {
 			b, _ := json.Marshal(resp.(healer.CreateTopicsResponse))
-			glog.Info(string(b))
+			klog.Info(string(b))
 		}
 		return nil
 	},
