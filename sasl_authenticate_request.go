@@ -2,9 +2,8 @@ package healer
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strings"
-
-	"github.com/golang/glog"
 )
 
 type SaslAuth interface {
@@ -34,7 +33,7 @@ func NewSaslAuthenticateRequest(clientID string, user, password, typ string) (r 
 	case "plain":
 		saslAuth = NewPlainSasl(user, password)
 	default:
-		glog.Errorf("%s NOT support for now", typ)
+		logger.Error(fmt.Errorf("%s NOT support for now", typ), "not supported sasl type")
 		return r
 	}
 

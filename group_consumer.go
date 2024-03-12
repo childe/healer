@@ -10,8 +10,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 // GroupConsumer can join one group with other GroupConsumers with the same groupID
@@ -61,7 +59,7 @@ func NewGroupConsumer(topic string, config interface{}) (*GroupConsumer, error) 
 		ts := strconv.Itoa(int(time.Now().UnixNano() / 1000000))
 		hostname, err := os.Hostname()
 		if err != nil {
-			glog.Infof("could not get hostname for clientID: %s", err)
+			logger.Error(err, "could not get hostname used in clientID")
 			cfg.ClientID = fmt.Sprintf("%s-%s", cfg.GroupID, ts)
 		} else {
 			cfg.ClientID = fmt.Sprintf("%s-%s-%s", cfg.GroupID, ts, hostname)
@@ -81,7 +79,7 @@ func NewGroupConsumer(topic string, config interface{}) (*GroupConsumer, error) 
 		config:        cfg,
 
 		mutex:              &sync.Mutex{},
-		assignmentStrategy: &RangeAssignmentStrategy{},
+		assignmentStrategy: &rangeAssignmentStrategy{},
 
 		joined:               false,
 		coordinatorAvailable: false,
@@ -118,15 +116,13 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 		if err == nil {
 			break
 		} else {
-			glog.Errorf("failed to get metadata of topic[%s]:%s", c.topics, err)
+			logger.Error(err, "failed to get metadata", "topics", c.topics)
 			time.Sleep(1000 * time.Millisecond)
 		}
 	}
 
-	if glog.V(5) {
-		b, _ := json.Marshal(metaDataResponse)
-		glog.Infof("topics[%s] metadata :%s", c.topics, b)
-	}
+	b, _ := json.Marshal(metaDataResponse)
+	logger.V(5).Info("got metadata", "topics", c.topics, "metadata", b)
 	c.topicMetadatas = metaDataResponse.TopicMetadatas
 }
 
@@ -142,7 +138,7 @@ func (c *GroupConsumer) getCoordinator() error {
 	if err != nil {
 		return err
 	}
-	glog.Infof("coordinator for group[%s]:%s", c.config.GroupID, coordinatorBroker.address)
+	logger.Info("create coordinator", "groupId", c.config.GroupID, "address", coordinatorBroker.address)
 	c.coordinator = coordinatorBroker
 
 	return nil
@@ -153,10 +149,8 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 	if err != nil {
 		return err
 	}
-	if glog.V(2) {
-		b, _ := json.Marshal(memberAssignment)
-		glog.Infof("memeber assignment:%s", b)
-	}
+	b, _ := json.Marshal(memberAssignment)
+	logger.V(1).Info("parse memeber assignment", "assignment", b)
 	c.partitionAssignments = memberAssignment.PartitionAssignments
 	c.simpleConsumers = make([]*SimpleConsumer, 0)
 
@@ -174,7 +168,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 
 // join && set generationID&memberID
 func (c *GroupConsumer) join() error {
-	glog.Infof("try to join group %s", c.config.GroupID)
+	logger.Info("try to join group", "groupId", c.config.GroupID)
 	var (
 		protocolType = "consumer"
 	)
@@ -189,13 +183,8 @@ func (c *GroupConsumer) join() error {
 	joinGroupResponse, err := c.coordinator.requestJoinGroup(
 		c.config.ClientID, c.config.GroupID, int32(c.config.SessionTimeoutMS), c.memberID, protocolType, gps)
 
-	if glog.V(2) {
-		b, _ := json.Marshal(joinGroupResponse)
-		glog.Infof("join response:%s", b)
-	}
-
 	if err != nil {
-		glog.Infof("join %s error: %s", c.config.GroupID, err)
+		logger.Error(err, "join group failed", "groupId", c.config.GroupID)
 
 		if err == AllError[25] {
 			c.memberID = ""
@@ -221,7 +210,7 @@ func (c *GroupConsumer) join() error {
 
 	c.generationID = joinGroupResponse.GenerationID
 	c.memberID = joinGroupResponse.MemberID
-	glog.Infof("memberID now is %s", c.memberID)
+	logger.Info("got new memberID after (re)join", "memberId", c.memberID)
 
 	if joinGroupResponse.LeaderID == c.memberID {
 		c.ifLeader = true
@@ -233,7 +222,7 @@ func (c *GroupConsumer) join() error {
 }
 
 func (c *GroupConsumer) sync() error {
-	glog.Infof("try to sync group %s", c.config.GroupID)
+	logger.Info("try to sync group", "groupId", c.config.GroupID)
 	var groupAssignment GroupAssignment
 	if c.ifLeader {
 		c.getTopicPartitionInfo()
@@ -241,18 +230,16 @@ func (c *GroupConsumer) sync() error {
 	} else {
 		groupAssignment = nil
 	}
-	glog.V(5).Infof("group assignment: %v", groupAssignment)
+	logger.V(5).Info("create group assignment", "assignment", groupAssignment)
 
 	syncGroupResponse, err := c.coordinator.requestSyncGroup(
 		c.config.ClientID, c.config.GroupID, c.generationID, c.memberID, groupAssignment)
 
-	if glog.V(5) {
-		b, _ := json.Marshal(syncGroupResponse)
-		glog.Infof("sync response:%s", b)
-	}
+	b, _ := json.Marshal(syncGroupResponse)
+	logger.Info("sync returns", "response", b)
 
 	if err != nil {
-		glog.Infof("sync %s error: %s", c.config.GroupID, err)
+		logger.Error(err, "sync failed", "groupId", c.config.GroupID)
 		if err == AllError[15] || err == AllError[16] {
 			c.coordinatorAvailable = false
 		}
@@ -264,8 +251,7 @@ func (c *GroupConsumer) sync() error {
 
 	err = c.parseGroupAssignments(syncGroupResponse.MemberAssignment)
 	if err != nil {
-		glog.Errorf("parse group assignments error: %s", err)
-		return err
+		return fmt.Errorf("failed to parse group assignment: %w", err)
 	}
 
 	return nil
@@ -277,7 +263,7 @@ func (c *GroupConsumer) joinAndSync() error {
 		if !c.coordinatorAvailable {
 			err = c.getCoordinator()
 			if err != nil {
-				glog.Errorf("could not find coordinator: %s", err)
+				logger.Error(err, "could not find coordinator")
 				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 				continue
 			}
@@ -322,7 +308,7 @@ func (c *GroupConsumer) heartbeat() error {
 		return nil
 	}
 
-	glog.V(5).Infof("heartbeat generationID:%d memberID:%s", c.generationID, c.memberID)
+	logger.V(5).Info("heartbeat", "generationID", c.generationID, "memberID", c.memberID)
 	_, err := c.coordinator.requestHeartbeat(c.config.ClientID, c.config.GroupID, c.generationID, c.memberID)
 	return err
 }
@@ -336,11 +322,11 @@ func (c *GroupConsumer) CommitOffset() {
 
 func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int64) bool {
 	if c.memberID == "" {
-		glog.V(5).Infof("do not commit offset [%s][%d]:%d because memberID is not available", topic, partitionID, offset)
+		logger.V(3).Info("do not commit offset because memberID is empty now", "topic", topic, "partitionID", partitionID, "offset", offset)
 		return false
 	}
 	if offset < 0 {
-		glog.V(5).Infof("invalid offset %d", offset)
+		logger.V(3).Info("invalid commit offset", "offste", offset)
 		return false
 	}
 	var apiVersion uint16
@@ -360,10 +346,10 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 		err = resp.Error()
 	}
 	if err == nil {
-		glog.V(5).Infof("commit offset %s(%d) [%s][%d]:%d", c.memberID, c.generationID, topic, partitionID, offset)
+		logger.V(3).Info("offset committed", "memberID", c.memberID, "generationID", c.generationID, "topic", topic, "partitionID", partitionID, "offset", offset)
 		return true
 	}
-	glog.Errorf("commit offset %s(%d) [%s][%d]:%d error:%s", c.memberID, c.generationID, topic, partitionID, offset, err)
+	logger.Error(err, "commit offset failed", "memberID", c.memberID, "generationID", c.generationID, "topic", topic, "partitionID", partitionID, "offset", offset)
 	return false
 }
 
@@ -380,11 +366,11 @@ func (c *GroupConsumer) restart() {
 }
 
 func (c *GroupConsumer) stop() {
-	glog.Infof("stop group consumer %s", c.config.GroupID)
+	logger.Info("stop group consumer", "GroupID", c.config.GroupID)
 	if c.simpleConsumers != nil {
-		glog.Infof("stop %d simple consumers", len(c.simpleConsumers))
+		logger.Info("stop simple consumers", "count", len(c.simpleConsumers))
 		for _, simpleConsumer := range c.simpleConsumers {
-			glog.Infof("stop simple consumer %s-%d", simpleConsumer.topic, simpleConsumer.partitionID)
+			logger.Info("stop simple consumer", "topic", simpleConsumer.topic, "partitionID", simpleConsumer.partitionID)
 			simpleConsumer.Stop()
 		}
 	}
@@ -394,14 +380,14 @@ func (c *GroupConsumer) stop() {
 
 func (c *GroupConsumer) leave() {
 	if !c.joined {
-		glog.Info("not joined yet, leave directly")
+		logger.Info("not joined yet, leave directly")
 		return
 	}
-	glog.Infof("leave %s from %s", c.memberID, c.config.GroupID)
+	logger.Info("group consumer leaves", "memberID", c.memberID, "GroupID", c.config.GroupID)
 	leaveReq := NewLeaveGroupRequest(c.config.ClientID, c.config.GroupID, c.memberID)
 	_, err := c.coordinator.RequestAndGet(leaveReq)
 	if err != nil {
-		glog.Errorf("member %s could not leave group:%s", c.memberID, err)
+		logger.Error(err, "leave group failed", "memberID", c.memberID)
 		return
 	}
 
@@ -433,9 +419,9 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 
 	select {
 	case <-done:
-		glog.Info("all simple consumers stopped. leave and return")
+		logger.Info("all simple consumers stopped. leave and return")
 	case <-time.After(timeout):
-		glog.Info("group consumer await timeout. return")
+		logger.Info("group consumer await timeout. return")
 		return
 	}
 
@@ -461,7 +447,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 			}
 			err := c.heartbeat()
 			if err != nil {
-				glog.Errorf("failed to send heartbeat, restart: %s", err)
+				logger.Error(err, "failed to send heartbeat, restarts")
 				c.restart()
 			}
 		}
@@ -469,6 +455,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 
 	// go refresh topic metadata
 	go func() {
+		logger.Info("start metadata refresh goroutine", "interval", c.config.MetadataMaxAgeMS)
 		var (
 			ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
 		)
@@ -480,18 +467,16 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 				continue
 			}
 
+			logger.Info("refresh metadata (in goroutine)")
+
 			metaDataResponse, err := c.brokers.RequestMetaData(c.config.ClientID, c.topics)
 			if err != nil {
-				glog.Errorf("request metadata (in goroutine) error: %s", err)
+				logger.Error(err, "request metadata (in goroutine) failed")
 				continue
 			}
 
-			if glog.V(5) {
-				b, _ := json.Marshal(metaDataResponse)
-				glog.Infof("topics[%s] metadata: %s", c.topics, b)
-			}
 			if !ifTopicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
-				glog.Info("metadata changed, restart")
+				logger.Info("metadata changed, restart group consumer")
 				c.topicMetadatas = metaDataResponse.TopicMetadatas
 				c.restart()
 			}

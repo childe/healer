@@ -7,10 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	snappy "github.com/eapache/go-xerial-snappy"
-	"github.com/golang/glog"
 	"github.com/pierrec/lz4"
 )
 
@@ -188,7 +186,7 @@ func (streamDecoder *fetchResponseStreamDecoder) read(n int) (rst []byte, length
 func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err error) {
 	switch compress {
 	case COMPRESSION_NONE:
-		uncompressedBytes, err = ioutil.ReadAll(reader)
+		uncompressedBytes, err = io.ReadAll(reader)
 		if err != nil {
 			return uncompressedBytes, fmt.Errorf("read uncompressed records bytes error: %w", err)
 		}
@@ -197,11 +195,11 @@ func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err 
 		if err != nil {
 			return nil, fmt.Errorf("create gzip reader of records bytes error: %w", err)
 		}
-		if uncompressedBytes, err = ioutil.ReadAll(reader); err != nil && err != io.EOF {
+		if uncompressedBytes, err = io.ReadAll(reader); err != nil && err != io.EOF {
 			return nil, fmt.Errorf("uncompress gzip records error: %w", err)
 		}
 	case COMPRESSION_SNAPPY:
-		buf, err := ioutil.ReadAll(reader)
+		buf, err := io.ReadAll(reader)
 		if err != nil {
 			return nil, fmt.Errorf("read streamDecoder error: %w", err)
 		}
@@ -211,7 +209,7 @@ func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err 
 		}
 	case COMPRESSION_LZ4:
 		reader := lz4.NewReader(reader)
-		uncompressedBytes, err = ioutil.ReadAll(reader)
+		uncompressedBytes, err = io.ReadAll(reader)
 		if err != nil {
 			return nil, fmt.Errorf("uncompress lz4 records error: %w", err)
 		}
@@ -226,7 +224,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 		if firstMessageSet {
 			firstMessageSet = false
 			messageSize := int(binary.BigEndian.Uint32(header17[8:]))
-			glog.V(20).Infof("messageSize: %d", messageSize)
 			value = make([]byte, 12+messageSize) // messageSize doesn't include the size of messageSize itself. 12 equals to the size of the header of offset & message_size.
 			copy(value, header17)
 			n, e := streamDecoder.Read(value[17:])
@@ -247,7 +244,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 				return offset, err
 			}
 			messageSize := int(binary.BigEndian.Uint32(buf[8:]))
-			glog.V(20).Infof("messageSize: %d", messageSize)
 			value = make([]byte, 12+messageSize)
 			n, err = streamDecoder.Read(value[12:])
 			if err != nil {
@@ -320,9 +316,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 
 	// count is not accurate, payload maybe truncated by maxsize parameter in fetch request
 	count := int(binary.BigEndian.Uint32(buf[57:]))
-	// if glog.V(15) {
-	// 	glog.Infof("baseTimestamp: %d, baseOffset: %d, batchLength: %d, compress: %d, count: %d", baseTimestamp, baseOffset, batchLength, compress, count)
-	// }
 
 	if count <= 0 {
 		return
@@ -330,7 +323,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 
 	// 49 is length of (batchLength, records count]
 	if int(batchLength)-49 > streamDecoder.totalLength-streamDecoder.offset {
-		glog.V(15).Infof("limit reader length: %d rest bytes length: %d", int64(batchLength)-49, streamDecoder.totalLength-streamDecoder.offset)
 		n, err = streamDecoder.readAll()
 		offset += n
 		return offset, err
@@ -406,7 +398,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 		offset += n
 
 		magic := header17[16]
-		// glog.V(15).Infof("magic: %d", magic)
 
 		if magic < 2 {
 			o, err = streamDecoder.decodeMessageSetMagic0or1(topicName, partitionID, int(magic), header17)
@@ -461,18 +452,12 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 	}
 
 	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[bytesBeforeRecordsLength-4:])))
-	if glog.V(15) {
-		glog.Infof("messageSetSizeBytes: %d", messageSetSizeBytes)
-	}
 	if messageSetSizeBytes == 0 {
 		return nil
 	}
 
 	// if we use fetch request with version 0 and not big enough fetch.max.bytes, kafka server may return partial records, and the NOT begins with the requests offset.
 	// healer will ignore the records, double fetch.max.bytes, and then retry.
-	if glog.V(15) {
-		glog.Infof("messageSetSizeBytes: %d, totalLength: %d, offset: %d", messageSetSizeBytes, streamDecoder.totalLength, streamDecoder.offset)
-	}
 	if int(messageSetSizeBytes) > streamDecoder.totalLength-streamDecoder.offset {
 		return &maxBytesTooSmall
 	}
@@ -540,9 +525,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 	}
 
 	streamDecoder.correlationID = int32(binary.BigEndian.Uint32(buffer))
-	if glog.V(10) {
-		glog.Infof("decode fetch correlationID: %d", streamDecoder.correlationID)
-	}
 	streamDecoder.responsesCount = int(binary.BigEndian.Uint32(buffer[countOffset:]))
 	return nil
 }
@@ -594,9 +576,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, st
 	if streamDecoder.more {
 		n, _ = streamDecoder.readAll()
 	}
-	if glog.V(10) {
-		glog.Infof("fetch correlationID: %d done", streamDecoder.correlationID)
-	}
+	logger.Info("decode fetch response done", "correlationID", streamDecoder.correlationID)
 
 	return nil
 }

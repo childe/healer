@@ -1,7 +1,5 @@
 package healer
 
-import "github.com/golang/glog"
-
 type MetaInfo struct {
 	brokers        []*BrokerInfo
 	topicMetadatas []TopicMetadata
@@ -57,20 +55,20 @@ func (h *Helper) UpdateMeta() error {
 func (h *Helper) GetGroups() []string {
 	err := h.UpdateMeta()
 	if err != nil {
-		glog.Errorf("update meta error:%s", err)
+		logger.Error(err, "update metadata error")
 		return nil
 	}
 	groups := []string{}
 	for _, brokerinfo := range h.metaInfo.brokers {
 		broker, err := h.brokers.GetBroker(brokerinfo.NodeID)
 		if err != nil {
-			glog.Errorf("get broker [%d] error:%s", brokerinfo.NodeID, err)
+			logger.Error(err, "get broker failed", "NodeID", brokerinfo.NodeID)
 			return nil
 		}
 
 		response, err := broker.requestListGroups(h.clientID)
 		if err != nil {
-			glog.Errorf("get group list from broker[%s] error:%s", broker.GetAddress(), err)
+			logger.Error(err, "get group list failed", "broker", broker.GetAddress())
 			return nil
 		}
 		for _, g := range response.Groups {

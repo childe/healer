@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/aviddiviner/go-murmur"
-	"github.com/golang/glog"
 )
 
 type ctxKey string
@@ -54,7 +53,7 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 		return nil, err
 	}
 
-	err = p.updateCurrentSimpleConsumer()
+	err = p.updateCurrentSimpleProducer()
 	if err != nil {
 		err = fmt.Errorf("update current simple consumer of %s error: %w", p.topic, err)
 		return nil, err
@@ -65,9 +64,9 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 
 	go func() {
 		for range time.NewTicker(time.Duration(producerConfig.MetadataMaxAgeMS) * time.Millisecond).C {
-			err := p.updateCurrentSimpleConsumer()
+			err := p.updateCurrentSimpleProducer()
 			if err != nil {
-				glog.Errorf("refresh metadata error in producer %s ticker: %v", p.topic, err)
+				logger.Error(err, "refresh simple producer failed", "topic", p.topic)
 			}
 		}
 	}()
@@ -76,7 +75,7 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 }
 
 // update metadata and currentProducer
-func (p *Producer) updateCurrentSimpleConsumer() error {
+func (p *Producer) updateCurrentSimpleProducer() error {
 	metadataResponse, err := p.brokers.RequestMetaData(p.config.ClientID, []string{p.topic})
 	if err == nil {
 		err = metadataResponse.Error()
@@ -102,11 +101,11 @@ func (p *Producer) updateCurrentSimpleConsumer() error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if p.currentProducer == nil {
-		glog.Infof("update current simple producer to %s", sp.leader)
+		logger.Info("init current simple producer", "leader", sp.leader)
 		p.currentProducer = sp
 	} else {
 		older := p.currentProducer
-		glog.Infof("update current simple producer from %p-%s to %p-%s", older, older.leader, sp, sp.leader)
+		logger.Info("update current simple producer", "older", older, "oldLeader", older.leader, "new", sp, "newLeader", sp.leader)
 		p.currentProducer = sp
 		older.Close()
 	}
@@ -174,7 +173,7 @@ func (p *Producer) AddMessage(key []byte, value []byte) error {
 		}
 		err = simpleProducer.AddMessage(key, value)
 		if err == ErrProducerClosed { // maybe current simple-producer closed in ticker, retry
-			glog.V(5).Infof("simple producer %p closed, retry", simpleProducer)
+			logger.V(1).Info("simple producer closed, retry", "producer", simpleProducer)
 			continue
 		}
 		return err

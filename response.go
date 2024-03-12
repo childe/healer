@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 // Response is the interface of all response. Error() returns the error abstracted from the error code of the response
@@ -62,7 +60,6 @@ func (p defaultReadParser) Read() ([]byte, error) {
 		l += length
 	}
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	glog.V(10).Infof("response length in header: %d", responseLength+4)
 	resp := make([]byte, 4+responseLength)
 
 	readLength := 0
@@ -85,9 +82,7 @@ func (p defaultReadParser) Read() ([]byte, error) {
 		}
 	}
 	copy(resp[0:4], responseLengthBuf)
-	if glog.V(10) {
-		glog.Infof("response length: %d. CorrelationID: %d", len(resp), binary.BigEndian.Uint32(resp[4:]))
-	}
+	logger.V(5).Info("response info", "length", len(resp), "CorrelationID", binary.BigEndian.Uint32(resp[4:]))
 	return resp, nil
 }
 

@@ -4,7 +4,7 @@ import "testing"
 
 func TestAssgin(t *testing.T) {
 	var (
-		s          = &RangeAssignmentStrategy{}
+		s          = &rangeAssignmentStrategy{}
 		members    []string
 		partitions []int32
 		rst        map[string][]int32

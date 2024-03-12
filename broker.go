@@ -11,8 +11,6 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 type Broker struct {
@@ -58,21 +56,19 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		return nil, fmt.Errorf("failed to marshal api versions when init broker: %s", err)
 	}
 
-	if glog.V(10) {
-		var versions string
-		for i, v := range broker.apiVersions {
-			if i+1 == len(broker.apiVersions) {
-				versions += fmt.Sprintf("%s:%d-%d", v.apiKey.String(), v.minVersion, v.maxVersion)
-			} else {
-				versions += fmt.Sprintf("%s:%d-%d,", v.apiKey.String(), v.minVersion, v.maxVersion)
-			}
+	var versions string
+	for i, v := range broker.apiVersions {
+		if i+1 == len(broker.apiVersions) {
+			versions += fmt.Sprintf("%s:%d-%d", v.apiKey.String(), v.minVersion, v.maxVersion)
+		} else {
+			versions += fmt.Sprintf("%s:%d-%d,", v.apiKey.String(), v.minVersion, v.maxVersion)
 		}
-		glog.Infof("broker %s api versions: %s", address, versions)
 	}
+	logger.V(5).Info("broker api versions", "broker", address, "versions", versions)
 
 	if broker.config.SaslConfig != nil {
 		if err := broker.sendSaslAuthenticate(); err != nil {
-			glog.Errorf("sasl authenticate to [%d]%s error: %s", nodeID, address, err)
+			logger.Error(err, "sasl authenticate failed", "nodeID", nodeID, "adddress", address)
 			return nil, err
 		}
 	}
@@ -227,18 +223,16 @@ func (broker *Broker) RequestAndGet(r Request) (Response, error) {
 }
 
 func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, error) {
-	if glog.V(10) {
-		glog.Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
-		api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
-		apiVersion := binary.BigEndian.Uint16(payload[6:])
-		correlationID := binary.BigEndian.Uint32(payload[8:])
-		glog.Infof("request length: %d. api: %s(%d). CorrelationID: %d. timeout: %d", len(payload), api, apiVersion, correlationID, timeout)
-	}
+	logger.V(5).Info("send request", "src", broker.conn.LocalAddr(), "dst", broker.conn.RemoteAddr())
+	api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
+	apiVersion := binary.BigEndian.Uint16(payload[6:])
+	correlationID := binary.BigEndian.Uint32(payload[8:])
+	logger.V(5).Info("request info", "length", len(payload), "api", api, "apiVersion", apiVersion, "correlationID", correlationID, "timeout", timeout)
 	for len(payload) > 0 {
 		n, err := broker.conn.Write(payload)
 		if err != nil {
 			broker.Close()
-			glog.Error(err)
+			logger.Error(err, "write request data failed")
 			return defaultReadParser{}, err
 		}
 		payload = payload[n:]
@@ -252,13 +246,11 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 }
 
 func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, buffers chan []byte, timeout int) error {
-	if glog.V(10) {
-		glog.Infof("%s -> %s", broker.conn.LocalAddr(), broker.conn.RemoteAddr())
-		api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
-		apiVersion := binary.BigEndian.Uint16(payload[6:])
-		correlationID := binary.BigEndian.Uint32(payload[8:])
-		glog.Infof("request length: %d. api: %s(%d). CorrelationID: %d. timeout: %d", len(payload), api, apiVersion, correlationID, timeout)
-	}
+	logger.V(5).Info("send request", "src", broker.conn.LocalAddr(), "dst", broker.conn.RemoteAddr())
+	api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
+	apiVersion := binary.BigEndian.Uint16(payload[6:])
+	correlationID := binary.BigEndian.Uint32(payload[8:])
+	logger.V(5).Info("request info", "length", len(payload), "api", api, "apiVersion", apiVersion, "correlationID", correlationID, "timeout", timeout)
 
 	for len(payload) > 0 {
 		n, err := broker.conn.Write(payload)
@@ -283,7 +275,7 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 
 		select {
 		case <-ctx.Done():
-			glog.Info("stop fetching data from kafka server because caller stop it")
+			logger.Info("stop fetching data from kafka server because caller stop it")
 			return ctx.Err()
 		case buffers <- responseLengthBuf[l:length]:
 		}
@@ -295,9 +287,7 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 	}
 
 	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
-	if glog.V(15) {
-		glog.Infof("total response length should be %d", 4+responseLength)
-	}
+	logger.V(5).Info("read response length header", "total response length", 4+responseLength)
 
 	readLength := 0
 	for {
@@ -318,16 +308,12 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 		}
 
 		readLength += length
-		if glog.V(15) {
-			glog.Infof("totally send %d/%d bytes to fetch response payload", readLength+4, responseLength+4)
-		}
+		logger.V(5).Info("send data to fetch response decoder", "currentBytes", readLength+4, "totalBytes", responseLength+4)
 		if readLength > responseLength {
-			return errors.New("fetch more data than needed while read fetch response")
+			return errors.New("got more data than needed while reading fetch response")
 		}
 		if readLength == responseLength {
-			if glog.V(15) {
-				glog.Info("read enough data, return")
-			}
+			logger.V(5).Info("read enough data, return")
 			return nil
 		}
 	}

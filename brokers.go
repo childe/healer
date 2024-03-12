@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 type Brokers struct {
@@ -41,11 +39,11 @@ func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Broke
 
 		// TODO conn not established?
 		if err != nil {
-			glog.Infof("init broker from %s error:%s", brokerAddr, err)
+			logger.Error(err, "create broker", "address", brokerAddr)
 		} else {
 			brokers, err := newBrokersFromOne(broker, clientID, config)
 			if err != nil {
-				glog.Infof("could not get broker list from %s:%s", broker.GetAddress(), err)
+				logger.Error(err, "could not create broker list", "address", broker.GetAddress())
 			} else {
 				go func() {
 					ticker := time.NewTicker(time.Duration(config.MetadataRefreshIntervalMS) * time.Millisecond)
@@ -54,7 +52,7 @@ func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Broke
 						select {
 						case <-ticker.C:
 							if !brokers.refreshMetadata() {
-								glog.Error("refresh metadata error")
+								logger.Info("refresh metadata failed")
 							}
 						case <-brokers.closeChan:
 							return
@@ -104,11 +102,8 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		}
 	}
 
-	if glog.V(5) {
-		glog.Infof("got %d brokers", len(brokers.brokersInfo))
-		for nodeID, broker := range brokers.brokersInfo {
-			glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
-		}
+	for nodeID, broker := range brokers.brokersInfo {
+		logger.V(3).Info("brokers in cluster", "nodeID", nodeID, "host", broker.Host, "port", broker.Port)
 	}
 
 	return brokers, nil
@@ -127,13 +122,13 @@ func (brokers *Brokers) refreshMetadata() bool {
 	for _, brokerAddr := range strings.Split(brokers.bootstrapServers, ",") {
 		broker, err := NewBroker(brokerAddr, -1, brokers.config)
 		if err != nil {
-			glog.Errorf("create broker[%s] error: %s", brokerAddr, err)
+			logger.Error(err, "create broker failed", "brokerAddress", brokerAddr)
 			continue
 		}
 
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
 		if len(metadataResponse.Brokers) == 0 {
-			glog.Errorf("request metadata error: %s", err)
+			logger.Info("no broker returned from metadata response")
 			broker.Close()
 			continue
 		}
@@ -144,28 +139,24 @@ func (brokers *Brokers) refreshMetadata() bool {
 		}
 		brokers.brokersInfo = brokersInfo
 
-		glog.Infof("got %d brokers", len(brokers.brokersInfo))
-		if glog.V(2) {
-			for nodeID, broker := range brokers.brokersInfo {
-				glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
-			}
+		for nodeID, broker := range brokers.brokersInfo {
+			logger.V(3).Info("brokers in cluster", "nodeID", nodeID, "host", broker.Host, "port", broker.Port)
 		}
-		return true
 	}
 
-	glog.Info("update metadata from latest brokersInfo")
+	logger.Info("update metadata from latest brokersInfo")
 	// from latest brokersinfo
 	for _, brokerInfo := range brokers.brokersInfo {
 		brokerAddr := fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port)
 		broker, err := NewBroker(brokerAddr, -1, brokers.config)
 		if err != nil {
-			glog.Errorf("create broker[%s] error: %s", brokerAddr, err)
+			logger.Error(err, "create broker failed", "brokerAddress", brokerAddr)
 			continue
 		}
 
 		metadataResponse, err := broker.requestMetaData(clientID, topics)
 		if len(metadataResponse.Brokers) == 0 {
-			glog.Errorf("request metadata error: %s", err)
+			logger.Info("no broker returned from metadata response")
 			continue
 		}
 
@@ -175,11 +166,8 @@ func (brokers *Brokers) refreshMetadata() bool {
 		}
 		brokers.brokersInfo = brokersInfo
 
-		glog.Infof("got %d brokers", len(brokers.brokersInfo))
-		if glog.V(2) {
-			for nodeID, broker := range brokers.brokersInfo {
-				glog.Infof("%d %s:%d", nodeID, broker.Host, broker.Port)
-			}
+		for nodeID, broker := range brokers.brokersInfo {
+			logger.V(3).Info("brokers in cluster", "nodeID", nodeID, "host", broker.Host, "port", broker.Port)
 		}
 		return true
 	}
@@ -194,7 +182,7 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 			if err == nil {
 				return broker, nil
 			}
-			glog.Errorf("create broker %s:%d, error: %s", brokerInfo.Host, brokerInfo.Port, err)
+			logger.Error(err, "create broker failed", "host", brokerInfo.Host, "port", brokerInfo.Port)
 		}
 		return nil, fmt.Errorf("could not get broker from nodeID[%d]", nodeID)
 	}
@@ -207,9 +195,9 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d), error: :%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 		}
 	} else {
-		glog.Infof("could not get broker info with nodeID[%d], referesh medadata", nodeID)
+		logger.Info("could not get broker from cache, referesh medadata", "nodeID", nodeID)
 		if !brokers.refreshMetadata() {
-			glog.Error("refresh metadata error")
+			logger.Info("refresh metadata failed")
 		}
 	}
 
@@ -218,12 +206,10 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			return broker, nil
-		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 		}
-	} else {
-		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
+		return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
 	}
+	return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
 }
 
 // GetBroker returns broker from cache or create a new one
@@ -252,7 +238,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (r Met
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err := brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
-			glog.Infof("get broker from %s:%d error: %s", brokerInfo.Host, brokerInfo.Port, err)
+			logger.Error(err, "get broker failed", "host", brokerInfo.Host, "port", brokerInfo.Port)
 			continue
 		}
 		r, err = broker.requestMetaData(clientID, topics)
@@ -264,7 +250,7 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (r Met
 		if errors.As(err, &AllError[0]) {
 			return r, err
 		}
-		glog.Errorf("get metadata of %v from %s error: %s", topics, broker.address, err)
+		logger.Error(err, "get metadata failed", "topics", topics, "brokerAddress", broker.address)
 		time.Sleep(time.Millisecond * 200)
 	}
 
@@ -299,36 +285,35 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 			}
 		}
 		return nil, fmt.Errorf("could not find partition %d in topic %s", partitionID, topic)
-	} else {
-		// try to get all partition offsets
-		offsetsRequestsMapping := make(map[int32][]int32, 0) //nodeID: partitionIDs
-		for _, x := range topicMetadata.PartitionMetadatas {
-			if _, ok := offsetsRequestsMapping[x.Leader]; ok {
-				offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionID)
-			} else {
-				offsetsRequestsMapping[x.Leader] = []int32{x.PartitionID}
-			}
-		}
-
-		rst := make([]OffsetsResponse, 0)
-		for leaderID, partitionIDs := range offsetsRequestsMapping {
-			if leader, err := brokers.GetBroker(leaderID); err != nil {
-				return nil, fmt.Errorf("could not find leader of %s[%v]:%w", topic, partitionIDs, err)
-			} else {
-				offsetsResponse, err := leader.requestOffsets(clientID, topic, partitionIDs, timeValue, offsets)
-				if err != nil {
-					// TODO display error for the partition and go on?
-					return nil, err
-				}
-				rst = append(rst, offsetsResponse)
-			}
-		}
-		return rst, nil
 	}
+	// try to get all partition offsets
+	offsetsRequestsMapping := make(map[int32][]int32, 0) //nodeID: partitionIDs
+	for _, x := range topicMetadata.PartitionMetadatas {
+		if _, ok := offsetsRequestsMapping[x.Leader]; ok {
+			offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionID)
+		} else {
+			offsetsRequestsMapping[x.Leader] = []int32{x.PartitionID}
+		}
+	}
+
+	rst := make([]OffsetsResponse, 0)
+	for leaderID, partitionIDs := range offsetsRequestsMapping {
+		if leader, err := brokers.GetBroker(leaderID); err != nil {
+			return nil, fmt.Errorf("could not find leader of %s[%v]:%w", topic, partitionIDs, err)
+		} else {
+			offsetsResponse, err := leader.requestOffsets(clientID, topic, partitionIDs, timeValue, offsets)
+			if err != nil {
+				// TODO display error for the partition and go on?
+				return nil, err
+			}
+			rst = append(rst, offsetsResponse)
+		}
+	}
+	return rst, nil
 }
 func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (int32, error) {
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
-	if err != nil {
+	if err != nil && !errors.As(err, &AllError[0]) {
 		return -1, fmt.Errorf("could not get metadata of topic %s: %w", topic, err)
 	}
 
@@ -347,12 +332,12 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (r FindCoordin
 	for _, brokerInfo := range brokers.brokersInfo {
 		broker, err = brokers.GetBroker(brokerInfo.NodeID)
 		if err != nil {
-			glog.Errorf("get broker[%d] error:%s", brokerInfo.NodeID, err)
+			logger.Error(err, "get broker failed", "nodeId", brokerInfo.NodeID)
 			continue
 		}
 		r, err = broker.findCoordinator(clientID, groupID)
 		if err != nil {
-			glog.Errorf("could not find coordinator from %s:%s", broker.address, err)
+			logger.Error(err, "could not find coordinator", "coordinator", broker.address)
 		} else {
 			return
 		}
@@ -409,7 +394,7 @@ func (brokers *Brokers) Request(req Request) (Response, error) {
 		}
 		resp, err := broker.RequestAndGet(req)
 		if err != nil {
-			glog.Infof("request %d from %s error: %s", req.API(), broker.address, err)
+			logger.Error(err, "request failed", "request", req.API(), "brokerAddress", broker.address)
 			continue
 		} else {
 			return resp, nil

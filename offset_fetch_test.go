@@ -2,8 +2,6 @@ package healer
 
 import (
 	"testing"
-
-	"github.com/golang/glog"
 )
 
 func TestOffsetFetchRequest(t *testing.T) {
@@ -17,7 +15,6 @@ func TestOffsetFetchRequest(t *testing.T) {
 
 	r := NewOffsetFetchRequest(0, clientID, groupID)
 
-	glog.Info(r.Length())
 	if r.Length() != 29 {
 		t.Error("offsetcommit request payload length should be 29")
 	}
@@ -28,7 +25,6 @@ func TestOffsetFetchRequest(t *testing.T) {
 	}
 
 	r.AddPartiton(topic, partitionID)
-	glog.Info(r.Length())
 	if r.Length() != 43 {
 		t.Error("offsetcommit request payload length should be 43")
 	}

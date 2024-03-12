@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 // SimpleConsumer instance is built to consume messages from kafka broker
@@ -58,7 +56,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 	c.ctx, c.cancel = context.WithCancel(c.ctx)
 
 	if err := c.refreshPartiton(); err != nil {
-		glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
+		logger.Error(err, "refresh partition meta failed", "topic", c.topic, "partitionID", c.partitionID)
 	}
 
 	go func() {
@@ -67,7 +65,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 			select {
 			case <-ticker.C:
 				if err := c.refreshPartiton(); err != nil {
-					glog.Errorf("refresh metadata in simple consumer for %s[%d] error: %s", c.topic, c.partitionID, err)
+					logger.Error(err, "refresh partition meta failed", "topic", c.topic, "partitionID", c.partitionID)
 				}
 			case <-c.stopChan:
 				return
@@ -80,7 +78,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 		for {
 			err = c.getCoordinator()
 			if err != nil {
-				glog.Errorf("get coordinator error: %s", err)
+				logger.Error(err, "failed to get coordinator")
 				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 				continue
 			}
@@ -132,7 +130,7 @@ func (c *SimpleConsumer) getCoordinator() error {
 	if err != nil {
 		return err
 	}
-	glog.Infof("coordinator for group[%s]:%s", c.config.GroupID, coordinatorBroker.address)
+	logger.Info("get coordinator", "GroupID", c.config.GroupID, "coordinator", coordinatorBroker.address)
 	c.coordinator = coordinatorBroker
 
 	return nil
@@ -155,7 +153,7 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 		return fmt.Errorf("find leader for %s-%d error: %w", c.topic, c.partitionID, err)
 	}
 
-	glog.Infof("leader ID of [%s][%d] is %d", c.topic, c.partitionID, leaderID)
+	logger.Info("get leader", "topic", c.topic, "partitionID", c.partitionID, "leaderID", leaderID)
 	if leaderID == -1 {
 		return errNoLeader
 	}
@@ -163,18 +161,18 @@ func (c *SimpleConsumer) getLeaderBroker() error {
 	leaderBroker, err = c.brokers.NewBroker(leaderID)
 	if err != nil {
 		// FIXME refresh metadata
-		glog.Errorf("could not create broker %d[%s]. maybe should refresh metadata.", leaderID, c.brokers.brokers[leaderID].address)
+		logger.Error(err, "could not create broker. maybe should refresh metadata.", "leaderID", leaderID, "leaderAddress", c.brokers.brokers[leaderID].address)
 		return err
 	}
 
 	c.leaderBroker = leaderBroker
-	glog.Infof("got leader broker %d:%s for %s-%d", leaderID, c.leaderBroker.GetAddress(), c.topic, c.partitionID)
+	logger.Info("leader broker created", "leaderID", leaderID, "leaderAddress", c.leaderBroker.GetAddress(), "topic", c.topic, "partitionID", c.partitionID)
 	return nil
 }
 
 // init offset based on fromBeginning if not got commited offset
 func (c *SimpleConsumer) initOffset() {
-	glog.V(5).Infof("[%s][%d] offset: %d", c.topic, c.partitionID, c.offset)
+	logger.V(1).Info("init offset", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 
 	if c.offset >= 0 {
 		return
@@ -189,10 +187,10 @@ func (c *SimpleConsumer) initOffset() {
 
 	for !c.stop {
 		if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
-			glog.Errorf("could not get offset %s[%d]:%s", c.topic, c.partitionID, err)
+			logger.Error(err, "could not get offset", "topic", c.topic, "partitionID", c.partitionID)
 			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 		} else {
-			glog.Infof("consume [%s][%d] from %d", c.topic, c.partitionID, c.offset)
+			logger.Info("fetched offset", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 			break
 		}
 	}
@@ -216,16 +214,15 @@ func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	return int64(offsetsResponse.TopicPartitionOffsets[c.topic][0].Offsets[0]), nil
 }
 
-func (c *SimpleConsumer) getCommitedOffet() {
+func (c *SimpleConsumer) getCommitedOffet() error {
+	logger.Info("get commited offset", "topic", c.topic, "partitionID", c.partitionID)
 	var apiVersion uint16
 	if c.config.OffsetsStorage == 0 {
 		apiVersion = 0
 	} else if c.config.OffsetsStorage == 1 {
 		apiVersion = 1
 	} else {
-		// TODO return error to caller
-		panic("invalid offsetStorage config")
-		//return messages, invallidOffsetsStorageConfig
+		return errors.New("invalid offsetStorage config")
 	}
 	r := NewOffsetFetchRequest(apiVersion, c.config.ClientID, c.config.GroupID)
 	r.AddPartiton(c.topic, c.partitionID)
@@ -244,7 +241,7 @@ func (c *SimpleConsumer) getCommitedOffet() {
 	for {
 		resp, err := coordinator.RequestAndGet(r)
 		if err != nil {
-			glog.Errorf("request fetch offset of [%s][%d] error:%s, sleep 500 ms", c.topic, c.partitionID, err)
+			logger.Error(err, "failed to request fetch offset, sleep 500 ms", "topic", c.topic, "partitionID", c.partitionID)
 			time.Sleep(500 * time.Millisecond)
 			continue
 		}
@@ -266,11 +263,12 @@ func (c *SimpleConsumer) getCommitedOffet() {
 			}
 		}
 	}
+	return nil
 }
 
 // Stop the consumer and wait for all relating go-routines to exit
 func (c *SimpleConsumer) Stop() {
-	glog.Infof("stopping simple consumer of [%s][%d]", c.topic, c.partitionID)
+	logger.Info("stopping simple consumer", "topic", c.topic, "partitionID", c.partitionID)
 	c.stop = true
 	c.cancel()
 
@@ -296,10 +294,10 @@ func (c *SimpleConsumer) commitOffset() bool {
 
 	_, err := c.coordinator.RequestAndGet(offsetComimtReq)
 	if err == nil {
-		glog.V(5).Infof("commit offset %s [%s][%d]:%d", c.config.GroupID, c.topic, c.partitionID, c.offset)
+		logger.V(3).Info("offset committed", "GroupID", c.config.GroupID, "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 		return true
 	}
-	glog.Errorf("commit offset %s [%s][%d]:%d error: %s", c.config.GroupID, c.topic, c.partitionID, c.offset, err)
+	logger.Error(err, "commit offset failed", "GroupID", c.config.GroupID, "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 	return false
 }
 
@@ -308,7 +306,7 @@ func (c *SimpleConsumer) commitOffset() bool {
 // else if it has GroupId, it use its own coordinator to commit
 func (c *SimpleConsumer) CommitOffset() {
 	if c.offset == c.offsetCommited {
-		glog.V(5).Infof("current offset[%d] of %s[%d] does not change, skip committing", c.offset, c.topic, c.partitionID)
+		logger.V(3).Info("current offset does not change, skip committing", "offset", c.offset, "topic", c.topic, "partitionID", c.partitionID)
 		return
 	}
 	offset := c.offset
@@ -337,11 +335,11 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 	c.offset = offset
 
-	glog.V(5).Infof("[%s][%d] offset: %d (before fetch offset)", c.topic, c.partitionID, c.offset)
+	logger.V(5).Info("start consume from offset (before fetch offset)", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 
 	for !c.stop {
 		if err = c.getLeaderBroker(); err != nil {
-			glog.Errorf("get leader broker of [%s/%d] error: %s", c.topic, c.partitionID, err)
+			logger.Error(err, "get leader broker of [%s/%d] error: %s", "topic", c.topic, "partitionID", c.partitionID)
 		} else {
 			break
 		}
@@ -354,11 +352,11 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	if c.config.GroupID != "" && (c.offset == -1 || c.offset == -2) {
 		c.getCommitedOffet()
 	}
-	glog.V(5).Infof("[%s][%d] offset: %d (after fetch offset)", c.topic, c.partitionID, c.offset)
+	logger.V(3).Info("got committed offset", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 
 	if c.offset == -1 || c.offset == -2 {
 		c.initOffset()
-		glog.V(5).Infof("[%s][%d] offset: %d (after init offset)", c.topic, c.partitionID, c.offset)
+		logger.V(3).Info("[%s][%d] offset: %d (after init offset)", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 	}
 
 	if c.config.AutoCommit && c.config.GroupID != "" {
@@ -384,7 +382,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 	defer func() {
-		glog.V(5).Infof("simple consumer stop consuming %s[%d]", c.topic, c.partitionID)
+		logger.V(5).Info("simple consumer stop consuming", "topic", c.topic, "partitionID", c.partitionID)
 		if c.leaderBroker != nil {
 			c.leaderBroker.Close()
 		}
@@ -404,7 +402,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 				c.stopWG.Done()
 			}()
 
-			glog.V(10).Infof("fetching %s[%d] from offset %d", c.topic, c.partitionID, c.offset)
+			logger.V(5).Info("send fetch request", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 			r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 			r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
 
@@ -413,7 +411,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 				if err == context.Canceled {
 					return
 				}
-				glog.Errorf("fetch error: %v", err)
+				logger.Error(err, "failed to send fetch request")
 			}
 		}()
 
@@ -435,7 +433,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 				if err == context.Canceled {
 					return
 				}
-				glog.Errorf("decode fetch response error: %v", err)
+				logger.Error(err, "failed to decode fetch response")
 			}
 		}()
 
@@ -460,23 +458,23 @@ func (c *SimpleConsumer) consumeFromOneFetchRequest(innerMessages chan *FullMess
 		}
 		if message != nil {
 			if message.Error != nil {
-				glog.Errorf("consumer %s[%d] error:%s", c.topic, c.partitionID, message.Error)
+				logger.Error(message.Error, "message error", "topic", c.topic, "partitionID", c.partitionID)
 				if message.Error == &maxBytesTooSmall {
 					// TODO user custom config, if maxBytesTooSmall, double it
 					c.config.FetchMaxBytes *= 2
-					glog.Infof("fetch.max.bytes is too small, double it to %d", c.config.FetchMaxBytes)
+					logger.Info("fetch.max.bytes is too small, double it", "new FetchMaxBytes", c.config.FetchMaxBytes)
 				}
 				if message.Error == AllError[1] {
 					c.offset, err = c.getOffset(c.fromBeginning)
 					if err != nil {
-						glog.Errorf("could not get %s[%d] offset:%s", c.topic, c.partitionID, message.Error)
+						logger.Error(err, "failed to get offset", "topic", c.topic, "partitionID", c.partitionID)
 					}
 				} else if message.Error == AllError[6] {
 					c.leaderBroker.Close()
 					c.leaderBroker = nil
 					for !c.stop {
 						if err = c.getLeaderBroker(); err != nil {
-							glog.Errorf("get leader broker of [%s/%d] error: %s", c.topic, c.partitionID, err)
+							logger.Error(err, "failer to get leader", "topic", c.topic, "partitionID", c.partitionID)
 						} else {
 							break
 						}
@@ -487,7 +485,7 @@ func (c *SimpleConsumer) consumeFromOneFetchRequest(innerMessages chan *FullMess
 				c.offset = message.Message.Offset + 1
 			}
 		} else {
-			glog.V(10).Infof("consumed all messages from one fetch response. current offset: %d", c.offset)
+			logger.V(5).Info("consumed all messages from one fetch response", "currentOffset", c.offset)
 			break
 		}
 	}

@@ -2,8 +2,6 @@ package healer
 
 import (
 	"encoding/binary"
-
-	"github.com/golang/glog"
 )
 
 // PartitionBlock is the partition to fetch.
@@ -50,9 +48,7 @@ func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchR
 }
 
 func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, fetchOffset int64, maxBytes int32, currentLeaderEpoch int32) {
-	if glog.V(10) {
-		glog.Infof("fetch request %s[%d]:%d, maxBytes:%d", topic, partitionID, fetchOffset, maxBytes)
-	}
+	logger.V(4).Info("add partition to fetch request", "topic", topic, "partitionID", partitionID, "fetchOffset", fetchOffset, "maxBytes", maxBytes)
 	fetchRequest.MaxBytes += maxBytes
 	partitionBlock := &PartitionBlock{
 		Partition:          partitionID,

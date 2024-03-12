@@ -3,8 +3,6 @@ package healer
 import (
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 // Consumer instance is built to consume messages from kafka broker
@@ -81,7 +79,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 
 	for !c.closed {
 		if metadataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, topics); err != nil {
-			glog.Errorf("could not get metadata of topics %v: %s", topics, err)
+			logger.Error(err, "get metadata failed", "topics", topics)
 			time.Sleep(time.Millisecond * 1000)
 		} else {
 			break
@@ -111,7 +109,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 			for {
 				err := simpleConsumer.getCoordinator()
 				if err != nil {
-					glog.Errorf("get coordinator error: %s", err)
+					logger.Error(err, "get coordinator failed")
 					time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 					continue
 				}
@@ -121,7 +119,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 		}
 	}
 
-	glog.V(10).Infof("%d simple consumers: %v", len(c.simpleConsumers), c.simpleConsumers)
+	logger.V(4).Info("create simple consumers", "simpleConsumerCount", len(c.simpleConsumers), "consumers", c.simpleConsumers)
 
 	var offset int64
 	if c.config.FromBeginning {
@@ -152,10 +150,10 @@ func (consumer *Consumer) AwaitClose(timeout time.Duration) {
 	defer func() {
 		select {
 		case <-c:
-			glog.Info("all simple consumers stopped. return")
+			logger.Info("all simple consumers stopped. return")
 			return
 		case <-time.After(timeout):
-			glog.Info("consumer await timeout. return")
+			logger.Info("consumer await timeout. return")
 			return
 		}
 	}()

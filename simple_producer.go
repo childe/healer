@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 // ErrProducerClosed is returned when adding message while producer is closed
@@ -41,25 +39,24 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 		brokerConfig := getBrokerConfigFromProducerConfig(p.config)
 		brokers, err := NewBrokersWithConfig(p.config.BootstrapServers, brokerConfig)
 		if err != nil {
-			glog.Errorf("init brokers error: %s", err)
+			logger.Error(err, "failed to init brokers")
 			return nil, err
 		}
 		p.brokers = brokers
 	}
 
 	leaderID, err := p.brokers.findLeader(p.config.ClientID, p.topic, p.partition)
-	if err == nil {
-		glog.V(10).Infof("leader ID of %s-%d is %d", p.topic, p.partition, leaderID)
-	} else {
-		glog.Errorf("could not get leader of %s-%d: %s", p.topic, p.partition, err)
+	if err != nil || leaderID == -1 {
+		logger.Error(err, "could not get leader", "topic", p.topic, "partitionID", p.partition)
 		return nil, err
 	}
+	logger.V(3).Info("leader ID of %s-%d is %d", p.topic, p.partition, leaderID)
 
 	leader, err := p.brokers.NewBroker(leaderID)
 	if err == nil {
-		glog.V(5).Infof("leader of %s-%d is %s", p.topic, p.partition, leader)
+		logger.V(5).Info("created leader", "topic", p.topic, "partition", p.partition, "leader", leader)
 	} else {
-		glog.Errorf("create leader error: %s", err)
+		logger.Error(err, "failed to create leader")
 		return nil, err
 	}
 
@@ -178,9 +175,7 @@ func (p *SimpleProducer) Flush() error {
 }
 
 func (p *SimpleProducer) flush(messageSet MessageSet) error {
-	if glog.V(5) {
-		glog.Infof("produce %d messsages to %s-%d", len(messageSet), p.topic, p.partition)
-	}
+	logger.V(5).Info("flush messsages", "count", len(messageSet), "topic", p.topic, "partition", p.partition)
 
 	produceRequest := &ProduceRequest{
 		RequiredAcks: p.config.Acks,
@@ -240,7 +235,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 		err = rp.Error()
 	}
 	if err != nil {
-		glog.Errorf("produce request error: %s", err)
+		logger.Error(err, "failed to produce request")
 		return err
 	}
 	return err
@@ -252,7 +247,7 @@ func (p *SimpleProducer) Close() {
 		p.lock.Lock()
 		defer p.lock.Unlock()
 
-		glog.Info("flush before SimpleProducer close")
+		logger.Info("flush before SimpleProducer close")
 		if len(p.messageSet) > 0 {
 			messageSet := p.messageSet
 			p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
@@ -260,10 +255,10 @@ func (p *SimpleProducer) Close() {
 		}
 
 		if p.parent == nil {
-			glog.Infof("close connection to leader %v of %s-%d", p.leader, p.topic, p.partition)
+			logger.Info("close connection to leader")
 			p.leader.Close()
 		} else {
-			glog.Infof("connection to %s-%d not closed here, parent will close it", p.parent.topic, p.partition)
+			logger.Info("connection not closed here, parent will close it")
 		}
 
 		close(p.closeChan)

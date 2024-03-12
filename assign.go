@@ -2,52 +2,20 @@ package healer
 
 import (
 	"sort"
-
-	"github.com/golang/glog"
 )
 
+// AssignmentStrategy is the interface for different assignment strategies, it returns GroupAssignment
 type AssignmentStrategy interface {
 	// generally topicMetadatas is returned by metaDataRequest sent by GroupConsumer
 	Assign([]Member, []TopicMetadata) GroupAssignment
 }
 
-type RangeAssignmentStrategy struct {
+type rangeAssignmentStrategy struct {
 }
-
-/*
-type PartitionMetadataInfo struct {
-	PartitionErrorCode int16
-	PartitionId        uint32
-	Leader             int32
-	Replicas           []int32
-	Isr                []int32
-}
-
-type TopicMetadata struct {
-	TopicErrorCode     int16
-	TopicName          string
-	PartitionMetadatas []*PartitionMetadataInfo
-}
-
-type PartitionAssignment struct {
-	Topic     string
-	Partition int32
-}
-type MemberAssignment struct {
-	Version              int16
-	PartitionAssignments []*PartitionAssignment
-	UserData             []byte
-}
-
-type GroupAssignment []struct {
-	MemberID         string
-	MemberAssignment []byte
-}
-*/
 
 // partitions in one topic
 // XXX (3,5)=>[(0,2),(2,2),(4,1)]  (5,10)=>[(0,2), (2,2), (4,2), (6,2), (8,2)]
-func (r *RangeAssignmentStrategy) assignPartitions(members []string, partitions []int32) map[string][]int32 {
+func (r *rangeAssignmentStrategy) assignPartitions(members []string, partitions []int32) map[string][]int32 {
 	var (
 		rst       = make(map[string][]int32)
 		watershed = len(partitions) % len(members)
@@ -85,7 +53,8 @@ func (a ByMemberID) Len() int           { return len(a) }
 func (a ByMemberID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByMemberID) Less(i, j int) bool { return a[i] < a[j] }
 
-func (r *RangeAssignmentStrategy) Assign(members []Member, topicMetadatas []TopicMetadata) GroupAssignment {
+// Assign is the implementation of AssignmentStrategy interface
+func (r *rangeAssignmentStrategy) Assign(members []Member, topicMetadatas []TopicMetadata) GroupAssignment {
 
 	topicPartitionsAssignments := make(map[string]map[string][]int32)
 	for _, topicMetadata := range topicMetadatas {
@@ -109,7 +78,7 @@ func (r *RangeAssignmentStrategy) Assign(members []Member, topicMetadatas []Topi
 		topicPartitionsAssignments[topicMetadata.TopicName] = r.assignPartitions(membersWithTheTopic, partitions)
 	}
 
-	glog.V(10).Infof("topic partitions assignments:%v", topicPartitionsAssignments)
+	logger.V(5).Info("create tp assignments by RangeAssignmentStrategy", "assignment", topicPartitionsAssignments)
 
 	groupAssignment := make([]struct {
 		MemberID         string
@@ -135,7 +104,7 @@ func (r *RangeAssignmentStrategy) Assign(members []Member, topicMetadatas []Topi
 		}
 	}
 
-	glog.V(10).Infof("memberAssignments:%v", memberAssignments)
+	logger.V(1).Info("create member assignments", "memberAssignments", memberAssignments)
 
 	i := 0
 	for member, memberAssignment := range memberAssignments {

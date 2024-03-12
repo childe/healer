@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
-	"io/ioutil"
 
 	lz4 "github.com/bkaradzic/go-lz4"
 	snappy "github.com/eapache/go-xerial-snappy"
-	"github.com/golang/glog"
 )
 
 var errUncompleteRecord = errors.New("Uncomplete Record, The last bytes are not enough to decode the record")
@@ -91,13 +89,6 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	}
 
 	headerCount, o := binary.Varint(payload[offset:])
-	// if glog.V(15) {
-	// 	glog.Infof("timestampDelta: %d", timestampDelta)
-	// 	glog.Infof("offsetDelta: %d", offsetDelta)
-	// 	glog.Infof("keyLength: %d", keyLength)
-	// 	glog.Infof("valueLen: %d", valueLen)
-	// 	glog.Infof("headerCount: %d", headerCount)
-	// }
 	offset += o
 	if headerCount > 0 {
 		record.Headers = make([]RecordHeader, headerCount)
@@ -168,7 +159,7 @@ func (message *Message) decompress() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if rst, err = ioutil.ReadAll(reader); err != nil && err != io.EOF {
+		if rst, err = io.ReadAll(reader); err != nil && err != io.EOF {
 			return nil, err
 		} else {
 			return rst, nil
@@ -299,21 +290,18 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		if compression != COMPRESSION_NONE {
 			message.Value, err = message.decompress()
 			if err != nil {
-				// TODO go on to next message in the messageSet or stop?
-				glog.Errorf("decompress message error:%s", err)
-				//return messageSet, err
+				return messageSet, err
 			}
 		}
 
 		// if crc check true, then go on decode to next level
 		if err == nil && compression != COMPRESSION_NONE {
-			if _messageSet, err := DecodeToMessageSet(message.Value); err != nil {
+			_messageSet, err := DecodeToMessageSet(message.Value)
+			if err != nil {
 				// TODO go on to next message in the messageSet?
-				glog.Errorf("decode message from value error:%s", err)
 				return messageSet, err
-			} else {
-				messageSet = append(messageSet, _messageSet...)
 			}
+			messageSet = append(messageSet, _messageSet...)
 		} else {
 			messageSet = append(messageSet, message)
 		}
