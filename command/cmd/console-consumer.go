@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -27,8 +28,7 @@ var consoleConsumerCmd = &cobra.Command{
 			return errors.New("topic must be specified")
 		}
 		maxMessages, err := cmd.Flags().GetInt("max-messages")
-		// printOffset, err := cmd.Flags().GetBool("printoffset")
-		// jsonFormat, err := cmd.Flags().GetBool("json")
+		ifJson, err := cmd.Flags().GetBool("json")
 		config, err := cmd.Flags().GetString("config")
 
 		for _, kv := range strings.Split(config, ",") {
@@ -69,7 +69,12 @@ var consoleConsumerCmd = &cobra.Command{
 
 		for i := 0; i < maxMessages; i++ {
 			message := <-messages
-			fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+			if ifJson {
+				b, _ := json.Marshal(message)
+				fmt.Printf("%s\n", string(b))
+			} else {
+				fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+			}
 		}
 		return nil
 	},
@@ -80,6 +85,6 @@ func init() {
 	consoleConsumerCmd.Flags().IntSlice("partitions", nil, "partition ids, comma-separated")
 	consoleConsumerCmd.Flags().Int("max-messages", math.MaxInt, "the number of messages to output")
 	consoleConsumerCmd.Flags().Bool("printoffset", true, "if print offset of each message")
-	consoleConsumerCmd.Flags().Bool("json", false, "print message in json format")
+	consoleConsumerCmd.Flags().Bool("json", false, "print all attributes of message in json format")
 	consoleConsumerCmd.Flags().StringP("topic", "t", "", "topic name")
 }
