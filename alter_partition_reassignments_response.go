@@ -17,12 +17,12 @@ type AlterPartitionReassignmentsResponse struct {
 
 func (r *AlterPartitionReassignmentsResponse) Error() error {
 	if r.ErrorCode != 0 {
-		return fmt.Errorf("%w: %s", getErrorFromErrorCode(r.ErrorCode), r.ErrorMsg)
+		return fmt.Errorf("%w: %s", KafkaError(r.ErrorCode), r.ErrorMsg)
 	}
 	for _, t := range r.Responses {
 		for _, p := range t.Partitions {
 			if p.ErrorCode != 0 {
-				return fmt.Errorf("%w: %s", getErrorFromErrorCode(p.ErrorCode), p.ErrorMsg)
+				return fmt.Errorf("%w: %s", KafkaError(p.ErrorCode), p.ErrorMsg)
 			}
 		}
 	}

@@ -16,7 +16,7 @@ func (r *ElectLeadersResponse) Error() error {
 	for _, replicaElectionResult := range r.ReplicaElectionResults {
 		for _, partitionResult := range replicaElectionResult.PartitionResults {
 			if partitionResult.ErrorCode != 0 {
-				err := getErrorFromErrorCode(partitionResult.ErrorCode)
+				err := KafkaError(partitionResult.ErrorCode)
 				return fmt.Errorf("%s-%d elect leader error: %w. error message: %s", replicaElectionResult.Topic, partitionResult.PartitionID, err, partitionResult.ErrorMessage)
 			}
 		}

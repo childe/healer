@@ -15,7 +15,7 @@ type IncrementalAlterConfigsResponse struct {
 func (r IncrementalAlterConfigsResponse) Error() error {
 	for _, e := range r.Resources {
 		if e.ErrorCode != 0 {
-			return getErrorFromErrorCode(e.ErrorCode)
+			return KafkaError(e.ErrorCode)
 		}
 	}
 	return nil

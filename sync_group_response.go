@@ -13,7 +13,10 @@ type SyncGroupResponse struct {
 }
 
 func (r SyncGroupResponse) Error() error {
-	return getErrorFromErrorCode(r.ErrorCode)
+	if r.ErrorCode == 0 {
+		return nil
+	}
+	return KafkaError(r.ErrorCode)
 }
 
 // NewSyncGroupResponse create a NewSyncGroupResponse instance from response payload bytes
@@ -31,7 +34,7 @@ func NewSyncGroupResponse(payload []byte) (r SyncGroupResponse, err error) {
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 	if err == nil && r.ErrorCode != 0 {
-		err = getErrorFromErrorCode(r.ErrorCode)
+		err = KafkaError(r.ErrorCode)
 	}
 
 	memberAssignmentLength := int(binary.BigEndian.Uint32(payload[offset:]))

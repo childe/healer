@@ -45,7 +45,8 @@ var apiCmd = &cobra.Command{
 			topics := c.QueryArray("topics")
 			resp, err := bs.RequestMetaData("healer-api", topics)
 			if err != nil {
-				if errors.As(err, &healer.AllError[0]) {
+				var e healer.KafkaError
+				if errors.As(err, &e) {
 					c.JSON(http.StatusOK, resp)
 					return
 				}

@@ -19,7 +19,7 @@ func (r OffsetsResponse) Error() error {
 	for topic, partitionOffsets := range r.TopicPartitionOffsets {
 		for _, offset := range partitionOffsets {
 			if offset.ErrorCode != 0 {
-				return fmt.Errorf("offsets response error of %s-%d: %w", topic, offset.Partition, getErrorFromErrorCode(offset.ErrorCode))
+				return fmt.Errorf("offsets response error of %s-%d: %w", topic, offset.Partition, KafkaError(offset.ErrorCode))
 			}
 		}
 	}

@@ -20,7 +20,7 @@ type TopicError struct {
 func (r CreateTopicsResponse) Error() error {
 	for _, e := range r.TopicErrors {
 		if e.ErrorCode != 0 {
-			return getErrorFromErrorCode(e.ErrorCode)
+			return KafkaError(e.ErrorCode)
 		}
 	}
 	return nil

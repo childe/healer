@@ -16,7 +16,7 @@ type DescribeConfigsResponse struct {
 func (r DescribeConfigsResponse) Error() error {
 	for _, resource := range r.Resources {
 		if resource.ErrorCode != 0 {
-			return fmt.Errorf("describe configs failed: %s", getErrorFromErrorCode(resource.ErrorCode))
+			return fmt.Errorf("describe configs failed: %s", KafkaError(resource.ErrorCode))
 		}
 	}
 	return nil

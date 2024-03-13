@@ -24,7 +24,7 @@ type createPartitionsResponseResultBlock struct {
 func (r CreatePartitionsResponse) Error() error {
 	for _, result := range r.Results {
 		if result.ErrorCode != 0 {
-			return fmt.Errorf("create partitions error(%d): %s: %w", result.ErrorCode, result.ErrorMessage, getErrorFromErrorCode(result.ErrorCode))
+			return fmt.Errorf("create partitions error(%d): %s: %w", result.ErrorCode, result.ErrorMessage, KafkaError(result.ErrorCode))
 		}
 	}
 	return nil

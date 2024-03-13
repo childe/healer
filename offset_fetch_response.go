@@ -26,7 +26,7 @@ func (r OffsetFetchResponse) Error() error {
 	for _, topic := range r.Topics {
 		for _, partition := range topic.Partitions {
 			if partition.ErrorCode != 0 {
-				return fmt.Errorf("offsetfetch response error of %s-%d: %w", topic.Topic, partition.PartitionID, getErrorFromErrorCode(partition.ErrorCode))
+				return fmt.Errorf("offsetfetch response error of %s-%d: %w", topic.Topic, partition.PartitionID, KafkaError(partition.ErrorCode))
 			}
 		}
 	}
@@ -80,7 +80,7 @@ func NewOffsetFetchResponse(payload []byte) (r OffsetFetchResponse, err error) {
 			offset += 2
 
 			if err == nil && p.ErrorCode != 0 {
-				err = getErrorFromErrorCode(p.ErrorCode)
+				err = KafkaError(p.ErrorCode)
 			}
 		}
 	}

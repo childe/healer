@@ -25,12 +25,12 @@ type MetadataResponse struct {
 func (r MetadataResponse) Error() error {
 	for _, topic := range r.TopicMetadatas {
 		if topic.TopicErrorCode != 0 {
-			err := getErrorFromErrorCode(topic.TopicErrorCode)
+			err := KafkaError(topic.TopicErrorCode)
 			return fmt.Errorf("%s error: %w", topic.TopicName, err)
 		}
 		for _, p := range topic.PartitionMetadatas {
 			if p.PartitionErrorCode != 0 {
-				err := getErrorFromErrorCode(p.PartitionErrorCode)
+				err := KafkaError(p.PartitionErrorCode)
 				return fmt.Errorf("%s-%d error: %w", topic.TopicName, p.PartitionID, err)
 			}
 		}

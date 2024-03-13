@@ -448,7 +448,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 
 	errorCode = int16(binary.BigEndian.Uint16(buffer[4:]))
 	if errorCode != 0 {
-		return getErrorFromErrorCode(errorCode)
+		return KafkaError(errorCode)
 	}
 
 	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[bytesBeforeRecordsLength-4:])))

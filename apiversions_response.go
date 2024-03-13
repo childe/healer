@@ -147,7 +147,11 @@ type APIVersionsResponse struct {
 }
 
 func (r APIVersionsResponse) Error() error {
-	return getErrorFromErrorCode(r.ErrorCode)
+	if r.ErrorCode != 0 {
+		return KafkaError(r.ErrorCode)
+
+	}
+	return nil
 }
 
 func newAPIVersionsResponse(payload []byte) (r APIVersionsResponse, err error) {

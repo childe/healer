@@ -28,7 +28,7 @@ func NewHeartbeatResponse(payload []byte) (r HeartbeatResponse, err error) {
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 
 	if r.ErrorCode != 0 {
-		err = getErrorFromErrorCode(r.ErrorCode)
+		err = KafkaError(r.ErrorCode)
 	}
 
 	return r, err

@@ -19,7 +19,7 @@ type DeleteGroupsResponse struct {
 func (r DeleteGroupsResponse) Error() error {
 	for _, result := range r.Results {
 		if result.ErrorCode != 0 {
-			return fmt.Errorf("delete group[%s] failed: %s", result.GroupID, getErrorFromErrorCode(result.ErrorCode))
+			return fmt.Errorf("delete group[%s] failed: %s", result.GroupID, KafkaError(result.ErrorCode))
 		}
 	}
 	return nil

@@ -14,7 +14,7 @@ type AlterConfigsResponse struct {
 func (r AlterConfigsResponse) Error() error {
 	for _, resource := range r.Resources {
 		if resource.ErrorCode != 0 {
-			return getErrorFromErrorCode(resource.ErrorCode)
+			return KafkaError(resource.ErrorCode)
 		}
 	}
 	return nil

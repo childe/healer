@@ -13,7 +13,10 @@ type SaslHandshakeResponse struct {
 }
 
 func (r SaslHandshakeResponse) Error() error {
-	return getErrorFromErrorCode(r.ErrorCode)
+	if r.ErrorCode != 0 {
+		return KafkaError(r.ErrorCode)
+	}
+	return nil
 }
 
 // NewSaslHandshakeResponse create a NewSaslHandshakeResponse instance from response payload bytes
@@ -32,7 +35,7 @@ func NewSaslHandshakeResponse(payload []byte) (r SaslHandshakeResponse, err erro
 	r.ErrorCode = int16(uint16(binary.BigEndian.Uint32(payload[offset:])))
 	offset += 2
 	if r.ErrorCode != 0 {
-		err = getErrorFromErrorCode(r.ErrorCode)
+		err = KafkaError(r.ErrorCode)
 	}
 
 	count := int(binary.BigEndian.Uint32(payload[offset:]))

@@ -58,7 +58,7 @@ func NewJoinGroupResponse(payload []byte) (r JoinGroupResponse, err error) {
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 	if err == nil && r.ErrorCode != 0 {
-		err = getErrorFromErrorCode(r.ErrorCode)
+		err = KafkaError(r.ErrorCode)
 	}
 
 	r.GenerationID = int32(binary.BigEndian.Uint32(payload[offset:]))

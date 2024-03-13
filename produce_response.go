@@ -25,7 +25,7 @@ func (r ProduceResponse) Error() error {
 	for _, produceResponse := range r.ProduceResponses {
 		for _, partition := range produceResponse.Partitions {
 			if partition.ErrorCode != 0 {
-				return getErrorFromErrorCode(partition.ErrorCode)
+				return KafkaError(partition.ErrorCode)
 			}
 		}
 	}
@@ -68,7 +68,7 @@ func NewProduceResponse(payload []byte) (r ProduceResponse, err error) {
 			p.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
 			if err == nil && p.ErrorCode != 0 {
-				err = getErrorFromErrorCode(p.ErrorCode)
+				err = KafkaError(p.ErrorCode)
 			}
 			p.BaseOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
 			offset += 8

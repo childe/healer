@@ -30,7 +30,7 @@ type DescribeGroupsResponse struct {
 func (r DescribeGroupsResponse) Error() error {
 	for _, group := range r.Groups {
 		if group.ErrorCode != 0 {
-			return getErrorFromErrorCode(group.ErrorCode)
+			return KafkaError(group.ErrorCode)
 		}
 	}
 	return nil
@@ -62,7 +62,7 @@ func NewDescribeGroupsResponse(payload []byte) (r DescribeGroupsResponse, err er
 		offset += 2
 
 		if err == nil && group.ErrorCode != 0 {
-			err = getErrorFromErrorCode(group.ErrorCode)
+			err = KafkaError(group.ErrorCode)
 		}
 
 		l = int(binary.BigEndian.Uint16(payload[offset:]))

@@ -247,7 +247,8 @@ func (brokers *Brokers) RequestMetaData(clientID string, topics []string) (r Met
 			return r, nil
 		}
 
-		if errors.As(err, &AllError[0]) {
+		var e KafkaError
+		if errors.As(err, &e) {
 			return r, err
 		}
 		logger.Error(err, "get metadata failed", "topics", topics, "brokerAddress", broker.address)
@@ -313,7 +314,8 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 }
 func (brokers *Brokers) findLeader(clientID, topic string, partitionID int32) (int32, error) {
 	metadataResponse, err := brokers.RequestMetaData(clientID, []string{topic})
-	if err != nil && !errors.As(err, &AllError[0]) {
+	var e KafkaError
+	if err != nil && !errors.As(err, &e) {
 		return -1, fmt.Errorf("could not get metadata of topic %s: %w", topic, err)
 	}
 

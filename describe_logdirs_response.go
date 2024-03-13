@@ -15,7 +15,7 @@ type DescribeLogDirsResponse struct {
 func (r DescribeLogDirsResponse) Error() error {
 	for _, result := range r.Results {
 		if result.ErrorCode != 0 {
-			return getErrorFromErrorCode(result.ErrorCode)
+			return KafkaError(result.ErrorCode)
 		}
 	}
 	return nil

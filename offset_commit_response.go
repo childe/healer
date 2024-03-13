@@ -31,7 +31,7 @@ func (r OffsetCommitResponse) Error() error {
 	for _, topic := range r.Topics {
 		for _, partition := range topic.Partitions {
 			if partition.ErrorCode != 0 {
-				return getErrorFromErrorCode(partition.ErrorCode)
+				return KafkaError(partition.ErrorCode)
 			}
 		}
 	}
@@ -77,7 +77,7 @@ func NewOffsetCommitResponse(payload []byte) (r OffsetCommitResponse, err error)
 			offset += 2
 
 			if err == nil && p.ErrorCode != 0 {
-				err = getErrorFromErrorCode(p.ErrorCode)
+				err = KafkaError(p.ErrorCode)
 			}
 		}
 	}

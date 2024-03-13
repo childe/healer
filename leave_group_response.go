@@ -28,7 +28,7 @@ func NewLeaveGroupResponse(payload []byte) (r LeaveGroupResponse, err error) {
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 
 	if err == nil && r.ErrorCode != 0 {
-		err = getErrorFromErrorCode(r.ErrorCode)
+		err = KafkaError(r.ErrorCode)
 	}
 
 	return r, err
