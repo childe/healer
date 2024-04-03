@@ -7,7 +7,7 @@ install:
 	install healer $(GOPATH)/bin
 
 test:
-	go test -v -args -brokers 127.0.0.1:9092 -broker 127.0.0.1:9092 -logtostderr
+	go test -v -gcflags="all=-N -l" .
 
 docker:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o docker/healer ./command

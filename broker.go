@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"sync"
 	"time"
 )
@@ -52,9 +52,6 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 		return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
 	}
 	broker.apiVersions = apiVersionsResponse.APIVersions
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal api versions when init broker: %s", err)
-	}
 
 	var versions string
 	for i, v := range broker.apiVersions {
@@ -118,7 +115,7 @@ func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 		return nil, err
 	}
 
-	caCert, err := ioutil.ReadFile(tlsConfig.CA)
+	caCert, err := os.ReadFile(tlsConfig.CA)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +229,6 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 		n, err := broker.conn.Write(payload)
 		if err != nil {
 			broker.Close()
-			logger.Error(err, "write request data failed")
 			return defaultReadParser{}, err
 		}
 		payload = payload[n:]
