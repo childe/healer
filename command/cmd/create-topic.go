@@ -32,7 +32,10 @@ var createTopicCmd = &cobra.Command{
 			return fmt.Errorf(`Option "[replica-assignment]" can't be used with option"[replication-factor]"`)
 		}
 
-		bs, err := healer.NewBrokers(brokers)
+		config := healer.DefaultBrokerConfig()
+		config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
+		config.NetConfig.TimeoutMSForEachAPI[healer.API_CreateTopics] = int(timeout)
+		bs, err := healer.NewBrokersWithConfig(brokers, config)
 		if err != nil {
 			return fmt.Errorf("failed to create brokers from %s", brokers)
 		}
