@@ -24,6 +24,7 @@ var apiCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		address, _ := cmd.Flags().GetString("address")
 		port, _ := cmd.Flags().GetInt32("port")
+		cors, _ := cmd.Flags().GetBool("cors")
 		client, _ := cmd.Flags().GetString("client")
 		if len(client) == 0 {
 			client = "healer"
@@ -31,6 +32,22 @@ var apiCmd = &cobra.Command{
 
 		fullAddress := fmt.Sprintf("%s:%d", address, port)
 		router := gin.Default()
+
+		if cors {
+			router.Use(func(c *gin.Context) {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+				c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+				c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+				c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+				if c.Request.Method == "OPTIONS" {
+					c.AbortWithStatus(204)
+					return
+				}
+
+				c.Next()
+			})
+		}
 
 		router.GET("/", func(c *gin.Context) {
 			c.String(http.StatusOK, "")
@@ -143,6 +160,7 @@ var apiCmd = &cobra.Command{
 func init() {
 	apiCmd.Flags().Int32P("port", "p", 8080, "listen port")
 	apiCmd.Flags().StringP("address", "a", "0.0.0.0", "listen address")
+	apiCmd.Flags().Bool("cors", false, "enable cors")
 
 	rootCmd.AddCommand(apiCmd)
 }
