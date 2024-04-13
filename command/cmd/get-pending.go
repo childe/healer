@@ -136,10 +136,10 @@ func getSubscriptionsInGroup(groupID, client string) (map[string]map[int32]strin
 	for _, group := range resp.(healer.DescribeGroupsResponse).Groups {
 		for _, memberDetail := range group.Members {
 			memberID := memberDetail.MemberID
-			if len(memberDetail.MemberAssignment) == 0 {
+			if len(memberDetail.RawMemberAssignment) == 0 {
 				continue
 			}
-			memberAssignment, err := healer.NewMemberAssignment(memberDetail.MemberAssignment)
+			memberAssignment, err := healer.NewMemberAssignment(memberDetail.RawMemberAssignment)
 			if err != nil {
 				return nil, err
 			}

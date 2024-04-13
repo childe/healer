@@ -6,11 +6,12 @@ import (
 )
 
 type MemberDetail struct {
-	MemberID         string
-	ClientID         string
-	ClientHost       string
-	MemberMetadata   []byte
-	MemberAssignment []byte
+	MemberID            string
+	ClientID            string
+	ClientHost          string
+	MemberMetadata      []byte
+	RawMemberAssignment []byte `json:"-"`
+	MemberAssignment    *MemberAssignment
 }
 
 type GroupDetail struct {
@@ -113,8 +114,9 @@ func NewDescribeGroupsResponse(payload []byte) (r DescribeGroupsResponse, err er
 
 			l = int(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
-			group.Members[i].MemberAssignment = make([]byte, l)
-			copy(group.Members[i].MemberAssignment, payload[offset:offset+l])
+			group.Members[i].RawMemberAssignment = make([]byte, l)
+			copy(group.Members[i].RawMemberAssignment, payload[offset:offset+l])
+			group.Members[i].MemberAssignment, err = NewMemberAssignment(group.Members[i].RawMemberAssignment)
 			offset += l
 		}
 

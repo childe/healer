@@ -9,35 +9,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func parseGroupDetail(group *healer.GroupDetail) (map[string]interface{}, error) {
-	rst := map[string]interface{}{}
-	rst["group_id"] = group.GroupID
-	rst["state"] = group.State
-	rst["protocol_type"] = group.ProtocolType
-	rst["protocol"] = group.Protocol
-
-	members := []map[string]interface{}{}
-	for i := range group.Members {
-		e := make(map[string]interface{})
-		e["member_id"] = group.Members[i].MemberID
-		e["client_id"] = group.Members[i].ClientID
-		e["client_host"] = group.Members[i].ClientHost
-
-		if len(group.Members[i].MemberAssignment) != 0 {
-			memberAssignment, err := healer.NewMemberAssignment(group.Members[i].MemberAssignment)
-			if err != nil {
-				return nil, err
-			}
-			for _, p := range memberAssignment.PartitionAssignments {
-				e["assignments"] = p
-			}
-		}
-		members = append(members, e)
-	}
-	rst["members"] = members
-	return rst, nil
-}
-
 var describeGroupsCmd = &cobra.Command{
 	Use:   "describe-groups",
 	Short: "describe groups in kafka cluster",
@@ -70,13 +41,9 @@ var describeGroupsCmd = &cobra.Command{
 			return fmt.Errorf("failed to make describe_groups request: %w", err)
 		}
 
-		groups := []map[string]interface{}{}
+		groups := make([]*healer.GroupDetail, 0)
 		for _, group := range resp.(healer.DescribeGroupsResponse).Groups {
-			g, err := parseGroupDetail(group)
-			if err != nil {
-				return err
-			}
-			groups = append(groups, g)
+			groups = append(groups, group)
 		}
 
 		b, err := json.MarshalIndent(groups, "", "  ")
