@@ -31,6 +31,11 @@ func (brokers *Brokers) Close() {
 	}
 }
 
+// BrokersInfo returns brokers info, it is a private member and should not be changed from outside
+func (brokers *Brokers) BrokersInfo() map[int32]*BrokerInfo {
+	return brokers.brokersInfo
+}
+
 // NewBrokersWithConfig create a new broker with config
 func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Brokers, error) {
 	clientID := "healer-newbrokers"
