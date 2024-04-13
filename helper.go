@@ -66,7 +66,7 @@ func (h *Helper) GetGroups() []string {
 			return nil
 		}
 
-		response, err := broker.requestListGroups(h.clientID)
+		response, err := broker.RequestListGroups(h.clientID)
 		if err != nil {
 			logger.Error(err, "get group list failed", "broker", broker.GetAddress())
 			return nil

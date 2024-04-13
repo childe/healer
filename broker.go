@@ -324,7 +324,7 @@ func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse
 	return r, err
 }
 
-func (broker *Broker) requestListGroups(clientID string) (r ListGroupsResponse, err error) {
+func (broker *Broker) RequestListGroups(clientID string) (r ListGroupsResponse, err error) {
 	request := NewListGroupsRequest(clientID)
 
 	resp, err := broker.RequestAndGet(request)
