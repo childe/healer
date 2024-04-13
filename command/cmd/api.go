@@ -65,6 +65,7 @@ var apiCmd = &cobra.Command{
 
 		router.GET("/groups", wrap(apicontrollers.ListGroups, client))
 		router.GET("/group/:group", wrap(apicontrollers.DescribeGroups, client))
+		router.GET("/group/:group/pending/:topic", wrap(apicontrollers.GetPending, client))
 
 		router.POST("/alter-partition-reassignments", func(c *gin.Context) {
 			type reassignment struct {
