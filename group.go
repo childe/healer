@@ -2,44 +2,13 @@ package healer
 
 import "encoding/binary"
 
-/*--- --- --- --- --- --- --- ---
-Consumer groups: Below we define the embedded protocol used by consumer groups.
-We recommend all consumer implementations follow this format so that
-tooling will work correctly across all clients.
-ProtocolType => "consumer"
-
-ProtocolName => AssignmentStrategy
-  AssignmentStrategy => string
-
-ProtocolMetadata => Version Subscription UserData
-  Version => int16
-  Subscription => [Topic]
-    Topic => string
-  UserData => bytes
-The UserData field can be used by custom partition assignment strategies.
-For example, in a sticky partitioning implementation, this field can contain
-the assignment from the previous generation. In a resource-based assignment strategy,
-it could include the number of cpus on the machine hosting each consumer instance.
-
-Kafka Connect uses the "connect" protocol type and its protocol details
-are internal to the Connect implementation.
-
-Consumer Groups: The format of the MemberAssignment field for consumer groups is included below:
-MemberAssignment => Version PartitionAssignment
-  Version => int16
-  PartitionAssignment => [Topic [Partition]]
-    Topic => string
-    Partition => int32
-  UserData => bytes
---- --- --- --- --- --- --- ---*/
-
 type PartitionAssignment struct {
 	Topic      string
 	Partitions []int32
 }
 
-// encode MemberAssignment to []byte that used as memeber of GroupAssignment in Sync Request
-// returned as []byte in sync response, and encode it to MemberAssignment
+// MemberAssignment will be encoded to []byte that used as memeber of GroupAssignment in Sync Request.
+// and sync and group response returns []byte that can be decoded to MemberAssignment
 type MemberAssignment struct {
 	Version              int16
 	PartitionAssignments []*PartitionAssignment
