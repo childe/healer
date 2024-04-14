@@ -39,7 +39,7 @@ type BrokerConfig struct {
 func DefaultBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
 		NetConfig: NetConfig{
-			ConnectTimeoutMS:    60000,
+			ConnectTimeoutMS:    10000,
 			TimeoutMS:           30000,
 			TimeoutMSForEachAPI: make([]int, 0),
 			KeepAliveMS:         7200000,
