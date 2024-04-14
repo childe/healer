@@ -13,9 +13,15 @@ type Client struct {
 	brokers *healer.Brokers
 }
 
-// New creates a new Client.
-func New(logger logr.Logger) *Client {
-	return &Client{}
+// New creates a new Client
+func New(bs, clientID string) (*Client, error) {
+	var err error
+	client := &Client{
+		clientID: clientID,
+		logger:   healer.GetLogger().WithName(clientID),
+	}
+	client.brokers, err = healer.NewBrokers(bs)
+	return client, err
 }
 
 // Close closes the connections to kafka brokers
