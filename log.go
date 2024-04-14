@@ -12,7 +12,12 @@ func init() {
 	logger = klog.NewKlogr().WithName("healer")
 }
 
-// SetLogger sets the logger to be used in the package.
+// SetLogger passes sets the logger in healer
 func SetLogger(l logr.Logger) {
 	logger = l
+}
+
+// GetLogger returns the logger in healer lib
+func GetLogger() logr.Logger {
+	return logger
 }
