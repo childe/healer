@@ -14,7 +14,7 @@ func TestNewBroker(t *testing.T) {
 	mockey.PatchConvey("TestNewBroker", t, func() {
 		nodeID := int32(0)
 		addr := "127.0.0.1:9092"
-		errMock := errors.New("NewBroker")
+		errMock := errors.New("mock error")
 
 		mockey.Mock(newConn).Return(nil, errMock).Build()
 		_, err := NewBroker(addr, nodeID, config)
@@ -25,7 +25,7 @@ func TestNewBroker(t *testing.T) {
 	mockey.PatchConvey("TestNewBroker", t, func() {
 		nodeID := int32(0)
 		addr := "127.0.0.1:9092"
-		errMock := errors.New("NewBroker")
+		errMock := errors.New("mock error")
 
 		mockey.Mock(newConn).Return(nil, nil).Build()
 
@@ -38,7 +38,7 @@ func TestNewBroker(t *testing.T) {
 	mockey.PatchConvey("TestNewBroker", t, func() {
 		nodeID := int32(0)
 		addr := "127.0.0.1:9092"
-		errMock := errors.New("NewBroker")
+		errMock := errors.New("mock error")
 		mockApiversion := make([]APIVersion, 2)
 		mockApiversion[0] = APIVersion{apiKey: 0, minVersion: 1, maxVersion: 10}
 		mockApiversion[1] = APIVersion{apiKey: 1, minVersion: 1, maxVersion: 10}
