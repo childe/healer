@@ -69,3 +69,30 @@ func TestNewBroker(t *testing.T) {
 		convey.So(err, convey.ShouldEqual, nil)
 	})
 }
+
+func TestGetHighestAvailableAPIVersion(t *testing.T) {
+	mockey.PatchConvey("TestgetHighestAvailableAPIVersion", t, func() {
+		key := API_MetadataRequest
+		for _, c := range []struct {
+			apiVersion APIVersion
+			want       uint16
+		}{
+			{apiVersion: APIVersion{ApiKey(key), 1, 10}, want: 7},
+			{apiVersion: APIVersion{ApiKey(key), 1, 6}, want: 1},
+			{apiVersion: APIVersion{ApiKey(key), 2, 10}, want: 7},
+			{apiVersion: APIVersion{ApiKey(key), 2, 6}, want: 0},
+		} {
+			broker := &Broker{
+				apiVersions: []APIVersion{
+					c.apiVersion,
+				},
+			}
+			got := broker.getHighestAvailableAPIVersion(key)
+			convey.So(got, convey.ShouldEqual, c.want)
+		}
+
+		broker := &Broker{}
+		got := broker.getHighestAvailableAPIVersion(1024)
+		convey.So(got, convey.ShouldEqual, 0)
+	})
+}
