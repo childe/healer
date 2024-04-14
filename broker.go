@@ -49,7 +49,7 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 	clientID := "healer-init"
 	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to request api versions when init broker: %s", err)
+		return nil, fmt.Errorf("failed to request api versions when init broker: %w", err)
 	}
 	broker.apiVersions = apiVersionsResponse.APIVersions
 
