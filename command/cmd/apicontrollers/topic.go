@@ -3,6 +3,7 @@ package apicontrollers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/childe/healer"
 	"github.com/gin-gonic/gin"
@@ -100,4 +101,33 @@ func AlterTopicConfig(c *gin.Context, client string) {
 	} else {
 		c.JSON(http.StatusOK, resp)
 	}
+}
+
+func GetTopicOffsets(c *gin.Context, client string) {
+	bootstrapServers := c.Query("bootstrap")
+	bs, err := healer.NewBrokers(bootstrapServers)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer bs.Close()
+
+	topic := c.Param("topic")
+
+	offsetsResponse, err := bs.RequestOffsets(client, topic, -1, -1, 1)
+
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	rst := make([]healer.PartitionOffset, 0)
+
+	for _, x := range offsetsResponse {
+		for _, partitionOffsetsList := range x.TopicPartitionOffsets {
+			rst = append(rst, partitionOffsetsList...)
+		}
+	}
+
+	sort.Slice(rst, func(i, j int) bool { return rst[i].Partition < rst[j].Partition })
+	c.JSON(http.StatusOK, rst)
 }
