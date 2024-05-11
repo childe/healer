@@ -181,6 +181,7 @@ func (broker *Broker) Close() {
 }
 
 // Request sends a request to the broker and returns a readParser
+// user should call RequestAndGet() to get the response
 func (broker *Broker) Request(r Request) (ReadParser, error) {
 	broker.correlationID++
 	r.SetCorrelationID(broker.correlationID)
