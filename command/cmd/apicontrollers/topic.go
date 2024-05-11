@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 
 	"github.com/childe/healer"
 	"github.com/gin-gonic/gin"
@@ -112,15 +113,22 @@ func GetTopicOffsets(c *gin.Context, client string) {
 	}
 	defer bs.Close()
 
+	timestamp := c.Query("timestamp")
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		c.String(http.StatusBadRequest, fmt.Sprintf("timestamp value error: %s", err))
+	}
+
 	topic := c.Param("topic")
 
-	offsetsResponse, err := bs.RequestOffsets(client, topic, -1, -1, 1)
+	rst := make([]healer.PartitionOffset, 0)
+
+	offsetsResponse, err := bs.RequestOffsets(client, topic, -1, ts, 1)
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
-
-	rst := make([]healer.PartitionOffset, 0)
 
 	for _, x := range offsetsResponse {
 		for _, partitionOffsetsList := range x.TopicPartitionOffsets {
