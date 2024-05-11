@@ -9,7 +9,7 @@ import (
 type DescribeLogDirsResponse struct {
 	CoordinatorID  uint32                          `json:"-"`
 	ThrottleTimeMS int32                           `json:"throttle_time_ms"`
-	Results        []describeLogDirsResponseResult `json:"results"`
+	Results        []DescribeLogDirsResponseResult `json:"results"`
 }
 
 func (r DescribeLogDirsResponse) Error() error {
@@ -21,18 +21,18 @@ func (r DescribeLogDirsResponse) Error() error {
 	return nil
 }
 
-type describeLogDirsResponseResult struct {
+type DescribeLogDirsResponseResult struct {
 	ErrorCode int16                          `json:"error_code"`
 	LogDir    string                         `json:"log_dir"`
-	Topics    []describeLogDirsResponseTopic `json:"topics"`
+	Topics    []DescribeLogDirsResponseTopic `json:"topics"`
 }
 
-type describeLogDirsResponseTopic struct {
+type DescribeLogDirsResponseTopic struct {
 	TopicName  string                             `json:"topic"`
-	Partitions []describeLogDirsResponsePartition `json:"partitions"`
+	Partitions []DescribeLogDirsResponsePartition `json:"partitions"`
 }
 
-func decodeToDescribeLogDirsResponseTopic(payload []byte, version uint16) (r describeLogDirsResponseTopic, offset int, err error) {
+func decodeToDescribeLogDirsResponseTopic(payload []byte, version uint16) (r DescribeLogDirsResponseTopic, offset int, err error) {
 	l := int(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
 	r.TopicName = string(payload[offset : offset+l])
@@ -44,13 +44,13 @@ func decodeToDescribeLogDirsResponseTopic(payload []byte, version uint16) (r des
 		r.Partitions = nil
 		return
 	} else if numPartitions == 0 {
-		r.Partitions = []describeLogDirsResponsePartition{}
+		r.Partitions = []DescribeLogDirsResponsePartition{}
 		return
 	} else if numPartitions < 0 {
 		err = fmt.Errorf("describe_logdirs response numPartitions < 0: %d", numPartitions)
 		return
 	} else {
-		r.Partitions = make([]describeLogDirsResponsePartition, numPartitions)
+		r.Partitions = make([]DescribeLogDirsResponsePartition, numPartitions)
 	}
 
 	var o int
@@ -62,14 +62,14 @@ func decodeToDescribeLogDirsResponseTopic(payload []byte, version uint16) (r des
 	return
 }
 
-type describeLogDirsResponsePartition struct {
+type DescribeLogDirsResponsePartition struct {
 	PartitionID int32 `json:"partition_id"`
 	Size        int64 `json:"size"`
 	OffsetLag   int64 `json:"offset_lag"`
 	IsFutureKey bool  `json:"is_future_key"`
 }
 
-func decodeToDescribeLogDirsResponsePartition(payload []byte, version uint16) (r describeLogDirsResponsePartition, offset int) {
+func decodeToDescribeLogDirsResponsePartition(payload []byte, version uint16) (r DescribeLogDirsResponsePartition, offset int) {
 	r.PartitionID = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
@@ -107,12 +107,12 @@ func NewDescribeLogDirsResponse(payload []byte, version uint16) (r DescribeLogDi
 		r.Results = nil
 		return r, nil
 	} else if numResults == 0 {
-		r.Results = []describeLogDirsResponseResult{}
+		r.Results = []DescribeLogDirsResponseResult{}
 		return r, nil
 	} else if numResults < 0 {
 		return r, fmt.Errorf("describe_logdirs response numResults < 0: %d", numResults)
 	} else {
-		r.Results = make([]describeLogDirsResponseResult, numResults)
+		r.Results = make([]DescribeLogDirsResponseResult, numResults)
 	}
 
 	for i := 0; i < numResults; i++ {
@@ -130,12 +130,12 @@ func NewDescribeLogDirsResponse(payload []byte, version uint16) (r DescribeLogDi
 			r.Results[i].Topics = nil
 			continue
 		} else if numTopics == 0 {
-			r.Results[i].Topics = []describeLogDirsResponseTopic{}
+			r.Results[i].Topics = []DescribeLogDirsResponseTopic{}
 			continue
 		} else if numTopics < 0 {
 			return r, fmt.Errorf("describe_logdirs response numTopics < 0: %d", numTopics)
 		} else {
-			r.Results[i].Topics = make([]describeLogDirsResponseTopic, numTopics)
+			r.Results[i].Topics = make([]DescribeLogDirsResponseTopic, numTopics)
 		}
 
 		var o int

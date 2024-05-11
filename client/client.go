@@ -24,6 +24,11 @@ func New(bs, clientID string) (*Client, error) {
 	return client, err
 }
 
+func (client *Client) WithLogger(logger logr.Logger) *Client {
+	client.logger = logger
+	return client
+}
+
 // Close closes the connections to kafka brokers
 func (c *Client) Close() {
 	c.brokers.Close()
@@ -52,4 +57,63 @@ func (c *Client) ListGroups() (groups []string, err error) {
 		}
 	}
 	return groups, nil
+}
+
+func (c *Client) DescribeLogDirs(topics []string) (map[int32]healer.DescribeLogDirsResponse, error) {
+	c.logger.Info("describe logdirs", "topics", topics)
+
+	meta, err := c.brokers.RequestMetaData(c.clientID, topics)
+	if err != nil {
+		return nil, err
+	}
+
+	type tp struct {
+		Topic       string
+		PartitionID int32
+	}
+	brokerPartitions := make(map[int32][]tp)
+	for _, topic := range meta.TopicMetadatas {
+		topicName := topic.TopicName
+		for _, partition := range topic.PartitionMetadatas {
+			pid := partition.PartitionID
+			for _, b := range partition.Replicas {
+				if _, ok := brokerPartitions[b]; !ok {
+					brokerPartitions[b] = []tp{
+						{
+							Topic:       topicName,
+							PartitionID: pid,
+						},
+					}
+				} else {
+					brokerPartitions[b] = append(brokerPartitions[b], tp{
+						Topic:       topicName,
+						PartitionID: pid,
+					})
+				}
+			}
+		}
+	}
+
+	c.logger.Info("broker partitions", "brokerPartitions", brokerPartitions)
+
+	rst := make(map[int32]healer.DescribeLogDirsResponse)
+	for b, topicPartitions := range brokerPartitions {
+		req := healer.NewDescribeLogDirsRequest(c.clientID, nil)
+		for _, tp := range topicPartitions {
+			req.AddTopicPartition(tp.Topic, tp.PartitionID)
+		}
+
+		broker, err := c.brokers.GetBroker(b)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := broker.RequestAndGet(req)
+		if err != nil {
+			c.logger.Error(err, "describe logdirs failed", "broker", broker.String())
+			continue
+		}
+		rst[b] = resp.(healer.DescribeLogDirsResponse)
+	}
+
+	return rst, nil
 }
