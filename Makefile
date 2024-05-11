@@ -7,10 +7,10 @@ install:
 	install healer $(GOPATH)/bin
 
 test:
-	go test -v -gcflags="all=-N -l" .
+	go test -v -gcflags="all=-N -l" ./...
 
 coverage:
-	go test -v -gcflags="all=-N -l" -coverprofile=coverage.out .
+	go test -v -gcflags="all=-N -l" -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
 
 docker:
