@@ -64,7 +64,7 @@ func TestDescribeLogDirs(t *testing.T) {
 			},
 		}
 		mockey.Mock((*Brokers).RequestMetaData).Return(mockMetadataResponse, nil).Build()
-		mockey.Mock((*Brokers).GetBroker).
+		getBrokerMocker := mockey.Mock((*Brokers).GetBroker).
 			To(func(nodeID int32) (*Broker, error) {
 				return &Broker{nodeID: nodeID}, nil
 			}).
@@ -205,5 +205,7 @@ func TestDescribeLogDirs(t *testing.T) {
 
 		convey.So(responses, convey.ShouldResemble, wanted)
 		convey.So(err, convey.ShouldBeNil)
+		convey.So(getBrokerMocker.Times(), convey.ShouldEqual, 2)
 	})
+
 }
