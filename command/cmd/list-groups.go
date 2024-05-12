@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/childe/healer/client"
+	"github.com/childe/healer"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ var listGroupsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		client, err := client.New(bs, clientID)
+		client, err := healer.NewClient(bs, clientID)
 		if err != nil {
 			return err
 		}

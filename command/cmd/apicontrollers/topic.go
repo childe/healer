@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/childe/healer"
-	"github.com/childe/healer/client"
 	"github.com/gin-gonic/gin"
 )
 
@@ -144,7 +143,7 @@ func GetTopicOffsets(c *gin.Context, client string) {
 
 func GetTopicLogDirs(c *gin.Context, clientID string) {
 	bootstrapServers := c.Query("bootstrap")
-	client, err := client.New(bootstrapServers, clientID)
+	client, err := healer.NewClient(bootstrapServers, clientID)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

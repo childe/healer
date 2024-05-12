@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/childe/healer/client"
+	"github.com/childe/healer"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +26,7 @@ var describeLogdirs = &cobra.Command{
 			return err
 		}
 
-		admin, err := client.New(brokers, clientID)
+		admin, err := healer.NewClient(brokers, clientID)
 
 		if err != nil {
 			return err

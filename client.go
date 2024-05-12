@@ -1,7 +1,6 @@
-package client
+package healer
 
 import (
-	"github.com/childe/healer"
 	"github.com/go-logr/logr"
 )
 
@@ -10,17 +9,17 @@ type Client struct {
 
 	logger logr.Logger
 
-	brokers *healer.Brokers
+	brokers *Brokers
 }
 
-// New creates a new Client
-func New(bs, clientID string) (*Client, error) {
+// NewClient creates a new Client
+func NewClient(bs, clientID string) (*Client, error) {
 	var err error
 	client := &Client{
 		clientID: clientID,
-		logger:   healer.GetLogger().WithName(clientID),
+		logger:   GetLogger().WithName(clientID),
 	}
-	client.brokers, err = healer.NewBrokers(bs)
+	client.brokers, err = NewBrokers(bs)
 	return client, err
 }
 
@@ -59,7 +58,7 @@ func (c *Client) ListGroups() (groups []string, err error) {
 	return groups, nil
 }
 
-func (c *Client) DescribeLogDirs(topics []string) (map[int32]healer.DescribeLogDirsResponse, error) {
+func (c *Client) DescribeLogDirs(topics []string) (map[int32]DescribeLogDirsResponse, error) {
 	c.logger.Info("describe logdirs", "topics", topics)
 
 	meta, err := c.brokers.RequestMetaData(c.clientID, topics)
@@ -96,9 +95,9 @@ func (c *Client) DescribeLogDirs(topics []string) (map[int32]healer.DescribeLogD
 
 	c.logger.Info("broker partitions", "brokerPartitions", brokerPartitions)
 
-	rst := make(map[int32]healer.DescribeLogDirsResponse)
+	rst := make(map[int32]DescribeLogDirsResponse)
 	for b, topicPartitions := range brokerPartitions {
-		req := healer.NewDescribeLogDirsRequest(c.clientID, nil)
+		req := NewDescribeLogDirsRequest(c.clientID, nil)
 		for _, tp := range topicPartitions {
 			req.AddTopicPartition(tp.Topic, tp.PartitionID)
 		}
@@ -117,11 +116,11 @@ func (c *Client) DescribeLogDirs(topics []string) (map[int32]healer.DescribeLogD
 		for _, t := range topics {
 			topicSet[t] = struct{}{}
 		}
-		r := resp.(healer.DescribeLogDirsResponse)
+		r := resp.(DescribeLogDirsResponse)
 		rs := r.Results
 		for i := range rs {
 			theTopics := rs[i].Topics
-			filterdTopics := make([]healer.DescribeLogDirsResponseTopic, 0)
+			filterdTopics := make([]DescribeLogDirsResponseTopic, 0)
 			for i := range theTopics {
 				if _, ok := topicSet[theTopics[i].TopicName]; ok {
 					filterdTopics = append(filterdTopics, theTopics[i])
@@ -130,14 +129,14 @@ func (c *Client) DescribeLogDirs(topics []string) (map[int32]healer.DescribeLogD
 			rs[i].Topics = filterdTopics
 		}
 
-		filteredTopicResults := make([]healer.DescribeLogDirsResponseResult, 0)
+		filteredTopicResults := make([]DescribeLogDirsResponseResult, 0)
 		for i := range rs {
 			if len(rs[i].Topics) > 0 {
 				filteredTopicResults = append(filteredTopicResults, rs[i])
 			}
 		}
 		r.Results = filteredTopicResults
-		rst[b] = resp.(healer.DescribeLogDirsResponse)
+		rst[b] = resp.(DescribeLogDirsResponse)
 	}
 
 	return rst, nil
