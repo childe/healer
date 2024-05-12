@@ -112,6 +112,31 @@ func (c *Client) DescribeLogDirs(topics []string) (map[int32]healer.DescribeLogD
 			c.logger.Error(err, "describe logdirs failed", "broker", broker.String())
 			continue
 		}
+
+		topicSet := make(map[string]struct{})
+		for _, t := range topics {
+			topicSet[t] = struct{}{}
+		}
+		r := resp.(healer.DescribeLogDirsResponse)
+		rs := r.Results
+		for i := range rs {
+			theTopics := rs[i].Topics
+			filterdTopics := make([]healer.DescribeLogDirsResponseTopic, 0)
+			for i := range theTopics {
+				if _, ok := topicSet[theTopics[i].TopicName]; ok {
+					filterdTopics = append(filterdTopics, theTopics[i])
+				}
+			}
+			rs[i].Topics = filterdTopics
+		}
+
+		filteredTopicResults := make([]healer.DescribeLogDirsResponseResult, 0)
+		for i := range rs {
+			if len(rs[i].Topics) > 0 {
+				filteredTopicResults = append(filteredTopicResults, rs[i])
+			}
+		}
+		r.Results = filteredTopicResults
 		rst[b] = resp.(healer.DescribeLogDirsResponse)
 	}
 
