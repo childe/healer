@@ -19,10 +19,10 @@ import (
 - Broker2
   - data1
     - test1-1
-	- other-1
-  - data2
     - test1-2
     - test2-1
+  - data2
+	- other-1
 */
 
 func TestDescribeLogDirs(t *testing.T) {
@@ -72,43 +72,86 @@ func TestDescribeLogDirs(t *testing.T) {
 
 		mockey.Mock((*Broker).RequestAndGet).
 			To(func(b *Broker, req Request) (Response, error) {
-				mockResponse := DescribeLogDirsResponse{
-					Results: []DescribeLogDirsResponseResult{
-						{
-							LogDir: "/data1",
-							Topics: []DescribeLogDirsResponseTopic{
-								{
-									TopicName: "test1",
-									Partitions: []DescribeLogDirsResponsePartition{
-										{PartitionID: 1, Size: 1024},
+				var mockResponse DescribeLogDirsResponse
+				if b.nodeID == 1 {
+					mockResponse = DescribeLogDirsResponse{
+						Results: []DescribeLogDirsResponseResult{
+							{
+								LogDir: "/data1",
+								Topics: []DescribeLogDirsResponseTopic{
+									{
+										TopicName: "test1",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 1, Size: 1024},
+										},
+									},
+									{
+										TopicName: "other",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 1, Size: 1024},
+										},
 									},
 								},
-								{
-									TopicName: "other",
-									Partitions: []DescribeLogDirsResponsePartition{
-										{PartitionID: 1, Size: 1024},
+							},
+							{
+								LogDir: "/data2",
+								Topics: []DescribeLogDirsResponseTopic{
+									{
+										TopicName: "test1",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 2, Size: 1024},
+										},
+									},
+									{
+										TopicName: "test2",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 1, Size: 1024},
+										},
 									},
 								},
 							},
 						},
-						{
-							LogDir: "/data2",
-							Topics: []DescribeLogDirsResponseTopic{
-								{
-									TopicName: "test1",
-									Partitions: []DescribeLogDirsResponsePartition{
-										{PartitionID: 2, Size: 1024},
+					}
+				}
+				if b.nodeID == 2 {
+					mockResponse = DescribeLogDirsResponse{
+						Results: []DescribeLogDirsResponseResult{
+							{
+								LogDir: "/data1",
+								Topics: []DescribeLogDirsResponseTopic{
+									{
+										TopicName: "test1",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 1, Size: 1024},
+										},
+									},
+									{
+										TopicName: "test1",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 2, Size: 1024},
+										},
+									},
+									{
+										TopicName: "test2",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 1, Size: 1024},
+										},
 									},
 								},
-								{
-									TopicName: "test2",
-									Partitions: []DescribeLogDirsResponsePartition{
-										{PartitionID: 1, Size: 1024},
+							},
+							{
+								LogDir: "/data2",
+								Topics: []DescribeLogDirsResponseTopic{
+									{
+										TopicName: "other",
+										Partitions: []DescribeLogDirsResponsePartition{
+											{PartitionID: 1, Size: 1024},
+										},
 									},
 								},
 							},
 						},
-					},
+					}
 				}
 				return mockResponse, nil
 			}).Build()
@@ -141,13 +184,18 @@ func TestDescribeLogDirs(t *testing.T) {
 							TopicName:  "test1",
 							Partitions: []DescribeLogDirsResponsePartition{{PartitionID: 1, Size: 1024}},
 						},
+						{
+							TopicName:  "test1",
+							Partitions: []DescribeLogDirsResponsePartition{{PartitionID: 2, Size: 1024}},
+						},
+						{
+							TopicName:  "test2",
+							Partitions: []DescribeLogDirsResponsePartition{{PartitionID: 1, Size: 1024}},
+						},
 					},
 				},
 				{
-					ErrorCode: 0, LogDir: "/data2", Topics: []DescribeLogDirsResponseTopic{
-						{TopicName: "test1", Partitions: []DescribeLogDirsResponsePartition{{PartitionID: 2, Size: 1024}}},
-						{TopicName: "test2", Partitions: []DescribeLogDirsResponsePartition{{PartitionID: 1, Size: 1024}}},
-					},
+					ErrorCode: 0, LogDir: "/data2", Topics: []DescribeLogDirsResponseTopic{},
 				},
 			},
 			},
