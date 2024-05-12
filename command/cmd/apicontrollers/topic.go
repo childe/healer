@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/childe/healer"
+	"github.com/childe/healer/client"
 	"github.com/gin-gonic/gin"
 )
 
@@ -117,6 +118,7 @@ func GetTopicOffsets(c *gin.Context, client string) {
 	ts, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("timestamp value error: %s", err))
+		return
 	}
 
 	topic := c.Param("topic")
@@ -137,5 +139,25 @@ func GetTopicOffsets(c *gin.Context, client string) {
 	}
 
 	sort.Slice(rst, func(i, j int) bool { return rst[i].Partition < rst[j].Partition })
+	c.JSON(http.StatusOK, rst)
+}
+
+func GetTopicLogDirs(c *gin.Context, clientID string) {
+	bootstrapServers := c.Query("bootstrap")
+	client, err := client.New(bootstrapServers, clientID)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer client.Close()
+
+	topic := c.Param("topic")
+
+	rst, err := client.DescribeLogDirs([]string{topic})
+
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
 	c.JSON(http.StatusOK, rst)
 }

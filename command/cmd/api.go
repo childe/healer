@@ -61,6 +61,7 @@ var apiCmd = &cobra.Command{
 
 		router.GET("/topic/:topic/configs", wrap(apicontrollers.GetTopicConfigs, client))
 		router.GET("/topic/:topic/offsets", wrap(apicontrollers.GetTopicOffsets, client))
+		router.GET("/topic/:topic/logdirs", wrap(apicontrollers.GetTopicLogDirs, client))
 		router.GET("/topic/:topic/config/:config", wrap(apicontrollers.GetTopicConfig, client))
 		router.POST("/topic/:topic/config/:config/:value", wrap(apicontrollers.AlterTopicConfig, client))
 
