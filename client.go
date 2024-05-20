@@ -141,3 +141,17 @@ func (c *Client) DescribeLogDirs(topics []string) (map[int32]DescribeLogDirsResp
 
 	return rst, nil
 }
+
+func (c *Client) DeleteTopics(topics []string, timeoutMs int32) (r DeleteTopicsResponse, err error) {
+	c.logger.Info("delete topics", "topics", topics)
+
+	req := NewDeleteTopicsRequest(c.clientID, topics, timeoutMs)
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return r, err
+	}
+
+	resp, err := controller.RequestAndGet(req)
+	return resp.(DeleteTopicsResponse), err
+}

@@ -126,6 +126,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewListGroupsResponse(data)
 	case API_CreateTopics:
 		return NewCreateTopicsResponse(data)
+	case API_DeleteTopics:
+		return NewDeleteTopicsResponse(data, p.version)
 	case API_AlterConfigs:
 		return NewAlterConfigsResponse(data)
 	case API_Delete_Groups:

@@ -119,6 +119,10 @@ func (brokers *Brokers) Controller() int32 {
 	return brokers.controllerID
 }
 
+func (brokers *Brokers) GetController() (*Broker, error) {
+	return brokers.GetBroker(brokers.Controller())
+}
+
 func (brokers *Brokers) refreshMetadata() bool {
 	topics := make([]string, 0)
 	clientID := "healer-refresh-metadata"
