@@ -50,7 +50,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 		partitionID: partitionID,
 		brokers:     brokers,
 
-		stopChan: make(chan struct{}, 0),
+		stopChan: make(chan struct{}),
 	}
 	c.ctx = context.Background()
 	c.ctx, c.cancel = context.WithCancel(c.ctx)
