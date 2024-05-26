@@ -145,7 +145,7 @@ var defaultConsumerConfig = DefaultConsumerConfig()
 // create ConsumerConfig from map or return directly if config is ConsumerConfig
 // return defaultConsumerConfig if config is nil
 func createConsumerConfig(config interface{}) (c ConsumerConfig, err error) {
-	switch config.(type) {
+	switch config := config.(type) {
 	case nil:
 		return defaultConsumerConfig, nil
 	case map[string]interface{}:
@@ -154,7 +154,7 @@ func createConsumerConfig(config interface{}) (c ConsumerConfig, err error) {
 			return defaultConsumerConfig, fmt.Errorf("decode consumer config error: %w", err)
 		}
 	case ConsumerConfig:
-		c = config.(ConsumerConfig)
+		return config, nil
 	default:
 		return c, fmt.Errorf("consumer only accept config from map[string]interface{} or ConsumerConfig")
 	}
