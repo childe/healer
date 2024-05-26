@@ -94,6 +94,9 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 // NewSimpleConsumer create a simple consumer
 func NewSimpleConsumer(topic string, partitionID int32, config interface{}) (*SimpleConsumer, error) {
 	cfg, err := createConsumerConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	brokerConfig := getBrokerConfigFromConsumerConfig(cfg)
 
@@ -111,6 +114,9 @@ func (c *SimpleConsumer) refreshPartiton() error {
 		return err
 	}
 	for _, topic := range metaDataResponse.TopicMetadatas {
+		if topic.TopicName != c.topic {
+			continue
+		}
 		for _, p := range topic.PartitionMetadatas {
 			if p.PartitionID == c.partitionID {
 				c.partition = *p
