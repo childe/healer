@@ -574,7 +574,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, st
 
 	// 早期版本的协议可能会有多出来的字节,需要丢弃
 	if streamDecoder.more {
-		n, _ = streamDecoder.readAll()
+		streamDecoder.readAll()
 	}
 	logger.Info("decode fetch response done", "correlationID", streamDecoder.correlationID)
 
