@@ -402,8 +402,8 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 
 	for !c.stop {
 		// fetch
+		c.stopWG.Add(1)
 		go func() {
-			c.stopWG.Add(1)
 			defer func() {
 				c.stopWG.Done()
 			}()
@@ -422,8 +422,8 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 		}()
 
 		//decode
+		c.stopWG.Add(1)
 		go func() {
-			c.stopWG.Add(1)
 			defer func() {
 				c.stopWG.Done()
 			}()
