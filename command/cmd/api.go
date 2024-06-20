@@ -3,11 +3,9 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/childe/healer/command/cmd/apicontrollers"
 
-	"github.com/childe/healer"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
@@ -69,91 +67,11 @@ var apiCmd = &cobra.Command{
 		router.GET("/group/:group", wrap(apicontrollers.DescribeGroups, client))
 		router.GET("/group/:group/pending/:topic", wrap(apicontrollers.GetPending, client))
 
-		router.POST("/alter-partition-reassignments", func(c *gin.Context) {
-			type reassignment struct {
-				Topic     string  `json:"topic"`
-				Partition int32   `json:"partition"`
-				Replicas  []int32 `json:"replicas"`
-			}
-
-			timeout := c.Query("timeout")
-			timeoutMS, err := strconv.Atoi(timeout)
-			if err != nil {
-				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
-				return
-			}
-
-			bootstrapServers := c.Query("bootstrap")
-			config := healer.DefaultBrokerConfig()
-			config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
-			config.NetConfig.TimeoutMSForEachAPI[healer.API_AlterPartitionReassignments] = timeoutMS
-			bs, err := healer.NewBrokersWithConfig(bootstrapServers, config)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			defer bs.Close()
-
-			reassignments := make([]reassignment, 0)
-			if err := c.BindJSON(&reassignments); err != nil {
-				c.String(http.StatusBadRequest, fmt.Sprintf("reassignments value error: %s", err))
-				return
-			}
-			req := healer.NewAlterPartitionReassignmentsRequest(int32(timeoutMS))
-			for _, v := range reassignments {
-				req.AddAssignment(v.Topic, v.Partition, v.Replicas)
-			}
-			resp, err := bs.AlterPartitionReassignments(&req)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			c.JSON(http.StatusOK, resp)
-		})
+		router.POST("/alter-partition-reassignments", wrap(apicontrollers.AlterPartitionReassignments, client))
 
 		router.POST("/list-partition-reassignments", wrap(apicontrollers.ListPartitionReassignments, client))
 
-		router.POST("/create-partitions", func(c *gin.Context) {
-			bootstrapServers := c.Query("bootstrap")
-			bs, err := healer.NewBrokers(bootstrapServers)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			defer bs.Close()
-
-			count := c.Query("count")
-			countI, err := strconv.Atoi(count)
-			if err != nil {
-				c.String(http.StatusBadRequest, fmt.Sprintf("count value error: %s", err))
-				return
-			}
-
-			timeout := c.Query("timeout")
-			timeoutMS, err := strconv.Atoi(timeout)
-			if err != nil {
-				c.String(http.StatusBadRequest, fmt.Sprintf("timeout value error: %s", err))
-				return
-			}
-
-			topic := c.Query("topic")
-
-			req := healer.NewCreatePartitionsRequest(client, uint32(timeoutMS), false)
-			req.AddTopic(topic, int32(countI), nil)
-
-			controller, err := bs.GetBroker(bs.Controller())
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-
-			resp, err := controller.RequestAndGet(req)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			c.JSON(http.StatusOK, resp)
-		})
+		router.POST("/create-partitions", wrap(apicontrollers.CreatePartitions, client))
 
 		router.Run(fullAddress)
 		return nil
