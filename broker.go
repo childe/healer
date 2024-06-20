@@ -27,7 +27,7 @@ type Broker struct {
 }
 
 var (
-	errTLSConfig = errors.New("Cert & File & CA must be set")
+	errTLSConfig = errors.New("tls is enabled but either cert or key or ca is not set")
 )
 
 // NewBroker is only called in NewBrokers, user must always init a Brokers instance by NewBrokers
@@ -39,36 +39,10 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 
 		correlationID: 0,
 	}
-
-	conn, err := newConn(address, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to establish connection when init broker [%d]%s: %v", nodeID, address, err)
+	if err := broker.createConn(); err != nil {
+		return nil, err
 	}
-	broker.conn = conn
 
-	clientID := "healer-init"
-	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to request api versions when init broker: %w", err)
-	}
-	broker.apiVersions = apiVersionsResponse.APIVersions
-
-	var versions string
-	for i, v := range broker.apiVersions {
-		if i+1 == len(broker.apiVersions) {
-			versions += fmt.Sprintf("%s:%d-%d", v.apiKey.String(), v.minVersion, v.maxVersion)
-		} else {
-			versions += fmt.Sprintf("%s:%d-%d,", v.apiKey.String(), v.minVersion, v.maxVersion)
-		}
-	}
-	logger.V(5).Info("broker api versions", "broker", address, "versions", versions)
-
-	if broker.config.SaslConfig != nil {
-		if err := broker.sendSaslAuthenticate(); err != nil {
-			logger.Error(err, "sasl authenticate failed", "nodeID", nodeID, "adddress", address)
-			return nil, err
-		}
-	}
 	return broker, nil
 }
 
@@ -87,6 +61,40 @@ func (broker *Broker) getHighestAvailableAPIVersion(apiKey uint16) uint16 {
 		}
 	}
 	return 0
+}
+
+// create a new connection to the broker, and then do the sasl authenticate if needed
+func (broker *Broker) createConn() error {
+	if conn, err := newConn(broker.GetAddress(), broker.config); err != nil {
+		return err
+	} else {
+		broker.conn = conn
+	}
+
+	clientID := "healer-init"
+	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
+	if err != nil {
+		return fmt.Errorf("failed to request api versions after creating new conn: %w", err)
+	}
+	broker.apiVersions = apiVersionsResponse.APIVersions
+
+	var versions string
+	for i, v := range broker.apiVersions {
+		if i+1 == len(broker.apiVersions) {
+			versions += fmt.Sprintf("%s:%d-%d", v.apiKey.String(), v.minVersion, v.maxVersion)
+		} else {
+			versions += fmt.Sprintf("%s:%d-%d,", v.apiKey.String(), v.minVersion, v.maxVersion)
+		}
+	}
+	logger.V(5).Info("broker api versions", "broker", broker.address, "versions", versions)
+
+	if broker.config.SaslConfig != nil {
+		if err := broker.sendSaslAuthenticate(); err != nil {
+			logger.Error(err, "sasl authenticate failed", "nodeID", broker.nodeID, "adddress", broker.address)
+			return err
+		}
+	}
+	return nil
 }
 
 func newConn(address string, config *BrokerConfig) (net.Conn, error) {
@@ -178,6 +186,13 @@ func (broker *Broker) String() string {
 // Close closes the connection to the broker
 func (broker *Broker) Close() {
 	broker.conn.Close()
+	broker.conn = nil
+}
+func (broker *Broker) ensureOpen() (err error) {
+	if broker.conn != nil {
+		return nil
+	}
+	return broker.createConn()
 }
 
 // Request sends a request to the broker and returns a readParser
@@ -207,6 +222,8 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 func (broker *Broker) RequestAndGet(r Request) (Response, error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
+
+	broker.ensureOpen()
 
 	rp, err := broker.Request(r)
 	if err != nil {
