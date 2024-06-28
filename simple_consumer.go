@@ -443,9 +443,9 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 	var message *FullMessage
 	for !c.stop {
 		select {
+		case message = <-innerMessages:
 		case <-c.ctx.Done():
 			return c.ctx.Err()
-		case message = <-innerMessages:
 		}
 		if message != nil {
 			if message.Error != nil {
@@ -472,8 +472,12 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 					}
 				}
 			} else {
-				messages <- message
-				c.offset = message.Message.Offset + 1
+				select {
+				case messages <- message:
+					c.offset = message.Message.Offset + 1
+				case <-c.ctx.Done():
+					return c.ctx.Err()
+				}
 			}
 		} else {
 			logger.V(5).Info("consumed all messages from one fetch response", "currentOffset", c.offset)

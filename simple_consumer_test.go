@@ -166,7 +166,8 @@ func TestConsume(t *testing.T) {
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(simpleConsumer, convey.ShouldNotBeNil)
 
-		msg, err := simpleConsumer.Consume(-2, nil)
+		messages := make(chan *FullMessage, 1)
+		msg, err := simpleConsumer.Consume(-2, messages)
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(msg, convey.ShouldNotBeNil)
 
@@ -181,7 +182,7 @@ func TestConsume(t *testing.T) {
 
 		convey.So(count, convey.ShouldEqual, 5)
 		convey.So(initOffset.Times(), convey.ShouldEqual, 1)
-		convey.So(getHighestAvailableAPIVersion.Times(), convey.ShouldEqual, 2)
+		convey.So(getHighestAvailableAPIVersion.Times(), convey.ShouldEqual, 1)
 		convey.So(streamDecode.Times(), convey.ShouldEqual, 1)
 		convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, 1)
 	})
