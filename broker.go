@@ -1,12 +1,14 @@
 package healer
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"sync"
@@ -259,7 +261,13 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 	return rp, nil
 }
 
-func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, buffers chan []byte, timeout int) error {
+func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, timeout int) (r io.Reader, err error) {
+	defer func() {
+		if err != nil {
+			broker.Close()
+		}
+	}()
+
 	logger.V(5).Info("send request", "src", broker.conn.LocalAddr(), "dst", broker.conn.RemoteAddr())
 	api := ApiKey(binary.BigEndian.Uint16(payload[4:]))
 	apiVersion := binary.BigEndian.Uint16(payload[6:])
@@ -269,68 +277,29 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, bu
 	for len(payload) > 0 {
 		n, err := broker.conn.Write(payload)
 		if err != nil {
-			broker.Close()
-			return err
+			return nil, err
 		}
 		payload = payload[n:]
 	}
 
-	l := 0
 	responseLengthBuf := make([]byte, 4)
-	for {
-		if timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
-		}
-		length, err := broker.conn.Read(responseLengthBuf[l:])
-		if err != nil {
-			broker.Close()
-			return err
-		}
-
-		select {
-		case <-ctx.Done():
-			logger.Info("stop fetching data from kafka server because caller stop it")
-			return ctx.Err()
-		case buffers <- responseLengthBuf[l:length]:
-		}
-
-		if length+l == 4 {
-			break
-		}
-		l += length
+	if timeout > 0 {
+		broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
+	}
+	n, err := broker.conn.Read(responseLengthBuf)
+	if err != nil {
+		return nil, err
+	}
+	if n != 4 {
+		return nil, errShortRead
 	}
 
-	responseLength := int(binary.BigEndian.Uint32(responseLengthBuf))
+	responseLength := binary.BigEndian.Uint32(responseLengthBuf)
 	logger.V(5).Info("read response length header", "total response length", 4+responseLength)
 
-	readLength := 0
-	for {
-		buf := make([]byte, 65535)
-		if timeout > 0 {
-			broker.conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Millisecond))
-		}
-		length, err := broker.conn.Read(buf)
-		if err != nil {
-			broker.Close()
-			return err
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case buffers <- buf[:length]:
-		}
-
-		readLength += length
-		logger.V(5).Info("send data to fetch response decoder", "currentBytes", readLength+4, "totalBytes", responseLength+4)
-		if readLength > responseLength {
-			return errors.New("got more data than needed while reading fetch response")
-		}
-		if readLength == responseLength {
-			logger.V(5).Info("read enough data, return")
-			return nil
-		}
-	}
+	buf := bytes.NewBuffer(make([]byte, responseLength))
+	go io.Copy(buf, broker.conn)
+	return buf, nil
 }
 
 func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse, err error) {
@@ -373,17 +342,9 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int3
 	return r, err
 }
 
-func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest, buffers chan []byte) (err error) {
+func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
-	//defer close(buffers)
-	defer func() {
-		select {
-		case <-ctx.Done():
-			return
-		case buffers <- nil:
-		}
-	}()
 
 	broker.correlationID++
 
@@ -395,7 +356,7 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 		timeout = broker.config.TimeoutMSForEachAPI[fetchRequest.API()]
 	}
 
-	return broker.requestStreamingly(ctx, payload, buffers, timeout)
+	return broker.requestStreamingly(ctx, payload, timeout)
 }
 
 func (broker *Broker) findCoordinator(clientID, groupID string) (r FindCoordinatorResponse, err error) {

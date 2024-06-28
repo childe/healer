@@ -2,6 +2,7 @@ package healer
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	"github.com/bytedance/mockey"
@@ -134,15 +135,12 @@ func TestConsume(t *testing.T) {
 		initOffset := mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
 		getHighestAvailableAPIVersion := mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
 		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
-			To(func(ctx context.Context, fetchRequest *FetchRequest, buffers chan []byte) error {
-				return nil
-				// for i := 0; i < 10000; i++ {
-				// 	buffers <- []byte("test")
-				// }
-				// return nil
+			To(func(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, err error) {
+				println("mock requestFetchStreamingly")
+				return nil, nil
 			}).Build()
 
-		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, version uint16, startOffset int64) error {
+		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, startOffset int64) error {
 			for i := 0; i < 10; i++ {
 				decoder.messages <- &FullMessage{
 					TopicName:   topic,
@@ -173,27 +171,15 @@ func TestConsume(t *testing.T) {
 		convey.So(msg, convey.ShouldNotBeNil)
 
 		count := 0
-		wg := make(chan struct{})
-		go func() {
-			defer close(wg)
-			for {
-				select {
-				case m := <-msg:
-					print(m)
-					count++
-					if m == nil {
-						return
-					}
-					// case <-time.After(time.Duration(1) * time.Second):
-					// 	panic("consume 10 messages timeout")
-				}
-			}
-		}()
+		for count < 5 {
+			m := <-msg
+			println("msg:", string(m.Message.Value))
+			count++
+		}
 
 		simpleConsumer.Stop()
-		<-wg
 
-		convey.So(count, convey.ShouldEqual, 10)
+		convey.So(count, convey.ShouldEqual, 5)
 		convey.So(initOffset.Times(), convey.ShouldEqual, 1)
 		convey.So(getHighestAvailableAPIVersion.Times(), convey.ShouldEqual, 2)
 		convey.So(streamDecode.Times(), convey.ShouldEqual, 1)

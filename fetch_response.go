@@ -47,11 +47,10 @@ type FetchResponse struct {
 type fetchResponseStreamDecoder struct {
 	ctx context.Context
 
-	depositBuffer []byte
-	totalLength   int
-	offset        int
+	totalLength int
+	offset      int
 
-	buffers  chan []byte
+	buffers  io.Reader
 	messages chan *FullMessage
 	more     bool
 
@@ -77,23 +76,9 @@ func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int, err erro
 	defer func() {
 		streamDecoder.offset += length
 	}()
-	length = len(streamDecoder.depositBuffer)
-	streamDecoder.depositBuffer = streamDecoder.depositBuffer[:0]
 
-	for {
-		select {
-		case <-streamDecoder.ctx.Done():
-			return length, streamDecoder.ctx.Err()
-		case buffer := <-streamDecoder.buffers:
-			if buffer != nil {
-				length += len(buffer)
-				streamDecoder.more = true
-			} else {
-				streamDecoder.more = false
-				return
-			}
-		}
-	}
+	buf := make([]byte, streamDecoder.totalLength-streamDecoder.offset)
+	return io.ReadFull(streamDecoder.buffers, buf)
 }
 
 var errShortRead = errors.New("short read")
@@ -103,43 +88,7 @@ func (streamDecoder *fetchResponseStreamDecoder) Read(p []byte) (n int, err erro
 		streamDecoder.offset += n
 	}()
 
-	var (
-		l      int
-		length int = len(p)
-		i      int
-	)
-	if len(streamDecoder.depositBuffer) >= length {
-		l = copy(p, streamDecoder.depositBuffer)
-		if l != length {
-			return l, errShortRead
-		}
-
-		streamDecoder.depositBuffer = streamDecoder.depositBuffer[length:]
-		return l, nil
-	}
-
-	l = copy(p, streamDecoder.depositBuffer)
-
-	var buffer []byte
-	for l < length {
-		select {
-		case <-streamDecoder.ctx.Done():
-			return l, streamDecoder.ctx.Err()
-		case buffer = <-streamDecoder.buffers:
-			if buffer != nil {
-				streamDecoder.more = true
-				i = copy(p[l:], buffer)
-				l += i
-				//streamDecoder.length += len(buffer)
-			} else {
-				streamDecoder.more = false
-				return l, io.EOF
-			}
-		}
-	}
-	streamDecoder.depositBuffer = buffer[i:]
-
-	return length, nil
+	return streamDecoder.buffers.Read(p)
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) read(n int) (rst []byte, length int, err error) {
@@ -147,37 +96,8 @@ func (streamDecoder *fetchResponseStreamDecoder) read(n int) (rst []byte, length
 		streamDecoder.offset += length
 	}()
 
-	if len(streamDecoder.depositBuffer) >= n {
-		rst = streamDecoder.depositBuffer[:n]
-		streamDecoder.depositBuffer = streamDecoder.depositBuffer[n:]
-		return rst, n, nil
-	}
-
 	rst = make([]byte, n)
-	var (
-		buffer []byte
-		i      int
-	)
-
-	length = copy(rst, streamDecoder.depositBuffer)
-
-	for length < n {
-		select {
-		case <-streamDecoder.ctx.Done():
-			return rst, length, streamDecoder.ctx.Err()
-		case buffer = <-streamDecoder.buffers:
-			if buffer != nil {
-				streamDecoder.more = true
-				i = copy(rst[length:], buffer)
-				length += i
-				//streamDecoder.length += len(buffer)
-			} else {
-				streamDecoder.more = false
-				return rst, length, nil
-			}
-		}
-	}
-	streamDecoder.depositBuffer = buffer[i:]
+	length, err = streamDecoder.buffers.Read(rst)
 
 	return rst, length, nil
 }
@@ -529,13 +449,12 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 	return nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, startOffset int64) error {
+func (streamDecoder *fetchResponseStreamDecoder) streamDecode(startOffset int64) error {
 	defer func() {
 		//close(streamDecoder.messages)
 		streamDecoder.putMessage(nil)
 	}()
 
-	streamDecoder.depositBuffer = make([]byte, 0)
 	streamDecoder.offset = 0
 	streamDecoder.startOffset = startOffset
 	streamDecoder.hasOneMessage = false
@@ -550,7 +469,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, st
 	responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
 	streamDecoder.totalLength = int(responseLength) + 4
 
-	if err := streamDecoder.decodeHeader(version); err != nil {
+	if err := streamDecoder.decodeHeader(streamDecoder.version); err != nil {
 		return err
 	}
 	if streamDecoder.responsesCount == 0 {
@@ -558,7 +477,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(version uint16, st
 	}
 
 	for i := 0; i < streamDecoder.responsesCount; i++ {
-		err := streamDecoder.decodeResponses(version)
+		err := streamDecoder.decodeResponses(streamDecoder.version)
 		if err != nil {
 			msg := &FullMessage{
 				TopicName:   "",

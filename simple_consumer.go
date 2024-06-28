@@ -20,8 +20,7 @@ type SimpleConsumer struct {
 	coordinator  *Broker
 	partition    PartitionMetadataInfo
 
-	stopChan chan struct{}
-	stopWG   sync.WaitGroup
+	stopWG sync.WaitGroup
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -49,8 +48,6 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 		topic:       topic,
 		partitionID: partitionID,
 		brokers:     brokers,
-
-		stopChan: make(chan struct{}),
 	}
 	c.ctx = context.Background()
 	c.ctx, c.cancel = context.WithCancel(c.ctx)
@@ -67,7 +64,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 				if err := c.refreshPartiton(); err != nil {
 					logger.Error(err, "refresh partition meta failed", "topic", c.topic, "partitionID", c.partitionID)
 				}
-			case <-c.stopChan:
+			case <-c.ctx.Done():
 				return
 			}
 		}
@@ -275,12 +272,15 @@ func (c *SimpleConsumer) getCommitedOffet() error {
 // Stop the consumer and wait for all relating go-routines to exit
 func (c *SimpleConsumer) Stop() {
 	logger.Info("stopping simple consumer", "topic", c.topic, "partitionID", c.partitionID)
-	c.stop = true
 	c.cancel()
 
-	close(c.stopChan)
+	c.stop = true
 	c.stopWG.Wait()
 
+	close(c.messages)
+	if c.leaderBroker != nil {
+		c.leaderBroker.Close()
+	}
 }
 
 // call this when simpleConsumer NOT belong to GroupConsumer, or call BelongTo.Commit()
@@ -389,69 +389,54 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 	defer func() {
 		logger.V(5).Info("simple consumer stop consuming", "topic", c.topic, "partitionID", c.partitionID)
-		if c.leaderBroker != nil {
-			c.leaderBroker.Close()
-		}
 		if c.wg != nil {
 			c.wg.Done()
 		}
 	}()
 
-	buffers := make(chan []byte, 10)
 	innerMessages := make(chan *FullMessage, 1)
 
-	for !c.stop {
-		// fetch
-		c.stopWG.Add(1)
-		go func() {
-			defer func() {
-				c.stopWG.Done()
-			}()
-
+	go func() {
+		for !c.stop {
+			// fetch
 			logger.V(5).Info("send fetch request", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 			r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 			r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
 
-			err := c.leaderBroker.requestFetchStreamingly(c.ctx, r, buffers)
+			reader, err := c.leaderBroker.requestFetchStreamingly(c.ctx, r)
 			if err != nil {
 				if err == context.Canceled {
 					return
 				}
-				logger.Error(err, "failed to send fetch request")
+				logger.Error(err, "failed to fetch")
 			}
-		}()
 
-		//decode
-		c.stopWG.Add(1)
-		go func() {
-			defer func() {
-				c.stopWG.Done()
-			}()
-
+			//decode
 			frsd := fetchResponseStreamDecoder{
 				ctx:      c.ctx,
-				buffers:  buffers,
+				buffers:  reader,
 				messages: innerMessages,
 				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
 			}
 
-			if err := frsd.streamDecode(c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest), c.offset); err != nil {
+			if err := frsd.streamDecode(c.offset); err != nil {
 				if err == context.Canceled {
 					return
 				}
 				logger.Error(err, "failed to decode fetch response")
 			}
-		}()
+		}
+	}()
 
-		// consume all messages from one fetch response
-		c.consumeFromOneFetchRequest(innerMessages, messages)
+	// consume all messages from one fetch response
+	c.consumeMessages(innerMessages, messages)
 
-	}
 }
 
-func (c *SimpleConsumer) consumeFromOneFetchRequest(innerMessages chan *FullMessage, messages chan *FullMessage) (err error) {
+func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messages chan *FullMessage) (err error) {
 	c.stopWG.Add(1)
 	defer func() {
+		// close(innerMessages)
 		c.stopWG.Done()
 	}()
 
