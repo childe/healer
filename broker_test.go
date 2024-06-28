@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"net"
 	"testing"
 
 	"github.com/bytedance/mockey"
@@ -8,11 +9,12 @@ import (
 )
 
 func TestNewBroker(t *testing.T) {
-	mockey.PatchConvey("TestListGroupsNil", t, func() {
-		mockey.Mock((*Brokers).BrokersInfo).Return(nil).Build()
-		groups, err := c.ListGroups()
+	mockey.PatchConvey("TestNewBroker", t, func() {
+		mockey.Mock((*Broker).requestAPIVersions).Return(APIVersionsResponse{}, nil).Build()
+		mockey.Mock((*net.Dialer).Dial).Return(nil, nil).Build()
+		broker, err := NewBroker("127.0.0.1:9092", 0, DefaultBrokerConfig())
 		convey.So(err, convey.ShouldBeNil)
-		convey.So(groups, convey.ShouldBeEmpty)
+		convey.So(broker, convey.ShouldNotBeNil)
 	})
 }
 
