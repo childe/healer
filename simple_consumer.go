@@ -403,7 +403,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 			r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 			r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
 
-			reader, responseLength, err := c.leaderBroker.requestFetchStreamingly(c.ctx, r)
+			reader, responseLength, err := c.leaderBroker.requestFetchStreamingly(r)
 			if err != nil {
 				if err == context.Canceled {
 					return

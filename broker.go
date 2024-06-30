@@ -2,7 +2,6 @@ package healer
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
@@ -261,7 +260,7 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 	return rp, nil
 }
 
-func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, timeout int) (r io.Reader, responseLength uint32, err error) {
+func (broker *Broker) requestStreamingly(payload []byte, timeout int) (r io.Reader, responseLength uint32, err error) {
 	defer func() {
 		if err != nil {
 			broker.Close()
@@ -338,7 +337,7 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int3
 	return r, err
 }
 
-func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
+func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
@@ -352,7 +351,7 @@ func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest 
 		timeout = broker.config.TimeoutMSForEachAPI[fetchRequest.API()]
 	}
 
-	return broker.requestStreamingly(ctx, payload, timeout)
+	return broker.requestStreamingly(payload, timeout)
 }
 
 func (broker *Broker) findCoordinator(clientID, groupID string) (r FindCoordinatorResponse, err error) {

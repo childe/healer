@@ -1,7 +1,7 @@
 package healer
 
 import (
-	"context"
+	"fmt"
 	"io"
 	"testing"
 
@@ -135,7 +135,7 @@ func TestConsume(t *testing.T) {
 		initOffset := mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
 		getHighestAvailableAPIVersion := mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
 		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
-			To(func(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
+			To(func(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
 				println("mock requestFetchStreamingly")
 				return nil, 0, nil
 			}).Build()
@@ -154,7 +154,7 @@ func TestConsume(t *testing.T) {
 						Attributes:  1,
 						Timestamp:   1,
 						Key:         []byte("test"),
-						Value:       []byte("test"),
+						Value:       []byte(fmt.Sprintf("test-%d", i)),
 					},
 				}
 			}
