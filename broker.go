@@ -244,14 +244,8 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 	apiVersion := binary.BigEndian.Uint16(payload[6:])
 	correlationID := binary.BigEndian.Uint32(payload[8:])
 	logger.V(5).Info("request info", "length", len(payload), "api", api, "apiVersion", apiVersion, "correlationID", correlationID, "timeout", timeout)
-	for len(payload) > 0 {
-		n, err := broker.conn.Write(payload)
-		if err != nil {
-			broker.Close()
-			return defaultReadParser{}, err
-		}
-		payload = payload[n:]
-	}
+
+	io.Copy(broker.conn, bytes.NewBuffer(payload))
 
 	rp := defaultReadParser{
 		broker:  broker,
