@@ -91,15 +91,16 @@ func (streamDecoder *fetchResponseStreamDecoder) Read(p []byte) (n int, err erro
 	return streamDecoder.buffers.Read(p)
 }
 
+// read util getting n bytes
 func (streamDecoder *fetchResponseStreamDecoder) read(n int) (rst []byte, length int, err error) {
 	defer func() {
 		streamDecoder.offset += length
 	}()
 
 	rst = make([]byte, n)
-	length, err = streamDecoder.buffers.Read(rst)
+	length, err = io.ReadFull(streamDecoder.buffers, rst)
 
-	return rst, length, nil
+	return rst, length, err
 }
 
 // uncompress read all remaining bytes and uncompress them
@@ -458,16 +459,6 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(startOffset int64)
 	streamDecoder.offset = 0
 	streamDecoder.startOffset = startOffset
 	streamDecoder.hasOneMessage = false
-
-	payloadLengthBuf, n, err := streamDecoder.read(4)
-	if err != nil {
-		return err
-	}
-	if n != 4 {
-		return fmt.Errorf("could not read enough bytes(4) to get fetchresponse length. read %d bytes", n)
-	}
-	responseLength := binary.BigEndian.Uint32(payloadLengthBuf)
-	streamDecoder.totalLength = int(responseLength) + 4
 
 	if err := streamDecoder.decodeHeader(streamDecoder.version); err != nil {
 		return err

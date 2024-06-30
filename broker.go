@@ -261,7 +261,7 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 	return rp, nil
 }
 
-func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, timeout int) (r io.Reader, err error) {
+func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, timeout int) (r io.Reader, responseLength uint32, err error) {
 	defer func() {
 		if err != nil {
 			broker.Close()
@@ -274,13 +274,7 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, ti
 	correlationID := binary.BigEndian.Uint32(payload[8:])
 	logger.V(5).Info("request info", "length", len(payload), "api", api, "apiVersion", apiVersion, "correlationID", correlationID, "timeout", timeout)
 
-	for len(payload) > 0 {
-		n, err := broker.conn.Write(payload)
-		if err != nil {
-			return nil, err
-		}
-		payload = payload[n:]
-	}
+	io.Copy(broker.conn, bytes.NewBuffer(payload))
 
 	responseLengthBuf := make([]byte, 4)
 	if timeout > 0 {
@@ -288,18 +282,20 @@ func (broker *Broker) requestStreamingly(ctx context.Context, payload []byte, ti
 	}
 	n, err := broker.conn.Read(responseLengthBuf)
 	if err != nil {
-		return nil, err
+		return nil, responseLength, err
 	}
 	if n != 4 {
-		return nil, errShortRead
+		return nil, responseLength, errShortRead
 	}
 
-	responseLength := binary.BigEndian.Uint32(responseLengthBuf)
-	logger.V(5).Info("read response length header", "total response length", 4+responseLength)
+	responseLength = binary.BigEndian.Uint32(responseLengthBuf)
+	logger.V(5).Info("got responseLength", "responseLength", responseLength)
 
-	buf := bytes.NewBuffer(make([]byte, responseLength))
-	go io.Copy(buf, broker.conn)
-	return buf, nil
+	reader := &io.LimitedReader{
+		R: broker.conn,
+		N: int64(responseLength),
+	}
+	return reader, responseLength, nil
 }
 
 func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse, err error) {
@@ -342,7 +338,7 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int3
 	return r, err
 }
 
-func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, err error) {
+func (broker *Broker) requestFetchStreamingly(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 

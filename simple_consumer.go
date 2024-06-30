@@ -403,7 +403,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 			r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
 			r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
 
-			reader, err := c.leaderBroker.requestFetchStreamingly(c.ctx, r)
+			reader, responseLength, err := c.leaderBroker.requestFetchStreamingly(c.ctx, r)
 			if err != nil {
 				if err == context.Canceled {
 					return
@@ -413,10 +413,11 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 
 			//decode
 			frsd := fetchResponseStreamDecoder{
-				ctx:      c.ctx,
-				buffers:  reader,
-				messages: innerMessages,
-				version:  c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
+				ctx:         c.ctx,
+				buffers:     reader,
+				messages:    innerMessages,
+				totalLength: int(responseLength) + 4,
+				version:     c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
 			}
 
 			if err := frsd.streamDecode(c.offset); err != nil {

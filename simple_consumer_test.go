@@ -135,9 +135,9 @@ func TestConsume(t *testing.T) {
 		initOffset := mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
 		getHighestAvailableAPIVersion := mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
 		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
-			To(func(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, err error) {
+			To(func(ctx context.Context, fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
 				println("mock requestFetchStreamingly")
-				return nil, nil
+				return nil, 0, nil
 			}).Build()
 
 		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, startOffset int64) error {
