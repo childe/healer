@@ -73,6 +73,8 @@ var apiCmd = &cobra.Command{
 
 		router.POST("/create-partitions", wrap(apicontrollers.CreatePartitions, client))
 
+		router.POST("/describe-logdirs", wrap(apicontrollers.DescribeLogdirs, client))
+
 		router.Run(fullAddress)
 		return nil
 	},
