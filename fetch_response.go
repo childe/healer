@@ -451,11 +451,6 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 }
 
 func (streamDecoder *fetchResponseStreamDecoder) streamDecode(startOffset int64) error {
-	defer func() {
-		//close(streamDecoder.messages)
-		streamDecoder.putMessage(nil)
-	}()
-
 	streamDecoder.offset = 0
 	streamDecoder.startOffset = startOffset
 	streamDecoder.hasOneMessage = false

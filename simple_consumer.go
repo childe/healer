@@ -481,7 +481,7 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 				}
 			}
 		} else {
-			logger.V(5).Info("consumed all messages from one fetch response", "currentOffset", c.offset)
+			logger.V(5).Info("got unexpected nil from message channel", "currentOffset", c.offset)
 			break
 		}
 	}
