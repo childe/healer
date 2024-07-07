@@ -132,8 +132,8 @@ func TestConsume(t *testing.T) {
 		}, nil).Build()
 		mockey.Mock((*SimpleConsumer).refreshPartiton).Return(nil).Build()
 		mockey.Mock((*SimpleConsumer).getLeaderBroker).Return(nil).Build()
-		initOffset := mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
-		getHighestAvailableAPIVersion := mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
+		mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
+		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
 		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
 			To(func(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
 				println("mock requestFetchStreamingly")
@@ -141,7 +141,7 @@ func TestConsume(t *testing.T) {
 			}).Build()
 
 		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, startOffset int64) error {
-			for i := 0; i < 10; i++ {
+			for i := 0; i < 5; i++ {
 				decoder.messages <- &FullMessage{
 					TopicName:   topic,
 					PartitionID: int32(partitionID),
@@ -161,29 +161,52 @@ func TestConsume(t *testing.T) {
 			return nil
 		}).Build()
 
-		simpleConsumer, err := NewSimpleConsumer(topic, int32(partitionID), config)
-
-		convey.So(err, convey.ShouldBeNil)
-		convey.So(simpleConsumer, convey.ShouldNotBeNil)
-
-		messages := make(chan *FullMessage, 1)
-		msg, err := simpleConsumer.Consume(-2, messages)
-		convey.So(err, convey.ShouldBeNil)
-		convey.So(msg, convey.ShouldNotBeNil)
-
-		count := 0
-		for count < 5 {
-			m := <-msg
-			println("msg:", string(m.Message.Value))
-			count++
+		type testCase struct {
+			messageChanLength            int
+			maxMessage                   int
+			requestFetchStreaminglyCount int
+			streamDecodeCount            int
 		}
+		for _, tc := range []testCase{
+			{
+				messageChanLength:            0,
+				maxMessage:                   1,
+				requestFetchStreaminglyCount: 1,
+				streamDecodeCount:            1,
+			},
+			{
+				messageChanLength:            0,
+				maxMessage:                   2,
+				requestFetchStreaminglyCount: 2, // incremental, add 1 for the first time
+				streamDecodeCount:            2, // incremental, add 1 for the first time
+			},
+			{
+				messageChanLength:            0,
+				maxMessage:                   5,
+				requestFetchStreaminglyCount: 4,
+				streamDecodeCount:            4,
+			},
+		} {
+			t.Logf("test case: %+v", tc)
+			simpleConsumer, err := NewSimpleConsumer(topic, int32(partitionID), config)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(simpleConsumer, convey.ShouldNotBeNil)
 
-		simpleConsumer.Stop()
+			messages := make(chan *FullMessage, tc.messageChanLength)
+			msg, err := simpleConsumer.Consume(-2, messages)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(msg, convey.ShouldNotBeNil)
 
-		convey.So(count, convey.ShouldEqual, 5)
-		convey.So(initOffset.Times(), convey.ShouldEqual, 1)
-		convey.So(getHighestAvailableAPIVersion.Times(), convey.ShouldEqual, 1)
-		convey.So(streamDecode.Times(), convey.ShouldEqual, 1)
-		convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, 1)
+			count := 0
+			for count < tc.maxMessage {
+				m := <-msg
+				println("msg:", string(m.Message.Value))
+				count++
+			}
+
+			convey.So(count, convey.ShouldEqual, tc.maxMessage)
+			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
+			convey.So(streamDecode.Times(), convey.ShouldEqual, tc.streamDecodeCount)
+		}
 	})
 }
