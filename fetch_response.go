@@ -442,7 +442,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 		return err
 	}
 	if n != headerLength {
-		return fmt.Errorf("could read enough bytes(8) from buffer channel for fetch response header. read %d bytes", n)
+		return fmt.Errorf("could read enough bytes of fetch response header. read %d bytes", n)
 	}
 
 	streamDecoder.correlationID = int32(binary.BigEndian.Uint32(buffer))

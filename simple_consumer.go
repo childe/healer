@@ -362,7 +362,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 	if c.offset == -1 || c.offset == -2 {
 		c.initOffset()
-		logger.V(3).Info("[%s][%d] offset: %d (after init offset)", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
+		logger.V(3).Info("offset after init offset", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 	}
 
 	if c.config.AutoCommit && c.config.GroupID != "" {
