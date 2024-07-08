@@ -20,8 +20,6 @@ type SimpleConsumer struct {
 	coordinator  *Broker
 	partition    PartitionMetadataInfo
 
-	stopWG sync.WaitGroup
-
 	ctx    context.Context
 	cancel context.CancelFunc
 
