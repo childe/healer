@@ -51,6 +51,7 @@ var groupConsumerCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		defer consumer.Close()
 
 		messages, err := consumer.Consume(nil)
 		if err != nil {
