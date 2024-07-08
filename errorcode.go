@@ -39,8 +39,8 @@ func getErrorFromErrorCode(errorcode int16) error {
 		return nil
 	}
 
-	if e, ok := AllError[errorcode]; ok {
-		return e
+	if _, ok := AllError[errorcode]; ok {
+		return KafkaError(errorcode)
 	}
 
 	return fmt.Errorf("unknown error code:%d", errorcode)

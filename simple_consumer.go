@@ -450,12 +450,12 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 				c.config.FetchMaxBytes *= 2
 				logger.Info("fetch.max.bytes is too small, double it", "new FetchMaxBytes", c.config.FetchMaxBytes)
 			}
-			if message.Error == AllError[1] {
+			if message.Error == KafkaError(1) {
 				c.offset, err = c.getOffset(c.fromBeginning)
 				if err != nil {
 					logger.Error(err, "failed to get offset", "topic", c.topic, "partitionID", c.partitionID)
 				}
-			} else if message.Error == AllError[6] {
+			} else if message.Error == KafkaError(6) {
 				c.leaderBroker.Close()
 				c.leaderBroker = nil
 				for !c.stop {
