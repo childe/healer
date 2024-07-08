@@ -13,7 +13,7 @@ func (kafkaError KafkaError) Error() string {
 	if e, ok := AllError[int16(kafkaError)]; ok {
 		return fmt.Sprintf("%s:%s", e.ErrorMsg, e.ErrorDesc)
 	}
-	return fmt.Sprintf("Unknown error code:%d", int16(kafkaError))
+	return fmt.Sprintf("unknown error code:%d", int16(kafkaError))
 }
 
 func (kafkaError KafkaError) IsRetriable() bool {
@@ -28,10 +28,6 @@ type Error struct {
 	ErrorMsg  string
 	ErrorDesc string
 	Retriable bool
-}
-
-func (healerError *Error) Error() string {
-	return healerError.ErrorDesc
 }
 
 func getErrorFromErrorCode(errorcode int16) error {
