@@ -200,6 +200,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 					return offset, err
 				}
 				streamDecoder.hasOneMessage = true
+			} else {
+				logger.Info("offset smaller than startOffset", "offset", "topic", topicName, "partition", partitionID, messageSet[i].Offset, "startOffset", streamDecoder.startOffset)
 			}
 		}
 	}
