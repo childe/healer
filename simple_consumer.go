@@ -275,7 +275,7 @@ func (c *SimpleConsumer) Stop() {
 	c.cancel()
 
 	c.stop = true
-	c.stopWG.Wait()
+	// c.stopWG.Wait()
 
 	close(c.messages)
 	if c.leaderBroker != nil {
@@ -387,103 +387,94 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 }
 
 func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
-	defer func() {
-		logger.V(5).Info("simple consumer stop consuming", "topic", c.topic, "partitionID", c.partitionID)
-		if c.wg != nil {
-			c.wg.Done()
+	wg := &sync.WaitGroup{}
+	for !c.stop {
+		innerMessages := make(chan *FullMessage, 1)
+
+		// fetch
+		logger.V(5).Info("send fetch request", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
+		r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
+		r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
+
+		reader, responseLength, err := c.leaderBroker.requestFetchStreamingly(r)
+		if err != nil {
+			if err == context.Canceled {
+				return
+			}
+			logger.Error(err, "failed to fetch")
 		}
-	}()
 
-	innerMessages := make(chan *FullMessage, 1)
+		//decode
+		frsd := fetchResponseStreamDecoder{
+			ctx:         c.ctx,
+			buffers:     reader,
+			messages:    innerMessages,
+			totalLength: int(responseLength) + 4,
+			version:     c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
+		}
 
-	go func() {
-		for !c.stop {
-			// fetch
-			logger.V(5).Info("send fetch request", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
-			r := NewFetchRequest(c.config.ClientID, c.config.FetchMaxWaitMS, c.config.FetchMinBytes)
-			r.addPartition(c.topic, c.partitionID, c.offset, c.config.FetchMaxBytes, c.partition.LeaderEpoch)
-
-			reader, responseLength, err := c.leaderBroker.requestFetchStreamingly(r)
-			if err != nil {
-				if err == context.Canceled {
-					return
-				}
-				logger.Error(err, "failed to fetch")
-			}
-
-			//decode
-			frsd := fetchResponseStreamDecoder{
-				ctx:         c.ctx,
-				buffers:     reader,
-				messages:    innerMessages,
-				totalLength: int(responseLength) + 4,
-				version:     c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
-			}
-
+		go func() {
 			if err := frsd.streamDecode(c.offset); err != nil {
 				if err == context.Canceled {
 					return
 				}
 				logger.Error(err, "failed to decode fetch response")
 			}
-		}
-	}()
+			close(innerMessages)
+		}()
 
-	// consume all messages from one fetch response
-	c.consumeMessages(innerMessages, messages)
-
+		// consume all messages from one fetch response
+		wg.Add(1)
+		go func() {
+			c.consumeMessages(innerMessages, messages)
+			wg.Done()
+		}()
+		wg.Wait()
+	}
 }
 
 func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messages chan *FullMessage) (err error) {
-	c.stopWG.Add(1)
-	defer func() {
-		// close(innerMessages)
-		c.stopWG.Done()
-	}()
-
 	var message *FullMessage
-	for !c.stop {
+	var ok bool
+	for {
 		select {
-		case message = <-innerMessages:
+		case message, ok = <-innerMessages:
 		case <-c.ctx.Done():
 			return c.ctx.Err()
 		}
-		if message != nil {
-			if message.Error != nil {
-				logger.Error(message.Error, "message error", "topic", c.topic, "partitionID", c.partitionID)
-				if message.Error == &maxBytesTooSmall {
-					// TODO user custom config, if maxBytesTooSmall, double it
-					c.config.FetchMaxBytes *= 2
-					logger.Info("fetch.max.bytes is too small, double it", "new FetchMaxBytes", c.config.FetchMaxBytes)
+		if !ok {
+			return nil
+		}
+		if message.Error != nil {
+			logger.Error(message.Error, "message error", "topic", c.topic, "partitionID", c.partitionID)
+			if message.Error == &maxBytesTooSmall {
+				// TODO user custom config, if maxBytesTooSmall, double it
+				c.config.FetchMaxBytes *= 2
+				logger.Info("fetch.max.bytes is too small, double it", "new FetchMaxBytes", c.config.FetchMaxBytes)
+			}
+			if message.Error == AllError[1] {
+				c.offset, err = c.getOffset(c.fromBeginning)
+				if err != nil {
+					logger.Error(err, "failed to get offset", "topic", c.topic, "partitionID", c.partitionID)
 				}
-				if message.Error == AllError[1] {
-					c.offset, err = c.getOffset(c.fromBeginning)
-					if err != nil {
-						logger.Error(err, "failed to get offset", "topic", c.topic, "partitionID", c.partitionID)
+			} else if message.Error == AllError[6] {
+				c.leaderBroker.Close()
+				c.leaderBroker = nil
+				for !c.stop {
+					if err = c.getLeaderBroker(); err != nil {
+						logger.Error(err, "failer to get leader", "topic", c.topic, "partitionID", c.partitionID)
+					} else {
+						break
 					}
-				} else if message.Error == AllError[6] {
-					c.leaderBroker.Close()
-					c.leaderBroker = nil
-					for !c.stop {
-						if err = c.getLeaderBroker(); err != nil {
-							logger.Error(err, "failer to get leader", "topic", c.topic, "partitionID", c.partitionID)
-						} else {
-							break
-						}
-					}
-				}
-			} else {
-				select {
-				case messages <- message:
-					c.offset = message.Message.Offset + 1
-				case <-c.ctx.Done():
-					return c.ctx.Err()
 				}
 			}
 		} else {
-			logger.V(5).Info("got unexpected nil from message channel", "currentOffset", c.offset)
-			break
+			select {
+			case messages <- message:
+				c.offset = message.Message.Offset + 1
+			case <-c.ctx.Done():
+				return c.ctx.Err()
+			}
 		}
 	}
-	return nil
 }

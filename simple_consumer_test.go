@@ -142,7 +142,10 @@ func TestConsume(t *testing.T) {
 
 		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, startOffset int64) error {
 			for i := 0; i < 5; i++ {
-				decoder.messages <- &FullMessage{
+				select {
+				case <-decoder.ctx.Done():
+					return nil
+				case decoder.messages <- &FullMessage{
 					TopicName:   topic,
 					PartitionID: int32(partitionID),
 					Error:       nil,
@@ -156,6 +159,7 @@ func TestConsume(t *testing.T) {
 						Key:         []byte("test"),
 						Value:       []byte(fmt.Sprintf("test-%d", i)),
 					},
+				}:
 				}
 			}
 			return nil
@@ -203,6 +207,8 @@ func TestConsume(t *testing.T) {
 				println("msg:", string(m.Message.Value))
 				count++
 			}
+			simpleConsumer.Stop()
+			print("stopped")
 
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
 			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
