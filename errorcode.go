@@ -43,7 +43,7 @@ func getErrorFromErrorCode(errorcode int16) error {
 		return e
 	}
 
-	return fmt.Errorf("Unknown error code:%d", errorcode)
+	return fmt.Errorf("unknown error code:%d", errorcode)
 }
 
 func init() {
