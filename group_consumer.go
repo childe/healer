@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -186,11 +185,11 @@ func (c *GroupConsumer) join() error {
 	if err != nil {
 		logger.Error(err, "join group failed", "groupId", c.config.GroupID)
 
-		if err == AllError[25] {
+		if err == KafkaError(25) {
 			c.memberID = ""
 		}
 
-		if err == io.EOF || err == AllError[15] || err == AllError[16] {
+		if err == io.EOF || err == KafkaError(15) || err == KafkaError(16) {
 			c.coordinatorAvailable = false
 		}
 
@@ -240,10 +239,10 @@ func (c *GroupConsumer) sync() error {
 
 	if err != nil {
 		logger.Error(err, "sync failed", "groupId", c.config.GroupID)
-		if err == AllError[15] || err == AllError[16] {
+		if err == KafkaError(15) || err == KafkaError(16) {
 			c.coordinatorAvailable = false
 		}
-		if err == AllError[25] {
+		if err == KafkaError(25) {
 			c.memberID = ""
 		}
 		return err
@@ -288,12 +287,14 @@ func (c *GroupConsumer) joinAndSync() error {
 			return nil
 		}
 
-		if err == AllError[22] || err == AllError[25] || err == AllError[27] {
+		if err == KafkaError(22) || err == KafkaError(25) || err == KafkaError(27) {
 			continue
 		}
-		if "*healer.Error" == reflect.TypeOf(err).String() && err.(*Error).Retriable {
-			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
-			continue
+		if _, ok := err.(KafkaError); ok {
+			if err.(KafkaError).IsRetriable() {
+				time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+				continue
+			}
 		}
 		return err
 	}
@@ -304,7 +305,7 @@ func (c *GroupConsumer) heartbeat() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if c.joined == false {
+	if !c.joined {
 		return nil
 	}
 
