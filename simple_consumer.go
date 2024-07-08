@@ -411,8 +411,9 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 			version:     c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
 		}
 
+		ctx, cancel := context.WithCancel(context.Background())
 		go func() {
-			if err := frsd.streamDecode(c.offset); err != nil {
+			if err := frsd.streamDecode(ctx, c.offset); err != nil {
 				if err == context.Canceled {
 					return
 				}
@@ -425,6 +426,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 		wg.Add(1)
 		go func() {
 			c.consumeMessages(innerMessages, messages)
+			cancel()
 			wg.Done()
 		}()
 		wg.Wait()
@@ -436,9 +438,9 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 	var ok bool
 	for {
 		select {
-		case message, ok = <-innerMessages:
 		case <-c.ctx.Done():
 			return c.ctx.Err()
+		case message, ok = <-innerMessages:
 		}
 		if !ok {
 			return nil
@@ -466,12 +468,13 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 					}
 				}
 			}
+			return
 		} else {
 			select {
-			case messages <- message:
-				c.offset = message.Message.Offset + 1
 			case <-c.ctx.Done():
 				return c.ctx.Err()
+			case messages <- message:
+				c.offset = message.Message.Offset + 1
 			}
 		}
 	}

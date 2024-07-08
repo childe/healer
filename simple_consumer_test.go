@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -140,7 +141,7 @@ func TestConsume(t *testing.T) {
 				return nil, 0, nil
 			}).Build()
 
-		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, startOffset int64) error {
+		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, ctx context.Context, startOffset int64) error {
 			for i := 0; i < 5; i++ {
 				select {
 				case <-decoder.ctx.Done():
@@ -213,6 +214,147 @@ func TestConsume(t *testing.T) {
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
 			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
 			convey.So(streamDecode.Times(), convey.ShouldEqual, tc.streamDecodeCount)
+		}
+	})
+}
+
+func TestConsumeOffsetOutofRange(t *testing.T) {
+	mockey.PatchConvey("TestConsume", t, func() {
+		topic := "testTopic"
+		partitionID := 1
+		config := map[string]interface{}{
+			"bootstrap.servers": "localhost:9092",
+			"client.id":         "healer-test",
+		}
+
+		mockey.Mock(NewBrokersWithConfig).Return(&Brokers{
+			brokersInfo: map[int32]*BrokerInfo{
+				1: {
+					NodeID: 0,
+					Host:   "localhost",
+					Port:   9092,
+				},
+			},
+		}, nil).Build()
+		mockey.Mock((*SimpleConsumer).refreshPartiton).Return(nil).Build()
+		mockey.Mock((*SimpleConsumer).getLeaderBroker).Return(nil).Build()
+		mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
+		getOffset := mockey.Mock((*SimpleConsumer).getOffset).Return(0, nil).Build()
+		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
+		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
+			To(func(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
+				println("mock requestFetchStreamingly")
+				return nil, 0, nil
+			}).Build()
+
+		streamDecode := mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, ctx context.Context, startOffset int64) error {
+			// put 2 normal messages, and then an error message, and then 2 normal messages
+			for i := 0; i < 2; i++ {
+				select {
+				case <-decoder.ctx.Done():
+					return nil
+				case decoder.messages <- &FullMessage{
+					TopicName:   topic,
+					PartitionID: int32(partitionID),
+					Error:       nil,
+					Message: &Message{
+						Offset:      1,
+						MessageSize: 10,
+						Crc:         1,
+						MagicByte:   1,
+						Attributes:  1,
+						Timestamp:   1,
+						Key:         []byte("test"),
+						Value:       []byte(fmt.Sprintf("test-%d", i)),
+					},
+				}:
+				}
+			}
+			decoder.messages <- &FullMessage{
+				TopicName:   topic,
+				PartitionID: int32(partitionID),
+				Error:       KafkaError(1),
+				Message: &Message{
+					Offset:      1,
+					MessageSize: 10,
+					Crc:         1,
+					MagicByte:   1,
+					Attributes:  1,
+					Timestamp:   1,
+					Key:         []byte("test"),
+					Value:       []byte("error message"),
+				},
+			}
+			for i := 0; i < 2; i++ {
+				select {
+				case <-decoder.ctx.Done():
+					return nil
+				case decoder.messages <- &FullMessage{
+					TopicName:   topic,
+					PartitionID: int32(partitionID),
+					Error:       nil,
+					Message: &Message{
+						Offset:      1,
+						MessageSize: 10,
+						Crc:         1,
+						MagicByte:   1,
+						Attributes:  1,
+						Timestamp:   1,
+						Key:         []byte("test"),
+						Value:       []byte(fmt.Sprintf("test-%d", i)),
+					},
+				}:
+				}
+			}
+			return nil
+		}).Build()
+
+		type testCase struct {
+			messageChanLength            int
+			maxMessage                   int
+			requestFetchStreaminglyCount int
+			streamDecodeCount            int
+			getOffsetCount               int
+		}
+		for _, tc := range []testCase{
+			{
+				messageChanLength:            0,
+				maxMessage:                   2,
+				requestFetchStreaminglyCount: 1,
+				streamDecodeCount:            1,
+				getOffsetCount:               0,
+			},
+			{
+				messageChanLength:            0,
+				maxMessage:                   5,
+				requestFetchStreaminglyCount: 4,
+				streamDecodeCount:            4,
+				getOffsetCount:               2,
+			},
+		} {
+			t.Logf("test case: %+v", tc)
+			simpleConsumer, err := NewSimpleConsumer(topic, int32(partitionID), config)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(simpleConsumer, convey.ShouldNotBeNil)
+
+			messages := make(chan *FullMessage, tc.messageChanLength)
+			msg, err := simpleConsumer.Consume(-2, messages)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(msg, convey.ShouldNotBeNil)
+
+			count := 0
+			for count < tc.maxMessage {
+				m := <-msg
+				println("msg:", string(m.Message.Value))
+				count++
+			}
+			simpleConsumer.Stop()
+			print("stopped")
+
+			convey.So(count, convey.ShouldEqual, tc.maxMessage)
+			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
+			convey.So(streamDecode.Times(), convey.ShouldEqual, tc.streamDecodeCount)
+			convey.So(getOffset.Times(), convey.ShouldEqual, tc.getOffsetCount)
 		}
 	})
 }

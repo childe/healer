@@ -452,7 +452,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 	return nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) streamDecode(startOffset int64) error {
+func (streamDecoder *fetchResponseStreamDecoder) streamDecode(ctx context.Context, startOffset int64) error {
 	streamDecoder.offset = 0
 	streamDecoder.startOffset = startOffset
 	streamDecoder.hasOneMessage = false
@@ -473,8 +473,13 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(startOffset int64)
 				Error:       err,
 				Message:     nil,
 			}
-			if err = streamDecoder.putMessage(msg); err != nil {
-				return err
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-streamDecoder.ctx.Done():
+				return streamDecoder.ctx.Err()
+			case streamDecoder.messages <- msg:
+				return nil
 			}
 		}
 	}
