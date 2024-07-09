@@ -95,6 +95,7 @@ func NewSimpleConsumer(topic string, partitionID int32, config interface{}) (*Si
 
 	brokerConfig := getBrokerConfigFromConsumerConfig(cfg)
 
+	logger.Info("create simple consumer", "topic", topic, "partitionID", partitionID, "config", cfg, "brokerConfig", brokerConfig)
 	brokers, err := NewBrokersWithConfig(cfg.BootstrapServers, brokerConfig)
 	if err != nil {
 		return nil, err
