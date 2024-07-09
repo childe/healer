@@ -92,7 +92,7 @@ type ConsumerConfig struct {
 	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
 	SessionTimeoutMS     int32  `json:"session.timeout.ms,string" mapstructure:"session.timeout.ms"`
 	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms,string" mapstructure:"fetch.max.wait.ms"`
-	FetchMaxBytes        int32  `json:"fetch.max.bytes,string" mapstructure:"fetch.max.bytes"`
+	FetchMaxBytes        int32  `json:"fetch.max.bytes,string" mapstructure:"fetch.max.bytes"` // if this is too small, healer will double it automatically
 	FetchMinBytes        int32  `json:"fetch.min.bytes,string" mapstructure:"fetch.min.bytes"`
 	FromBeginning        bool   `json:"from.beginning,string" mapstructure:"from.beginning"`
 	AutoCommit           bool   `json:"auto.commit,string" mapstructure:"auto.commit"`

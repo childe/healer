@@ -448,7 +448,6 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 		if message.Error != nil {
 			logger.Error(message.Error, "message error", "topic", c.topic, "partitionID", c.partitionID)
 			if message.Error == &maxBytesTooSmall {
-				// TODO user custom config, if maxBytesTooSmall, double it
 				c.config.FetchMaxBytes *= 2
 				logger.Info("fetch.max.bytes is too small, double it", "new FetchMaxBytes", c.config.FetchMaxBytes)
 			}
