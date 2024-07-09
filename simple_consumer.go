@@ -273,7 +273,6 @@ func (c *SimpleConsumer) Stop() {
 	c.cancel()
 
 	c.stop = true
-	// c.stopWG.Wait()
 
 	close(c.messages)
 	if c.leaderBroker != nil {
@@ -344,6 +343,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	for !c.stop {
 		if err = c.getLeaderBroker(); err != nil {
 			logger.Error(err, "get leader broker of [%s/%d] error: %s", "topic", c.topic, "partitionID", c.partitionID)
+			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 		} else {
 			break
 		}
@@ -462,6 +462,7 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 				for !c.stop {
 					if err = c.getLeaderBroker(); err != nil {
 						logger.Error(err, "failer to get leader", "topic", c.topic, "partitionID", c.partitionID)
+						time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 					} else {
 						break
 					}
