@@ -89,7 +89,7 @@ func (broker *Broker) createConn() error {
 	}
 	logger.V(5).Info("broker api versions", "broker", broker.address, "versions", versions)
 
-	if broker.config.SaslConfig != nil {
+	if broker.config.Sasl.Mechanism != "" {
 		if err := broker.sendSaslAuthenticate(); err != nil {
 			logger.Error(err, "sasl authenticate failed", "nodeID", broker.nodeID, "adddress", broker.address)
 			return err
@@ -100,8 +100,8 @@ func (broker *Broker) createConn() error {
 
 func newConn(address string, config *BrokerConfig) (net.Conn, error) {
 	dialer := net.Dialer{
-		Timeout:   time.Millisecond * time.Duration(config.ConnectTimeoutMS),
-		KeepAlive: time.Millisecond * time.Duration(config.KeepAliveMS),
+		Timeout:   time.Millisecond * time.Duration(config.Net.ConnectTimeoutMS),
+		KeepAlive: time.Millisecond * time.Duration(config.Net.KeepAliveMS),
 	}
 
 	if config.TLSEnabled {
@@ -147,11 +147,10 @@ func createTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 
 func (broker *Broker) sendSaslAuthenticate() error {
 	var (
-		clientID   = "healer-sals-authenticate"
-		saslConfig = broker.config.SaslConfig
-		mechanism  = saslConfig.SaslMechanism
-		user       = saslConfig.SaslUser
-		password   = saslConfig.SaslPassword
+		clientID  = "healer-sals-authenticate"
+		mechanism = broker.config.Sasl.Mechanism
+		user      = broker.config.Sasl.User
+		password  = broker.config.Sasl.Password
 	)
 
 	saslHandShakeRequest := NewSaslHandShakeRequest(clientID, mechanism)
@@ -201,10 +200,10 @@ func (broker *Broker) ensureOpen() (err error) {
 func (broker *Broker) Request(r Request) (ReadParser, error) {
 	broker.correlationID++
 	r.SetCorrelationID(broker.correlationID)
-	timeout := broker.config.TimeoutMS
-	if len(broker.config.TimeoutMSForEachAPI) > int(r.API()) {
-		if broker.config.TimeoutMSForEachAPI[r.API()] > 0 {
-			timeout = broker.config.TimeoutMSForEachAPI[r.API()]
+	timeout := broker.config.Net.TimeoutMS
+	if len(broker.config.Net.TimeoutMSForEachAPI) > int(r.API()) {
+		if broker.config.Net.TimeoutMSForEachAPI[r.API()] > 0 {
+			timeout = broker.config.Net.TimeoutMSForEachAPI[r.API()]
 		}
 	}
 	version := broker.getHighestAvailableAPIVersion(r.API())
@@ -340,9 +339,9 @@ func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest) (r io.
 	fetchRequest.SetCorrelationID(broker.correlationID)
 	payload := fetchRequest.Encode(broker.getHighestAvailableAPIVersion(API_FetchRequest))
 
-	timeout := broker.config.TimeoutMS
-	if len(broker.config.TimeoutMSForEachAPI) > int(fetchRequest.API()) {
-		timeout = broker.config.TimeoutMSForEachAPI[fetchRequest.API()]
+	timeout := broker.config.Net.TimeoutMS
+	if len(broker.config.Net.TimeoutMSForEachAPI) > int(fetchRequest.API()) {
+		timeout = broker.config.Net.TimeoutMSForEachAPI[fetchRequest.API()]
 	}
 
 	return broker.requestStreamingly(payload, timeout)

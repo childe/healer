@@ -23,8 +23,8 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 		timeoutMS, err := cmd.Flags().GetInt32("timeout.ms")
 
 		config := healer.DefaultBrokerConfig()
-		config.NetConfig.TimeoutMSForEachAPI = make([]int, 68)
-		config.NetConfig.TimeoutMSForEachAPI[healer.API_ListPartitionReassignments] = int(timeoutMS)
+		config.Net.TimeoutMSForEachAPI = make([]int, 68)
+		config.Net.TimeoutMSForEachAPI[healer.API_ListPartitionReassignments] = int(timeoutMS)
 		bs, err := healer.NewBrokersWithConfig(brokers, config)
 
 		if err != nil {

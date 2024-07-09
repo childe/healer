@@ -23,14 +23,14 @@ type TLSConfig struct {
 }
 
 type SaslConfig struct {
-	SaslMechanism string `json:"sasl.mechanism" mapstructure:"sasl.mechanism"`
-	SaslUser      string `json:"sasl.user" mapstructure:"sasl.user"`
-	SaslPassword  string `json:"sasl.password" mapstructure:"sasl.password"`
+	Mechanism string `json:"mechanism" mapstructure:"mechanism"`
+	User      string `json:"user" mapstructure:"user"`
+	Password  string `json:"password" mapstructure:"password"`
 }
 
 type BrokerConfig struct {
-	NetConfig
-	*SaslConfig
+	Net                       NetConfig
+	Sasl                      SaslConfig
 	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 	TLSEnabled                bool       `json:"tls.enabled,string" mapstructure:"tls.enabled"`
 	TLS                       *TLSConfig `json:"tls" mapstructure:"tls"`
@@ -38,7 +38,7 @@ type BrokerConfig struct {
 
 func DefaultBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
-		NetConfig: NetConfig{
+		Net: NetConfig{
 			ConnectTimeoutMS:    10000,
 			TimeoutMS:           30000,
 			TimeoutMSForEachAPI: make([]int, 0),
@@ -51,10 +51,10 @@ func DefaultBrokerConfig() *BrokerConfig {
 
 func getBrokerConfigFromConsumerConfig(c ConsumerConfig) *BrokerConfig {
 	b := DefaultBrokerConfig()
-	b.NetConfig = c.NetConfig
+	b.Net = c.Net
 	b.TLSEnabled = c.TLSEnabled
 	b.TLS = c.TLS
-	b.SaslConfig = c.SaslConfig
+	b.Sasl = c.Sasl
 
 	if c.MetadataRefreshIntervalMS > 0 {
 		b.MetadataRefreshIntervalMS = c.MetadataRefreshIntervalMS
@@ -64,10 +64,10 @@ func getBrokerConfigFromConsumerConfig(c ConsumerConfig) *BrokerConfig {
 
 func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
 	b := DefaultBrokerConfig()
-	b.NetConfig = p.NetConfig
+	b.Net = p.NetConfig
 	b.TLSEnabled = p.TLSEnabled
 	b.TLS = p.TLS
-	b.SaslConfig = p.SaslConfig
+	b.Sasl = p.SaslConfig
 	if p.MetadataRefreshIntervalMS > 0 {
 		b.MetadataRefreshIntervalMS = p.MetadataRefreshIntervalMS
 	}
@@ -83,8 +83,8 @@ func (c *BrokerConfig) checkValid() error {
 }
 
 type ConsumerConfig struct {
-	NetConfig
-	*SaslConfig
+	Net                  NetConfig
+	Sasl                 SaslConfig
 	BootstrapServers     string `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
 	ClientID             string `json:"client.id" mapstructure:"client.id"`
 	GroupID              string `json:"group.id" mapstructure:"group.id"`
@@ -107,7 +107,7 @@ type ConsumerConfig struct {
 
 func DefaultConsumerConfig() ConsumerConfig {
 	c := ConsumerConfig{
-		NetConfig: NetConfig{
+		Net: NetConfig{
 			ConnectTimeoutMS:    30000,
 			TimeoutMS:           30000,
 			TimeoutMSForEachAPI: make([]int, 0),
@@ -127,14 +127,14 @@ func DefaultConsumerConfig() ConsumerConfig {
 		OffsetsStorage:       1,
 	}
 
-	if c.TimeoutMSForEachAPI == nil {
-		c.TimeoutMSForEachAPI = make([]int, 68)
-		for i := range c.TimeoutMSForEachAPI {
-			c.TimeoutMSForEachAPI[i] = c.TimeoutMS
+	if c.Net.TimeoutMSForEachAPI == nil {
+		c.Net.TimeoutMSForEachAPI = make([]int, 68)
+		for i := range c.Net.TimeoutMSForEachAPI {
+			c.Net.TimeoutMSForEachAPI[i] = c.Net.TimeoutMS
 		}
-		c.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
-		c.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
-		c.TimeoutMSForEachAPI[API_FetchRequest] = c.TimeoutMS + int(c.FetchMaxWaitMS)
+		c.Net.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
+		c.Net.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
+		c.Net.TimeoutMSForEachAPI[API_FetchRequest] = c.Net.TimeoutMS + int(c.FetchMaxWaitMS)
 	}
 
 	return c
@@ -182,7 +182,7 @@ func (config *ConsumerConfig) checkValid() error {
 // ProducerConfig is the config for producer
 type ProducerConfig struct {
 	NetConfig
-	*SaslConfig
+	SaslConfig
 	BootstrapServers         string `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
 	ClientID                 string `json:"client.id" mapstructure:"client.id"`
 	Acks                     int16  `json:"acks,string" mapstructure:"acks"`

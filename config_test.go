@@ -19,6 +19,9 @@ func TestCreateConsumerConfig(t *testing.T) {
 		configMap := map[string]interface{}{
 			"bootstrap.servers": "localhost:9092",
 			"group.id":          "test",
+			"sasl": map[string]interface{}{
+				"mechanism": "plain",
+			},
 		}
 		concumerConfig, err := createConsumerConfig(configMap)
 		convey.So(err, convey.ShouldBeNil)
@@ -26,6 +29,7 @@ func TestCreateConsumerConfig(t *testing.T) {
 		convey.So(concumerConfig.BootstrapServers, convey.ShouldEqual, "localhost:9092")
 		convey.So(concumerConfig.GroupID, convey.ShouldEqual, "test")
 		convey.So(concumerConfig.RetryBackOffMS, convey.ShouldEqual, 100)
+		convey.So(concumerConfig.Sasl.Mechanism, convey.ShouldEqual, "plain")
 
 		convey.So(defaultConsumerConfig.BootstrapServers, convey.ShouldEqual, "")
 	})
