@@ -19,6 +19,7 @@ func TestCreateConsumerConfig(t *testing.T) {
 		configMap := map[string]interface{}{
 			"bootstrap.servers": "localhost:9092",
 			"group.id":          "test",
+			"mechanism":         "plain",
 			"sasl": map[string]interface{}{
 				"mechanism": "plain",
 			},

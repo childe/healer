@@ -29,8 +29,8 @@ type SaslConfig struct {
 }
 
 type BrokerConfig struct {
-	Net                       NetConfig
-	Sasl                      SaslConfig
+	Net                       NetConfig  `json:"net" mapstructure:"net"`
+	Sasl                      SaslConfig `json:"sasl" mapstructure:"sasl"`
 	MetadataRefreshIntervalMS int        `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 	TLSEnabled                bool       `json:"tls.enabled,string" mapstructure:"tls.enabled"`
 	TLS                       *TLSConfig `json:"tls" mapstructure:"tls"`
@@ -84,20 +84,20 @@ func (c *BrokerConfig) checkValid() error {
 
 type ConsumerConfig struct {
 	Net                  NetConfig
-	Sasl                 SaslConfig
-	BootstrapServers     string `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
-	ClientID             string `json:"client.id" mapstructure:"client.id"`
-	GroupID              string `json:"group.id" mapstructure:"group.id"`
-	RetryBackOffMS       int    `json:"retry.backoff.ms,string" mapstructure:"retry.backoff.ms"`
-	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
-	SessionTimeoutMS     int32  `json:"session.timeout.ms,string" mapstructure:"session.timeout.ms"`
-	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms,string" mapstructure:"fetch.max.wait.ms"`
-	FetchMaxBytes        int32  `json:"fetch.max.bytes,string" mapstructure:"fetch.max.bytes"` // if this is too small, healer will double it automatically
-	FetchMinBytes        int32  `json:"fetch.min.bytes,string" mapstructure:"fetch.min.bytes"`
-	FromBeginning        bool   `json:"from.beginning,string" mapstructure:"from.beginning"`
-	AutoCommit           bool   `json:"auto.commit,string" mapstructure:"auto.commit"`
-	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,string" mapstructure:"auto.commit.interval.ms"`
-	OffsetsStorage       int    `json:"offsets.storage,string" mapstructure:"offsets.storage"`
+	Sasl                 SaslConfig `mapstructure:",squash"`
+	BootstrapServers     string     `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
+	ClientID             string     `json:"client.id" mapstructure:"client.id"`
+	GroupID              string     `json:"group.id" mapstructure:"group.id"`
+	RetryBackOffMS       int        `json:"retry.backoff.ms,string" mapstructure:"retry.backoff.ms"`
+	MetadataMaxAgeMS     int        `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
+	SessionTimeoutMS     int32      `json:"session.timeout.ms,string" mapstructure:"session.timeout.ms"`
+	FetchMaxWaitMS       int32      `json:"fetch.max.wait.ms,string" mapstructure:"fetch.max.wait.ms"`
+	FetchMaxBytes        int32      `json:"fetch.max.bytes,string" mapstructure:"fetch.max.bytes"` // if this is too small, healer will double it automatically
+	FetchMinBytes        int32      `json:"fetch.min.bytes,string" mapstructure:"fetch.min.bytes"`
+	FromBeginning        bool       `json:"from.beginning,string" mapstructure:"from.beginning"`
+	AutoCommit           bool       `json:"auto.commit,string" mapstructure:"auto.commit"`
+	AutoCommitIntervalMS int        `json:"auto.commit.interval.ms,string" mapstructure:"auto.commit.interval.ms"`
+	OffsetsStorage       int        `json:"offsets.storage,string" mapstructure:"offsets.storage"`
 
 	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 
