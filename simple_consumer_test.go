@@ -137,7 +137,7 @@ func TestConsume(t *testing.T) {
 		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
 		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
 			To(func(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
-				println("mock requestFetchStreamingly")
+				t.Log("mock requestFetchStreamingly")
 				return nil, 0, nil
 			}).Build()
 
@@ -205,11 +205,11 @@ func TestConsume(t *testing.T) {
 			count := 0
 			for count < tc.maxMessage {
 				m := <-msg
-				println("msg:", string(m.Message.Value))
+				t.Logf("msg: %s", string(m.Message.Value))
 				count++
 			}
 			simpleConsumer.Stop()
-			print("stopped")
+			t.Log("stopped")
 
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
 			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
@@ -218,8 +218,8 @@ func TestConsume(t *testing.T) {
 	})
 }
 
-func TestConsumeOffsetOutofRange(t *testing.T) {
-	mockey.PatchConvey("TestConsume", t, func() {
+func TestOffsetOutofRangeConsume(t *testing.T) {
+	mockey.PatchConvey("TestOffsetOutofRangeConsume", t, func() {
 		topic := "testTopic"
 		partitionID := 1
 		config := map[string]interface{}{
@@ -243,7 +243,7 @@ func TestConsumeOffsetOutofRange(t *testing.T) {
 		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(10).Build()
 		requestFetchStreamingly := mockey.Mock((*Broker).requestFetchStreamingly).
 			To(func(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
-				println("mock requestFetchStreamingly")
+				t.Log("mock requestFetchStreamingly")
 				return nil, 0, nil
 			}).Build()
 
@@ -314,7 +314,7 @@ func TestConsumeOffsetOutofRange(t *testing.T) {
 			maxMessage                   int
 			requestFetchStreaminglyCount int
 			streamDecodeCount            int
-			getOffsetCount               int
+			getOffsetCount               []int
 		}
 		for _, tc := range []testCase{
 			{
@@ -322,14 +322,14 @@ func TestConsumeOffsetOutofRange(t *testing.T) {
 				maxMessage:                   2,
 				requestFetchStreaminglyCount: 1,
 				streamDecodeCount:            1,
-				getOffsetCount:               0,
+				getOffsetCount:               []int{0, 1},
 			},
 			{
 				messageChanLength:            0,
 				maxMessage:                   5,
 				requestFetchStreaminglyCount: 4,
 				streamDecodeCount:            4,
-				getOffsetCount:               2,
+				getOffsetCount:               []int{2, 3},
 			},
 		} {
 			t.Logf("test case: %+v", tc)
@@ -345,16 +345,16 @@ func TestConsumeOffsetOutofRange(t *testing.T) {
 			count := 0
 			for count < tc.maxMessage {
 				m := <-msg
-				println("msg:", string(m.Message.Value))
+				t.Logf("msg: %s", string(m.Message.Value))
 				count++
 			}
 			simpleConsumer.Stop()
-			print("stopped")
+			t.Log("stopped")
 
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
 			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
 			convey.So(streamDecode.Times(), convey.ShouldEqual, tc.streamDecodeCount)
-			convey.So(getOffset.Times(), convey.ShouldEqual, tc.getOffsetCount)
+			convey.So(getOffset.Times(), convey.ShouldBeBetween, tc.getOffsetCount[0]-1, tc.getOffsetCount[1]+1)
 		}
 	})
 }

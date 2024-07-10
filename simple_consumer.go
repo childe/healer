@@ -20,10 +20,11 @@ type SimpleConsumer struct {
 	coordinator  *Broker
 	partition    PartitionMetadataInfo
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx           context.Context
+	cancel        context.CancelFunc
+	stop          bool
+	consumeLoopWg sync.WaitGroup
 
-	stop           bool
 	fromBeginning  bool
 	offset         int64
 	offsetCommited int64
@@ -275,10 +276,12 @@ func (c *SimpleConsumer) Stop() {
 
 	c.stop = true
 
-	close(c.messages)
 	if c.leaderBroker != nil {
 		c.leaderBroker.Close()
 	}
+
+	c.consumeLoopWg.Wait()
+	close(c.messages)
 }
 
 // call this when simpleConsumer NOT belong to GroupConsumer, or call BelongTo.Commit()
@@ -386,6 +389,9 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 }
 
 func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
+	c.consumeLoopWg.Add(1)
+	defer c.consumeLoopWg.Done()
+
 	wg := &sync.WaitGroup{}
 	for !c.stop {
 		innerMessages := make(chan *FullMessage, 1)
