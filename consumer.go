@@ -20,7 +20,7 @@ type Consumer struct {
 // NewConsumer creates a new consumer instance
 func NewConsumer(config interface{}, topics ...string) (*Consumer, error) {
 	cfg, err := createConsumerConfig(config)
-	logger.Info("create group consumer", "origin_config", config, "final_config", cfg)
+	logger.Info("create consumer", "origin_config", config, "final_config", cfg)
 	if err != nil {
 		return nil, err
 	}

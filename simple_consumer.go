@@ -90,7 +90,7 @@ func NewSimpleConsumerWithBrokers(topic string, partitionID int32, config Consum
 // NewSimpleConsumer create a simple consumer
 func NewSimpleConsumer(topic string, partitionID int32, config interface{}) (*SimpleConsumer, error) {
 	cfg, err := createConsumerConfig(config)
-	logger.Info("create group consumer", "origin_config", config, "final_config", cfg)
+	logger.Info("create simple consumer", "origin_config", config, "final_config", cfg)
 	if err != nil {
 		return nil, err
 	}
