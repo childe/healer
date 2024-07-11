@@ -80,6 +80,23 @@ func (requestHeader *RequestHeader) Encode(payload []byte) int {
 	return offset
 }
 
+// DecodeRequestHeader decodes request header from []byte, just used in test cases
+func DecodeRequestHeader(payload []byte) (requestHeader RequestHeader, offset int) {
+	requestHeader.APIKey = binary.BigEndian.Uint16(payload)
+	offset += 2
+	requestHeader.APIVersion = binary.BigEndian.Uint16(payload[offset:])
+	offset += 2
+
+	requestHeader.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
+
+	clientIDLength := binary.BigEndian.Uint16(payload[offset:])
+	offset += 2
+	requestHeader.ClientID = string(payload[offset : offset+int(clientIDLength)])
+	offset += int(clientIDLength)
+	return
+}
+
 // API returns APiKey of the request(which hold the request header)
 func (requestHeader *RequestHeader) API() uint16 {
 	return requestHeader.APIKey

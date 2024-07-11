@@ -61,24 +61,25 @@ func (c AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 // NewAlterConfigsRequest create a new AlterConfigsRequest
 func NewAlterConfigsRequest(clientID string) AlterConfigsRequest {
 	requestHeader := &RequestHeader{
-		APIKey:     API_AlterConfigs,
-		ClientID:   clientID,
+		APIKey:   API_AlterConfigs,
+		ClientID: clientID,
 	}
 	return AlterConfigsRequest{requestHeader, nil, false}
 }
 
 // SetValidateOnly set validateOnly in request
-func (r AlterConfigsRequest) SetValidateOnly(validateOnly bool) {
+func (r *AlterConfigsRequest) SetValidateOnly(validateOnly bool) *AlterConfigsRequest {
 	r.validateOnly = validateOnly
+	return r
 }
 
 // AddConfig add new config entry to request
-func (r AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configName, configValue string) error {
+func (r *AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configName, configValue string) error {
 	for i, res := range r.Resources {
-		if res.ResourceType == res.ResourceType && res.ResourceName == resourceName {
+		if res.ResourceType == resourceType && res.ResourceName == resourceName {
 			for _, c := range res.ConfigEntries {
 				if c.ConfigName == configName {
-					if c.ConfigValue != c.ConfigValue {
+					if c.ConfigValue != configValue {
 						return fmt.Errorf("config %s already exist with different value", configName)
 					}
 					return nil
@@ -106,7 +107,7 @@ func (r AlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configN
 	return nil
 }
 
-func (r AlterConfigsRequest) length() int {
+func (r *AlterConfigsRequest) length() int {
 	l := r.RequestHeader.length()
 
 	l += 4
@@ -143,7 +144,7 @@ func (r AlterConfigsRequest) Encode(version uint16) []byte {
 		offset += r.encode(payload[offset:])
 	}
 
-	if r.validateOnly == true {
+	if r.validateOnly {
 		payload[offset] = 1
 	} else {
 		payload[offset] = 0

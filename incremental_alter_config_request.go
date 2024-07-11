@@ -73,17 +73,18 @@ func NewIncrementalAlterConfigsRequest(clientID string) IncrementalAlterConfigsR
 }
 
 // SetValidateOnly set validateOnly in request
-func (r IncrementalAlterConfigsRequest) SetValidateOnly(validateOnly bool) {
+func (r *IncrementalAlterConfigsRequest) SetValidateOnly(validateOnly bool) *IncrementalAlterConfigsRequest {
 	r.ValidateOnly = validateOnly
+	return r
 }
 
 // AddConfig add new config entry to request
 func (r *IncrementalAlterConfigsRequest) AddConfig(resourceType uint8, resourceName, configName, configValue string) error {
 	for i, res := range r.Resources {
-		if res.ResourceType == res.ResourceType && res.ResourceName == resourceName {
+		if res.ResourceType == resourceType && res.ResourceName == resourceName {
 			for _, c := range res.Entries {
 				if c.Name == configName {
-					if c.Value != c.Value {
+					if c.Value != configValue {
 						return fmt.Errorf("config %s already exist with different value", configName)
 					}
 					return nil
@@ -151,10 +152,50 @@ func (r IncrementalAlterConfigsRequest) Encode(version uint16) []byte {
 		offset += r.encode(payload[offset:])
 	}
 
-	if r.ValidateOnly == true {
+	if r.ValidateOnly {
 		payload[offset] = 1
 	} else {
 		payload[offset] = 0
 	}
 	return payload
+}
+
+// DecodeIncrementalAlterConfigsRequest decodes []byte to IncrementalAlterConfigsRequest, just used in test cases
+func DecodeIncrementalAlterConfigsRequest(payload []byte, version uint16) (r IncrementalAlterConfigsRequest) {
+	header, offset := DecodeRequestHeader(payload[4:])
+	r.RequestHeader = &header
+	offset += 4
+
+	count := binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
+
+	r.Resources = make([]IncrementalAlterConfigsRequestResource, count)
+	for i := range r.Resources {
+		r.Resources[i].ResourceType = payload[offset]
+		offset++
+		resourceNameLength := binary.BigEndian.Uint16(payload[offset:])
+		offset += 2
+		r.Resources[i].ResourceName = string(payload[offset : offset+int(resourceNameLength)])
+		offset += int(resourceNameLength)
+
+		entryCount := binary.BigEndian.Uint32(payload[offset:])
+		offset += 4
+		r.Resources[i].Entries = make([]IncrementalAlterConfigsRequestConfigEntry, entryCount)
+		for j := range r.Resources[i].Entries {
+			nameLength := binary.BigEndian.Uint16(payload[offset:])
+			offset += 2
+			r.Resources[i].Entries[j].Name = string(payload[offset : offset+int(nameLength)])
+			offset += int(nameLength)
+
+			r.Resources[i].Entries[j].Operation = int8(payload[offset])
+			offset++
+
+			valueLength := binary.BigEndian.Uint16(payload[offset:])
+			offset += 2
+			r.Resources[i].Entries[j].Value = string(payload[offset : offset+int(valueLength)])
+			offset += int(valueLength)
+		}
+	}
+	r.ValidateOnly = payload[offset] == 1
+	return r
 }
