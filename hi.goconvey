@@ -1,0 +1,4 @@
+-v
+-gcflags=all=-N -l
+-timeout=2s
+-count=1
