@@ -34,20 +34,21 @@ type Producer struct {
 // config can be a map[string]interface{} or a ProducerConfig,
 // use DefaultProducerConfig if config is nil
 func NewProducer(topic string, config interface{}) (*Producer, error) {
-	producerConfig, err := createProducerConfig(config)
+	cfg, err := createProducerConfig(config)
+	logger.Info("create producer", "origin_config", config, "final_config", cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	p := &Producer{
-		config:               producerConfig,
+		config:               cfg,
 		topic:                topic,
 		pidToSimpleProducers: make(map[int32]*SimpleProducer),
 		leaderBrokersMapping: make(map[int32]*Broker),
 	}
 
-	brokerConfig := getBrokerConfigFromProducerConfig(&producerConfig)
-	p.brokers, err = NewBrokersWithConfig(producerConfig.BootstrapServers, brokerConfig)
+	brokerConfig := getBrokerConfigFromProducerConfig(&cfg)
+	p.brokers, err = NewBrokersWithConfig(cfg.BootstrapServers, brokerConfig)
 	if err != nil {
 		err = fmt.Errorf("init brokers error: %w", err)
 		return nil, err
@@ -63,7 +64,7 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 	p.ctx = context.WithValue(ctx, parentProducerKey, p)
 
 	go func() {
-		for range time.NewTicker(time.Duration(producerConfig.MetadataMaxAgeMS) * time.Millisecond).C {
+		for range time.NewTicker(time.Duration(cfg.MetadataMaxAgeMS) * time.Millisecond).C {
 			err := p.updateCurrentSimpleProducer()
 			if err != nil {
 				logger.Error(err, "refresh simple producer failed", "topic", p.topic)
@@ -85,7 +86,6 @@ func (p *Producer) updateCurrentSimpleProducer() error {
 	}
 	p.topicMeta = metadataResponse.TopicMetadatas[0]
 
-	rand.Seed(time.Now().UnixNano())
 	validPartitionID := make([]int32, 0)
 	for _, partition := range p.topicMeta.PartitionMetadatas {
 		if partition.PartitionErrorCode == 0 {

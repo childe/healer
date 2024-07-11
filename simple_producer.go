@@ -67,20 +67,21 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 // config can be a map[string]interface{} or a ProducerConfig,
 // use DefaultProducerConfig if config is nil
 func NewSimpleProducer(ctx context.Context, topic string, partition int32, config interface{}) (*SimpleProducer, error) {
-	producerConfig, err := createProducerConfig(config)
+	cfg, err := createProducerConfig(config)
+	logger.Info("create simple producer", "origin_config", config, "final_config", cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	p := &SimpleProducer{
-		config:    &producerConfig,
+		config:    &cfg,
 		topic:     topic,
 		partition: partition,
 
-		closeChan: make(chan struct{}, 0),
+		closeChan: make(chan struct{}),
 	}
 
-	switch producerConfig.CompressionType {
+	switch cfg.CompressionType {
 	case "none":
 		p.compressionValue = COMPRESSION_NONE
 	case "gzip":
@@ -92,9 +93,9 @@ func NewSimpleProducer(ctx context.Context, topic string, partition int32, confi
 	default:
 		return nil, fmt.Errorf("unknown compress type")
 	}
-	p.compressor = NewCompressor(producerConfig.CompressionType)
+	p.compressor = NewCompressor(cfg.CompressionType)
 
-	p.messageSet = make([]*Message, 0, producerConfig.MessageMaxCount)
+	p.messageSet = make([]*Message, 0, cfg.MessageMaxCount)
 
 	leader := ctx.Value(leaderKey)
 	if leader != nil {
