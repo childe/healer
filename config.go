@@ -64,10 +64,10 @@ func getBrokerConfigFromConsumerConfig(c ConsumerConfig) *BrokerConfig {
 
 func getBrokerConfigFromProducerConfig(p *ProducerConfig) *BrokerConfig {
 	b := DefaultBrokerConfig()
-	b.Net = p.NetConfig
+	b.Net = p.Net
 	b.TLSEnabled = p.TLSEnabled
 	b.TLS = p.TLS
-	b.Sasl = p.SaslConfig
+	b.Sasl = p.Sasl
 	if p.MetadataRefreshIntervalMS > 0 {
 		b.MetadataRefreshIntervalMS = p.MetadataRefreshIntervalMS
 	}
@@ -83,8 +83,8 @@ func (c *BrokerConfig) checkValid() error {
 }
 
 type ConsumerConfig struct {
-	Net                  NetConfig
-	Sasl                 SaslConfig `mapstructure:",squash"`
+	Net                  NetConfig  `json:"net" mapstructure:"net"`
+	Sasl                 SaslConfig `json:"sasl" mapstructure:"sasl"`
 	BootstrapServers     string     `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
 	ClientID             string     `json:"client.id" mapstructure:"client.id"`
 	GroupID              string     `json:"group.id" mapstructure:"group.id"`
@@ -181,18 +181,18 @@ func (config *ConsumerConfig) checkValid() error {
 
 // ProducerConfig is the config for producer
 type ProducerConfig struct {
-	NetConfig
-	SaslConfig
-	BootstrapServers         string `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
-	ClientID                 string `json:"client.id" mapstructure:"client.id"`
-	Acks                     int16  `json:"acks,string" mapstructure:"acks"`
-	CompressionType          string `json:"compress.type" mapstructure:"compress.type"`
-	BatchSize                int    `json:"batch.size,string" mapstructure:"batch.size"`
-	MessageMaxCount          int    `json:"message.max.count,string" mapstructure:"message.max.count"`
-	FlushIntervalMS          int    `json:"flush.interval.ms,string" mapstructure:"flush.interval.ms,string"`
-	MetadataMaxAgeMS         int    `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
-	FetchTopicMetaDataRetrys int    `json:"fetch.topic.metadata.retrys,string" mapstructure:"fetch.topic.metadata.retrys"`
-	ConnectionsMaxIdleMS     int    `json:"connections.max.idle.ms,string" mapstructure:"connections.max.idle.ms"`
+	Net                      NetConfig  `json:"net" mapstructure:"net"`
+	Sasl                     SaslConfig `json:"sasl" mapstructure:"sasl"`
+	BootstrapServers         string     `json:"bootstrap.servers" mapstructure:"bootstrap.servers"`
+	ClientID                 string     `json:"client.id" mapstructure:"client.id"`
+	Acks                     int16      `json:"acks,string" mapstructure:"acks"`
+	CompressionType          string     `json:"compress.type" mapstructure:"compress.type"`
+	BatchSize                int        `json:"batch.size,string" mapstructure:"batch.size"`
+	MessageMaxCount          int        `json:"message.max.count,string" mapstructure:"message.max.count"`
+	FlushIntervalMS          int        `json:"flush.interval.ms,string" mapstructure:"flush.interval.ms,string"`
+	MetadataMaxAgeMS         int        `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
+	FetchTopicMetaDataRetrys int        `json:"fetch.topic.metadata.retrys,string" mapstructure:"fetch.topic.metadata.retrys"`
+	ConnectionsMaxIdleMS     int        `json:"connections.max.idle.ms,string" mapstructure:"connections.max.idle.ms"`
 
 	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 
@@ -211,7 +211,7 @@ type ProducerConfig struct {
 // DefaultProducerConfig returns a default ProducerConfig
 func DefaultProducerConfig() ProducerConfig {
 	return ProducerConfig{
-		NetConfig: NetConfig{
+		Net: NetConfig{
 			ConnectTimeoutMS:    30000,
 			TimeoutMS:           30000,
 			TimeoutMSForEachAPI: make([]int, 0),
