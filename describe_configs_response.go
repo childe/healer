@@ -79,15 +79,17 @@ type describeConfigsResponseConfigEntry struct {
 }
 
 func decodeToDescribeConfigsResponseConfigEntry(payload []byte) (r describeConfigsResponseConfigEntry, offset int) {
-	l := int(binary.BigEndian.Uint16(payload))
+	l := int(int16(binary.BigEndian.Uint16(payload)))
 	offset += 2
 	r.ConfigName = string(payload[offset : offset+l])
 	offset += l
 
-	l = int(binary.BigEndian.Uint16(payload[offset:]))
+	l = int(int16(binary.BigEndian.Uint16(payload[offset:])))
 	offset += 2
-	r.ConfigValue = string(payload[offset : offset+l])
-	offset += l
+	if l > 0 {
+		r.ConfigValue = string(payload[offset : offset+l])
+		offset += l
+	}
 
 	r.ReadOnly = payload[offset] != 0
 	offset++
