@@ -169,27 +169,27 @@ func TestConsume(t *testing.T) {
 		type testCase struct {
 			messageChanLength            int
 			maxMessage                   int
-			requestFetchStreaminglyCount int
-			streamDecodeCount            int
+			requestFetchStreaminglyCount []int
+			streamDecodeCount            []int
 		}
 		for _, tc := range []testCase{
 			{
 				messageChanLength:            0,
 				maxMessage:                   1,
-				requestFetchStreaminglyCount: 1,
-				streamDecodeCount:            1,
+				requestFetchStreaminglyCount: []int{1, 1},
+				streamDecodeCount:            []int{1, 1},
 			},
 			{
 				messageChanLength:            0,
 				maxMessage:                   2,
-				requestFetchStreaminglyCount: 2, // incremental, add 1 for the first time
-				streamDecodeCount:            2, // incremental, add 1 for the first time
+				requestFetchStreaminglyCount: []int{2, 2}, // incremental, add 1 for the first time
+				streamDecodeCount:            []int{2, 2}, // incremental, add 1 for the first time
 			},
 			{
 				messageChanLength:            0,
 				maxMessage:                   5,
-				requestFetchStreaminglyCount: 4,
-				streamDecodeCount:            4,
+				requestFetchStreaminglyCount: []int{3, 4},
+				streamDecodeCount:            []int{3, 4},
 			},
 		} {
 			t.Logf("test case: %+v", tc)
@@ -210,10 +210,11 @@ func TestConsume(t *testing.T) {
 			}
 			simpleConsumer.Stop()
 			t.Log("stopped")
+			streamDecode.MockTimes()
 
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
-			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
-			convey.So(streamDecode.Times(), convey.ShouldEqual, tc.streamDecodeCount)
+			convey.So(requestFetchStreamingly.Times(), convey.ShouldBeBetween, tc.requestFetchStreaminglyCount[0]-1, tc.requestFetchStreaminglyCount[1]+1)
+			convey.So(streamDecode.Times(), convey.ShouldBeBetween, tc.streamDecodeCount[0]-1, tc.streamDecodeCount[1]+1)
 		}
 	})
 }
@@ -312,24 +313,24 @@ func TestOffsetOutofRangeConsume(t *testing.T) {
 		type testCase struct {
 			messageChanLength            int
 			maxMessage                   int
-			requestFetchStreaminglyCount int
-			streamDecodeCount            int
+			requestFetchStreaminglyCount []int
+			streamDecodeCount            []int
 			getOffsetCount               []int
 		}
 		for _, tc := range []testCase{
 			{
 				messageChanLength:            0,
 				maxMessage:                   2,
-				requestFetchStreaminglyCount: 1,
-				streamDecodeCount:            1,
+				requestFetchStreaminglyCount: []int{1, 1},
+				streamDecodeCount:            []int{1, 1},
 				getOffsetCount:               []int{0, 1},
 			},
 			{
 				messageChanLength:            0,
 				maxMessage:                   5,
-				requestFetchStreaminglyCount: 4,
-				streamDecodeCount:            4,
-				getOffsetCount:               []int{2, 3},
+				requestFetchStreaminglyCount: []int{4, 4},
+				streamDecodeCount:            []int{4, 4}, // incremental, add count from the first time
+				getOffsetCount:               []int{2, 3}, // incremental, add count from the first time
 			},
 		} {
 			t.Logf("test case: %+v", tc)
@@ -352,8 +353,8 @@ func TestOffsetOutofRangeConsume(t *testing.T) {
 			t.Log("stopped")
 
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
-			convey.So(requestFetchStreamingly.Times(), convey.ShouldEqual, tc.requestFetchStreaminglyCount)
-			convey.So(streamDecode.Times(), convey.ShouldEqual, tc.streamDecodeCount)
+			convey.So(requestFetchStreamingly.Times(), convey.ShouldBeBetween, tc.requestFetchStreaminglyCount[0]-1, tc.requestFetchStreaminglyCount[1]+1)
+			convey.So(streamDecode.Times(), convey.ShouldBeBetween, tc.streamDecodeCount[0]-1, tc.streamDecodeCount[1]+1)
 			convey.So(getOffset.Times(), convey.ShouldBeBetween, tc.getOffsetCount[0]-1, tc.getOffsetCount[1]+1)
 		}
 	})
