@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/childe/healer"
 	"github.com/spf13/cobra"
@@ -17,30 +16,42 @@ var consoleConsumerCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		consumerConfig := map[string]interface{}{"bootstrap.servers": brokers}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		if client != "" {
 			consumerConfig["client.id"] = client
 		}
 		partitions, err := cmd.Flags().GetIntSlice("partitions")
+		if err != nil {
+			return err
+		}
 		topic, err := cmd.Flags().GetString("topic")
+		if err != nil {
+			return err
+		}
 		if topic == "" || err != nil {
 			return errors.New("topic must be specified")
 		}
 		maxMessages, err := cmd.Flags().GetInt("max-messages")
-		ifJson, err := cmd.Flags().GetBool("json")
-		config, err := cmd.Flags().GetString("config")
-
-		for _, kv := range strings.Split(config, ",") {
-			if strings.Trim(kv, " ") == "" {
-				continue
-			}
-			t := strings.SplitN(kv, "=", 2)
-			if len(t) != 2 {
-				return fmt.Errorf("invalid config : %s", kv)
-			}
-			consumerConfig[t[0]] = t[1]
+		if err != nil {
+			return err
 		}
+		ifJson, err := cmd.Flags().GetBool("json")
+		if err != nil {
+			return err
+		}
+		config, err := cmd.Flags().GetString("config")
+		if err != nil {
+			return err
+		}
+
+		json.Unmarshal([]byte(config), &consumerConfig)
 
 		var (
 			consumer *healer.Consumer
@@ -51,10 +62,8 @@ var consoleConsumerCmd = &cobra.Command{
 				return err
 			}
 		} else {
-			assign := make(map[string][]int)
-			assign[topic] = make([]int, 0)
-			for _, pid := range partitions {
-				assign[topic] = append(assign[topic], pid)
+			assign := map[string][]int{
+				topic: partitions,
 			}
 			if consumer, err = healer.NewConsumer(consumerConfig); err != nil {
 				return err
@@ -81,7 +90,7 @@ var consoleConsumerCmd = &cobra.Command{
 }
 
 func init() {
-	consoleConsumerCmd.Flags().String("config", "", "XX=YY,AA=ZZ. refer to https://github.com/childe/healer/blob/master/config.go")
+	consoleConsumerCmd.Flags().String("config", "", `{"xx"="yy","aa"="zz"} refer to https://github.com/childe/healer/blob/master/config.go`)
 	consoleConsumerCmd.Flags().IntSlice("partitions", nil, "partition ids, comma-separated")
 	consoleConsumerCmd.Flags().Int("max-messages", math.MaxInt, "the number of messages to output")
 	consoleConsumerCmd.Flags().Bool("printoffset", true, "if print offset of each message")

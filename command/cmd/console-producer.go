@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/childe/healer"
 	"github.com/spf13/cobra"
@@ -17,28 +17,30 @@ var consoleProducerCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		producerConfig := map[string]interface{}{"bootstrap.servers": brokers}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		if client != "" {
 			producerConfig["client.id"] = client
 		}
 		topic, err := cmd.Flags().GetString("topic")
+		if err != nil {
+			return err
+		}
 		if topic == "" || err != nil {
 			return errors.New("topic must be specified")
 		}
 
 		config, err := cmd.Flags().GetString("config")
-
-		for _, kv := range strings.Split(config, ",") {
-			if strings.Trim(kv, " ") == "" {
-				continue
-			}
-			t := strings.SplitN(kv, "=", 2)
-			if len(t) != 2 {
-				return fmt.Errorf("invalid config : %s", kv)
-			}
-			producerConfig[t[0]] = t[1]
+		if err != nil {
+			return err
 		}
+		json.Unmarshal([]byte(config), &producerConfig)
 
 		consoleProducer, err := healer.NewProducer(topic, producerConfig)
 		if err != nil {
@@ -64,6 +66,6 @@ var consoleProducerCmd = &cobra.Command{
 }
 
 func init() {
-	consoleProducerCmd.Flags().String("config", "", "XX=YY,AA=ZZ. refer to https://github.com/childe/healer/blob/master/config.go")
+	consoleProducerCmd.Flags().String("config", "", `{"xx"="yy","aa"="zz"} refer to https://github.com/childe/healer/blob/master/config.go`)
 	consoleProducerCmd.Flags().StringP("topic", "t", "", "topic name")
 }

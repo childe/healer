@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/childe/healer"
 	"github.com/spf13/cobra"
@@ -18,33 +17,53 @@ var simpleConsumerCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		consumerConfig := map[string]interface{}{"bootstrap.servers": brokers}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		if client != "" {
 			consumerConfig["client.id"] = client
 		}
 		partition, err := cmd.Flags().GetInt32("partition")
+		if err != nil {
+			return err
+		}
 		topic, err := cmd.Flags().GetString("topic")
+		if err != nil {
+			return err
+		}
 		if topic == "" || err != nil {
 			return errors.New("topic must be specified")
 		}
 		offset, err := cmd.Flags().GetInt64("offset")
-		maxMessages, err := cmd.Flags().GetInt32("max-messages")
-		stopOffset, err := cmd.Flags().GetInt64("stopoffset")
-		printOffset, err := cmd.Flags().GetBool("printoffset")
-		jsonFormat, err := cmd.Flags().GetBool("json")
-		config, err := cmd.Flags().GetString("config")
-
-		for _, kv := range strings.Split(config, ",") {
-			if strings.Trim(kv, " ") == "" {
-				continue
-			}
-			t := strings.SplitN(kv, "=", 2)
-			if len(t) != 2 {
-				return fmt.Errorf("invalid config : %s", kv)
-			}
-			consumerConfig[t[0]] = t[1]
+		if err != nil {
+			return err
 		}
+		maxMessages, err := cmd.Flags().GetInt32("max-messages")
+		if err != nil {
+			return err
+		}
+		stopOffset, err := cmd.Flags().GetInt64("stopoffset")
+		if err != nil {
+			return err
+		}
+		printOffset, err := cmd.Flags().GetBool("printoffset")
+		if err != nil {
+			return err
+		}
+		jsonFormat, err := cmd.Flags().GetBool("json")
+		if err != nil {
+			return err
+		}
+		config, err := cmd.Flags().GetString("config")
+		if err != nil {
+			return err
+		}
+		json.Unmarshal([]byte(config), &consumerConfig)
 
 		simpleConsumer, err := healer.NewSimpleConsumer(topic, partition, consumerConfig)
 		if err != nil {
@@ -88,7 +107,7 @@ var simpleConsumerCmd = &cobra.Command{
 }
 
 func init() {
-	simpleConsumerCmd.Flags().String("config", "", "XX=YY,AA=ZZ. refer to https://github.com/childe/healer/blob/master/config.go")
+	simpleConsumerCmd.Flags().String("config", "", `{"xx"="yy","aa"="zz"} refer to https://github.com/childe/healer/blob/master/config.go`)
 	simpleConsumerCmd.Flags().Int32("partition", 0, "partition id")
 	simpleConsumerCmd.Flags().Int64("offset", -1, "the offset to consume from, -2 which means from beginning; while value -1 means from end")
 	simpleConsumerCmd.Flags().Int32("max-messages", math.MaxInt32, "the number of messages to output")
