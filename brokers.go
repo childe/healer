@@ -38,6 +38,7 @@ func (brokers *Brokers) BrokersInfo() map[int32]*BrokerInfo {
 
 // NewBrokersWithConfig create a new broker with config
 func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Brokers, error) {
+	logger.Info("create new brokers", "bootstrapServers", bootstrapServers, "config", config)
 	clientID := "healer-newbrokers"
 	for _, brokerAddr := range strings.Split(bootstrapServers, ",") {
 		broker, err := NewBroker(brokerAddr, -1, config)

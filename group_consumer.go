@@ -48,6 +48,7 @@ type GroupConsumer struct {
 // NewGroupConsumer cretae a new GroupConsumer
 func NewGroupConsumer(topic string, config interface{}) (*GroupConsumer, error) {
 	cfg, err := createConsumerConfig(config)
+	logger.Info("create group consumer", "origin_config", config, "final_config", cfg)
 	if err != nil {
 		return nil, err
 	}

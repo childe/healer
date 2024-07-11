@@ -488,7 +488,7 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(ctx context.Contex
 	if streamDecoder.more {
 		streamDecoder.readAll()
 	}
-	logger.Info("decode fetch response done", "correlationID", streamDecoder.correlationID)
+	logger.V(5).Info("decode fetch response done", "correlationID", streamDecoder.correlationID)
 
 	return nil
 }
