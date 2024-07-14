@@ -185,8 +185,13 @@ func (broker *Broker) String() string {
 
 // Close closes the connection to the broker
 func (broker *Broker) Close() {
-	broker.conn.Close()
-	broker.conn = nil
+	logger.Info("close broker", "broker", broker.String())
+	broker.mux.Lock()
+	if broker.conn != nil {
+		broker.conn.Close()
+		broker.conn = nil
+	}
+	broker.mux.Unlock()
 }
 func (broker *Broker) ensureOpen() (err error) {
 	if broker.conn != nil {
@@ -256,6 +261,7 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 func (broker *Broker) requestStreamingly(payload []byte, timeout int) (r io.Reader, responseLength uint32, err error) {
 	defer func() {
 		if err != nil {
+			logger.Info("requestStreamingly error", "error", err)
 			broker.Close()
 		}
 	}()
