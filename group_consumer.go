@@ -358,13 +358,13 @@ func (c *GroupConsumer) commitOffset(topic string, partitionID int32, offset int
 func (c *GroupConsumer) restart() {
 	// heartbeat and metadata changing could both cause restart. make sure they do not conflict
 	c.restartLocker.Lock()
+	defer c.restartLocker.Unlock()
 
 	c.stop()
 	// stop heartbeat
 	c.joined = false
 	c.consumeWithoutHeartBeat(c.config.FromBeginning)
 
-	c.restartLocker.Unlock()
 }
 
 func (c *GroupConsumer) stop() {
