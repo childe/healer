@@ -277,13 +277,17 @@ func (c *SimpleConsumer) Stop() {
 
 	c.stop = true
 
+	c.consumeLoopWg.Wait()
+
 	if c.leaderBroker != nil {
 		c.leaderBroker.Close()
 	}
 
-	c.consumeLoopWg.Wait()
 	// close(c.messages)
-	c.wg.Done()
+
+	if c.wg != nil {
+		c.wg.Done()
+	}
 }
 
 // call this when simpleConsumer NOT belong to GroupConsumer, or call BelongTo.Commit()
