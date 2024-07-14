@@ -368,14 +368,17 @@ func (c *GroupConsumer) restart() {
 }
 
 func (c *GroupConsumer) stop() {
-	logger.Info("stop group consumer", "GroupID", c.config.GroupID)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	logger.Info("stop group consumer", "GroupID", c.config.GroupID, "simpleConsumerCount", len(c.simpleConsumers))
 	if c.simpleConsumers != nil {
-		logger.Info("stop simple consumers", "count", len(c.simpleConsumers))
 		for _, simpleConsumer := range c.simpleConsumers {
 			logger.Info("stop simple consumer", "topic", simpleConsumer.topic, "partitionID", simpleConsumer.partitionID)
 			simpleConsumer.Stop()
 		}
 	}
+	c.simpleConsumers = nil
 
 	c.wg.Wait()
 }
