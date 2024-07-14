@@ -282,7 +282,8 @@ func (c *SimpleConsumer) Stop() {
 	}
 
 	c.consumeLoopWg.Wait()
-	close(c.messages)
+	// close(c.messages)
+	c.wg.Done()
 }
 
 // call this when simpleConsumer NOT belong to GroupConsumer, or call BelongTo.Commit()
