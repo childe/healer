@@ -127,7 +127,7 @@ func DefaultConsumerConfig() ConsumerConfig {
 		OffsetsStorage:       1,
 	}
 
-	if c.Net.TimeoutMSForEachAPI == nil {
+	if len(c.Net.TimeoutMSForEachAPI) == 0 {
 		c.Net.TimeoutMSForEachAPI = make([]int, 68)
 		for i := range c.Net.TimeoutMSForEachAPI {
 			c.Net.TimeoutMSForEachAPI[i] = c.Net.TimeoutMS
