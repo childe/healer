@@ -122,7 +122,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	}
 
 	b, _ := json.Marshal(metaDataResponse)
-	logger.V(5).Info("got metadata", "topics", c.topics, "metadata", b)
+	logger.Info("got metadata", "topics", c.topics, "metadata", b)
 	c.topicMetadatas = metaDataResponse.TopicMetadatas
 }
 
@@ -150,7 +150,7 @@ func (c *GroupConsumer) parseGroupAssignments(memberAssignmentPayload []byte) er
 		return err
 	}
 	b, _ := json.Marshal(memberAssignment)
-	logger.V(1).Info("parse memeber assignment", "assignment", b)
+	logger.Info("parse memeber assignment", "assignment", b)
 	c.partitionAssignments = memberAssignment.PartitionAssignments
 	c.simpleConsumers = make([]*SimpleConsumer, 0)
 
@@ -230,7 +230,7 @@ func (c *GroupConsumer) sync() error {
 	} else {
 		groupAssignment = nil
 	}
-	logger.V(5).Info("create group assignment", "assignment", groupAssignment)
+	logger.Info("create group assignment", "assignment", groupAssignment)
 
 	syncGroupResponse, err := c.coordinator.requestSyncGroup(
 		c.config.ClientID, c.config.GroupID, c.generationID, c.memberID, groupAssignment)
