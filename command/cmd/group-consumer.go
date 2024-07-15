@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/childe/healer"
 	"github.com/spf13/cobra"
@@ -59,6 +62,9 @@ var groupConsumerCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
+
 		defer consumer.Close()
 
 		messages, err := consumer.Consume(nil)
@@ -66,18 +72,20 @@ var groupConsumerCmd = &cobra.Command{
 			return err
 		}
 
-		if maxMessages <= 0 {
-			for {
+		i := 0
+		for {
+			select {
+			case <-sigChan:
+				return nil
+			default:
 				message := <-messages
 				fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
-			}
-		} else {
-			for i := 0; i < maxMessages; i++ {
-				message := <-messages
-				fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+				i++
+				if maxMessages > 0 && i >= maxMessages {
+					return nil
+				}
 			}
 		}
-		return nil
 	},
 }
 
