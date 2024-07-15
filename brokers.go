@@ -20,12 +20,12 @@ type Brokers struct {
 
 	mutex sync.Locker
 
-	closeChan chan bool
+	closeChan chan struct{}
 }
 
 // Close close all brokers
 func (brokers *Brokers) Close() {
-	brokers.closeChan <- true
+	close(brokers.closeChan)
 	for _, broker := range brokers.brokers {
 		broker.Close()
 	}
@@ -86,7 +86,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 		brokersInfo: make(map[int32]*BrokerInfo),
 		brokers:     make(map[int32]*Broker),
 		mutex:       &sync.Mutex{},
-		closeChan:   make(chan bool, 0),
+		closeChan:   make(chan struct{}, 0),
 	}
 
 	topics := make([]string, 0)
