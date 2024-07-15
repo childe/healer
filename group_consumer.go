@@ -389,10 +389,8 @@ func (c *GroupConsumer) leave() {
 		return
 	}
 	logger.Info("group consumer leaves", "memberID", c.memberID, "GroupID", c.config.GroupID)
-	leaveReq := NewLeaveGroupRequest(c.config.ClientID, c.config.GroupID, c.memberID)
-	_, err := c.coordinator.RequestAndGet(leaveReq)
-	if err != nil {
-		logger.Error(err, "leave group failed", "memberID", c.memberID)
+	if _, err := c.coordinator.requestLeaveGroup(c.config.ClientID, c.config.GroupID, c.memberID); err != nil {
+		logger.Error(err, "leave group failed", "groupID", c.config.GroupID, "memberID", c.memberID)
 		return
 	}
 
@@ -465,6 +463,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 			ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
 		)
 		for range ticker.C {
+			// TODO split this out to a seperate func for testing
 			if c.closed {
 				return
 			}
