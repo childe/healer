@@ -399,3 +399,9 @@ func (broker *Broker) requestHeartbeat(clientID, groupID string, generationID in
 	}
 	return r, err
 }
+
+func (broker *Broker) requestLeaveGroup(clientID, groupID string, memberID string) (r LeaveGroupResponse, err error) {
+	leaveReq := NewLeaveGroupRequest(clientID, groupID, memberID)
+	resp, err := broker.RequestAndGet(leaveReq)
+	return resp.(LeaveGroupResponse), err
+}
