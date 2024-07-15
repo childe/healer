@@ -210,7 +210,6 @@ func TestConsume(t *testing.T) {
 			}
 			simpleConsumer.Stop()
 			t.Log("stopped")
-			streamDecode.MockTimes()
 
 			convey.So(count, convey.ShouldEqual, tc.maxMessage)
 			convey.So(requestFetchStreamingly.Times(), convey.ShouldBeBetween, tc.requestFetchStreaminglyCount[0]-1, tc.requestFetchStreaminglyCount[1]+1)
