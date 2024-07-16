@@ -398,6 +398,8 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 	c.consumeLoopWg.Add(1)
 	defer c.consumeLoopWg.Done()
 
+	defer logger.Info("consume loop exit", "topic", c.topic, "partitionID", c.partitionID)
+
 	wg := &sync.WaitGroup{}
 	for !c.stop {
 		innerMessages := make(chan *FullMessage, 1)
@@ -413,6 +415,8 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 				return
 			}
 			logger.Error(err, "failed to fetch")
+			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
+			continue
 		}
 
 		//decode
@@ -480,6 +484,8 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 						break
 					}
 				}
+			} else if message.Error == KafkaError(74) {
+				c.refreshPartiton()
 			}
 			return
 		} else {

@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -24,7 +25,8 @@ type Broker struct {
 
 	correlationID uint32
 
-	mux sync.Mutex
+	mux       sync.Mutex
+	closeLock sync.Mutex
 }
 
 var (
@@ -66,11 +68,15 @@ func (broker *Broker) getHighestAvailableAPIVersion(apiKey uint16) uint16 {
 
 // create a new connection to the broker, and then do the sasl authenticate if needed
 func (broker *Broker) createConn() error {
+	// TODO split to use defer to unlock
+	broker.mux.Lock()
 	if conn, err := newConn(broker.GetAddress(), broker.config); err != nil {
+		broker.mux.Unlock()
 		return err
 	} else {
 		broker.conn = conn
 	}
+	broker.mux.Unlock()
 
 	clientID := "healer-init"
 	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
@@ -186,12 +192,14 @@ func (broker *Broker) String() string {
 // Close closes the connection to the broker
 func (broker *Broker) Close() {
 	logger.Info("close broker", "broker", broker.String())
-	broker.mux.Lock()
+
+	broker.closeLock.Lock()
+	defer broker.closeLock.Unlock()
+
 	if broker.conn != nil {
 		broker.conn.Close()
 		broker.conn = nil
 	}
-	broker.mux.Unlock()
 }
 func (broker *Broker) ensureOpen() (err error) {
 	if broker.conn != nil {
@@ -215,7 +223,7 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 	r.SetVersion(version)
 	rp, err := broker.request(r.Encode(version), timeout)
 	if err != nil {
-		return nil, fmt.Errorf("requst of %d(%d) to %s error: %w", r.API(), version, broker.GetAddress(), err)
+		return nil, fmt.Errorf("request of %d(%d) to %s error: %w", r.API(), version, broker.GetAddress(), err)
 	}
 	rp.version = version
 	rp.api = r.API()
@@ -224,18 +232,26 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 }
 
 // RequestAndGet sends a request to the broker and returns the response
-func (broker *Broker) RequestAndGet(r Request) (Response, error) {
+func (broker *Broker) RequestAndGet(r Request) (resp Response, err error) {
+	if err := broker.ensureOpen(); err != nil {
+		return nil, err
+	}
+
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 
-	broker.ensureOpen()
+	defer func() {
+		if os.IsTimeout(err) || errors.Is(err, io.EOF) || errors.Is(err, syscall.EPIPE) {
+			broker.Close()
+		}
+	}()
 
 	rp, err := broker.Request(r)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := rp.ReadAndParse()
+	resp, err = rp.ReadAndParse()
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +265,9 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 	correlationID := binary.BigEndian.Uint32(payload[8:])
 	logger.V(5).Info("request info", "length", len(payload), "api", api, "apiVersion", apiVersion, "correlationID", correlationID, "timeout", timeout)
 
-	io.Copy(broker.conn, bytes.NewBuffer(payload))
+	if _, err := io.Copy(broker.conn, bytes.NewBuffer(payload)); err != nil {
+		return defaultReadParser{}, err
+	}
 
 	rp := defaultReadParser{
 		broker:  broker,
@@ -261,7 +279,6 @@ func (broker *Broker) request(payload []byte, timeout int) (defaultReadParser, e
 func (broker *Broker) requestStreamingly(payload []byte, timeout int) (r io.Reader, responseLength uint32, err error) {
 	defer func() {
 		if err != nil {
-			logger.Info("requestStreamingly error", "error", err)
 			broker.Close()
 		}
 	}()
@@ -337,6 +354,10 @@ func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int3
 }
 
 func (broker *Broker) requestFetchStreamingly(fetchRequest *FetchRequest) (r io.Reader, responseLength uint32, err error) {
+	if err := broker.ensureOpen(); err != nil {
+		return nil, 0, err
+	}
+
 	broker.mux.Lock()
 	defer broker.mux.Unlock()
 

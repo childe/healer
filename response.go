@@ -42,6 +42,7 @@ func (p defaultReadParser) ReadAndParse() (Response, error) {
 
 // Read read a whole response data from broker. it firstly read length of the response data, then read the whole response data
 func (p defaultReadParser) Read() ([]byte, error) {
+	//TODO use LimitedReader
 	l := 0
 	responseLengthBuf := make([]byte, 4)
 	for {
@@ -50,7 +51,6 @@ func (p defaultReadParser) Read() ([]byte, error) {
 		}
 		length, err := p.broker.conn.Read(responseLengthBuf[l:])
 		if err != nil {
-			p.broker.Close()
 			return nil, err
 		}
 
@@ -69,7 +69,6 @@ func (p defaultReadParser) Read() ([]byte, error) {
 		}
 		length, err := p.broker.conn.Read(resp[4+readLength:])
 		if err != nil {
-			p.broker.Close()
 			return nil, err
 		}
 
@@ -82,7 +81,7 @@ func (p defaultReadParser) Read() ([]byte, error) {
 		}
 	}
 	copy(resp[0:4], responseLengthBuf)
-	logger.V(5).Info("response info", "length", len(resp), "CorrelationID", binary.BigEndian.Uint32(resp[4:]))
+	// logger.V(5).Info("response info", "length", len(resp), "CorrelationID", binary.BigEndian.Uint32(resp[4:]))
 	return resp, nil
 }
 
