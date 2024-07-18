@@ -77,8 +77,7 @@ var groupConsumerCmd = &cobra.Command{
 			select {
 			case <-sigChan:
 				return nil
-			default:
-				message := <-messages
+			case message := <-messages:
 				fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
 				i++
 				if maxMessages > 0 && i >= maxMessages {
