@@ -431,6 +431,34 @@ func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	c.leave()
 }
 
+func (c *GroupConsumer) refreshMeta() {
+	var (
+		ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
+	)
+	for range ticker.C {
+		if c.closed {
+			return
+		}
+		if !c.ifLeader {
+			continue
+		}
+
+		logger.Info("refresh metadata (in goroutine)")
+
+		metaDataResponse, err := c.brokers.RequestMetaData(c.config.ClientID, c.topics)
+		if err != nil {
+			logger.Error(err, "request metadata (in goroutine) failed")
+			continue
+		}
+
+		if !ifTopicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
+			logger.Info("metadata changed, restart group consumer")
+			c.topicMetadatas = metaDataResponse.TopicMetadatas
+			c.restart()
+		}
+	}
+}
+
 // Consume will join group and then cosumes messages from kafka.
 // it return a chan, and client could get messages from the chan
 func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage, error) {
@@ -456,35 +484,9 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 		}
 	}()
 
-	// go refresh topic metadata
 	go func() {
 		logger.Info("start metadata refresh goroutine", "interval", c.config.MetadataMaxAgeMS)
-		var (
-			ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
-		)
-		for range ticker.C {
-			// TODO split this out to a seperate func for testing
-			if c.closed {
-				return
-			}
-			if !c.ifLeader {
-				continue
-			}
-
-			logger.Info("refresh metadata (in goroutine)")
-
-			metaDataResponse, err := c.brokers.RequestMetaData(c.config.ClientID, c.topics)
-			if err != nil {
-				logger.Error(err, "request metadata (in goroutine) failed")
-				continue
-			}
-
-			if !ifTopicMetadatasSame(c.topicMetadatas, metaDataResponse.TopicMetadatas) {
-				logger.Info("metadata changed, restart group consumer")
-				c.topicMetadatas = metaDataResponse.TopicMetadatas
-				c.restart()
-			}
-		}
+		c.refreshMeta()
 	}()
 
 	return c.consumeWithoutHeartBeat(c.config.FromBeginning)
