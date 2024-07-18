@@ -42,7 +42,7 @@ func NewBroker(address string, nodeID int32, config *BrokerConfig) (*Broker, err
 
 		correlationID: 0,
 	}
-	if err := broker.createConn(); err != nil {
+	if err := broker.createConnAndAuth(); err != nil {
 		return nil, err
 	}
 
@@ -66,17 +66,22 @@ func (broker *Broker) getHighestAvailableAPIVersion(apiKey uint16) uint16 {
 	return 0
 }
 
-// create a new connection to the broker, and then do the sasl authenticate if needed
 func (broker *Broker) createConn() error {
-	// TODO split to use defer to unlock
 	broker.mux.Lock()
+	defer broker.mux.Unlock()
+
 	if conn, err := newConn(broker.GetAddress(), broker.config); err != nil {
 		broker.mux.Unlock()
 		return err
 	} else {
 		broker.conn = conn
+		return nil
 	}
-	broker.mux.Unlock()
+}
+
+// create a new connection to the broker, and then do the sasl authenticate if needed
+func (broker *Broker) createConnAndAuth() error {
+	broker.createConn()
 
 	clientID := "healer-init"
 	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
@@ -205,7 +210,7 @@ func (broker *Broker) ensureOpen() (err error) {
 	if broker.conn != nil {
 		return nil
 	}
-	return broker.createConn()
+	return broker.createConnAndAuth()
 }
 
 // Request sends a request to the broker and returns a readParser
