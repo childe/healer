@@ -15,8 +15,17 @@ var deleteGroupsCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		bootStrapBrokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		groups, err := cmd.Flags().GetStringSlice("groups")
+		if err != nil {
+			return err
+		}
 
 		brokers, err := healer.NewBrokers(bootStrapBrokers)
 		if err != nil {

@@ -87,12 +87,33 @@ var createPartitionsCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		topic, err := cmd.Flags().GetString("topic")
+		if err != nil {
+			return err
+		}
 		assignments, err := cmd.Flags().GetString("assignments")
+		if err != nil {
+			return err
+		}
 		timeout, err := cmd.Flags().GetUint32("timeout")
+		if err != nil {
+			return err
+		}
 		validateOnly, err := cmd.Flags().GetBool("validate-only")
+		if err != nil {
+			return err
+		}
 		count, err := cmd.Flags().GetInt32("count")
+		if err != nil {
+			return err
+		}
 
 		bs, err := healer.NewBrokers(brokers)
 		if err != nil {

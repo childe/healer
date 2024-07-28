@@ -17,19 +17,40 @@ var createTopicCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		topic, err := cmd.Flags().GetString("topic")
+		if err != nil {
+			return err
+		}
 		partitions, err := cmd.Flags().GetInt32("partitions")
+		if err != nil {
+			return err
+		}
 		replicationFactor, err := cmd.Flags().GetInt16("replication-factor")
+		if err != nil {
+			return err
+		}
 		replicaAssignment, err := cmd.Flags().GetString("replica-assignment")
+		if err != nil {
+			return err
+		}
 		timeout, err := cmd.Flags().GetUint32("timeout")
+		if err != nil {
+			return err
+		}
 
 		if partitions != -1 && replicaAssignment != "" {
-			return fmt.Errorf(`Option "[partitions]" can't be used with option"[partitions]"`)
+			return fmt.Errorf(`option "[partitions]" can't be used with option"[replica-assignment]"`)
 		}
 
 		if replicationFactor != -1 && replicaAssignment != "" {
-			return fmt.Errorf(`Option "[replica-assignment]" can't be used with option"[replication-factor]"`)
+			return fmt.Errorf(`option "[replica-assignment]" can't be used with option"[replication-factor]"`)
 		}
 
 		config := healer.DefaultBrokerConfig()

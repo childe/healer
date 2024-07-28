@@ -15,11 +15,29 @@ var alterConfigsCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		resourceType, err := cmd.Flags().GetString("resource-type")
+		if err != nil {
+			return err
+		}
 		resourceName, err := cmd.Flags().GetString("resource-name")
+		if err != nil {
+			return err
+		}
 		configName, err := cmd.Flags().GetString("config-name")
+		if err != nil {
+			return err
+		}
 		configValue, err := cmd.Flags().GetString("config-value")
+		if err != nil {
+			return err
+		}
 
 		bs, err := healer.NewBrokers(brokers)
 		if err != nil {
