@@ -184,17 +184,86 @@ func getGroups(groupID string) []string {
 	return rst
 }
 
+// get pending values and print them. if subscriptions is not nil, print memberID
+func getPending(groupID, topicName, client string, header, total bool, subscriptions map[int32]string) error {
+	timestamp := time.Now().Unix()
+
+	offsets, err := getOffset(topicName, client)
+	if err != nil {
+		klog.Errorf("get offsets error: %s", err)
+		return err
+	}
+
+	partitions, err := getPartitions(topicName, client)
+	if err != nil {
+		klog.Errorf("get partitions of %s error: %s", topicName, err)
+		return err
+	}
+	committedOffsets, err := getCommittedOffset(topicName, partitions, groupID, client)
+	if err != nil {
+		klog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
+		return err
+	}
+
+	var (
+		offsetSum    int64 = 0
+		committedSum int64 = 0
+		pendingSum   int64 = 0
+	)
+
+	if header {
+		fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag")
+	}
+
+	for _, partitionID := range partitions {
+		pending := offsets[partitionID] - committedOffsets[partitionID]
+		if offsets[partitionID] == -1 {
+			pending = 0
+		}
+		offsetSum += offsets[partitionID]
+		committedSum += committedOffsets[partitionID]
+		pendingSum += pending
+		if subscriptions != nil {
+			fmt.Printf("%d  %s  %s  %d  %d  %d  %d %s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, subscriptions[partitionID])
+		} else {
+			fmt.Printf("%d  %s  %s  %d  %d  %d  %d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending)
+		}
+	}
+	if total {
+		fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
+	}
+	return nil
+}
+
 var getPendingCmd = &cobra.Command{
 	Use:   "get-pending",
 	Short: "get pending count of a group for a topic",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		bootstrapBrokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return nil
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return nil
+		}
 		topic, err := cmd.Flags().GetString("topic")
+		if err != nil {
+			return nil
+		}
 		groupID, err := cmd.Flags().GetString("group")
+		if err != nil {
+			return nil
+		}
 		header, err := cmd.Flags().GetBool("header")
+		if err != nil {
+			return nil
+		}
 		total, err := cmd.Flags().GetBool("total")
+		if err != nil {
+			return nil
+		}
 
 		brokers, err = healer.NewBrokers(bootstrapBrokers)
 		if err != nil {
@@ -203,114 +272,25 @@ var getPendingCmd = &cobra.Command{
 		helper = healer.NewHelperFromBrokers(brokers, client)
 
 		groupIDs := getGroups(groupID)
-		for i, group := range groupIDs {
-			klog.V(5).Infof("%d/%d %s", i, len(groupIDs), group)
-		}
 
 		for i, groupID := range groupIDs {
 			klog.V(5).Infof("%d/%d %s", i, len(groupIDs), groupID)
 			subscriptions, err := getSubscriptionsInGroup(groupID, client)
 			if err != nil {
-				klog.Errorf("get subscriptions of %s error: %s", groupID, err)
+				klog.Errorf("failed to get subscriptions of %s: %s", groupID, err)
 				continue
 			}
 			klog.V(5).Infof("%d topics: %v", len(subscriptions), subscriptions)
 
 			if topic != "" {
-				if _, ok := subscriptions[topic]; !ok {
-					klog.V(10).Infof("topic %s not found in group %s", topic, groupID)
-					continue
+				if err = getPending(groupID, topic, client, header, total, nil); err != nil {
+					klog.Errorf("get pending of %s/%s error: %s", groupID, topic, err)
 				}
-				var topicName = topic
-				timestamp := time.Now().Unix()
-
-				offsets, err := getOffset(topicName, client)
-				if err != nil {
-					klog.Errorf("get offsets error: %s", err)
-					continue
-				}
-
-				partitions, err := getPartitions(topicName, client)
-				if err != nil {
-					klog.Errorf("get partitions of %s error: %s", topicName, err)
-					continue
-				}
-				committedOffsets, err := getCommittedOffset(topicName, partitions, groupID, client)
-				if err != nil {
-					klog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
-					continue
-				}
-
-				var (
-					offsetSum    int64 = 0
-					committedSum int64 = 0
-					pendingSum   int64 = 0
-				)
-
-				if header {
-					fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag")
-				}
-
-				for _, partitionID := range partitions {
-					pending := offsets[partitionID] - committedOffsets[partitionID]
-					if offsets[partitionID] == -1 {
-						pending = 0
+			} else {
+				for topicName, v := range subscriptions {
+					if err = getPending(groupID, topicName, client, header, total, v); err != nil {
+						klog.Errorf("get pending of %s/%s error: %s", groupID, topicName, err)
 					}
-					offsetSum += offsets[partitionID]
-					committedSum += committedOffsets[partitionID]
-					pendingSum += pending
-					fmt.Printf("%d  %s  %s  %d  %d  %d  %d\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending)
-				}
-				if total {
-					fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
-				}
-				continue
-			}
-
-			for topicName, v := range subscriptions {
-				klog.V(5).Infof("topic: %s", topicName)
-				if topic != "" && topicName != topic {
-					continue
-				}
-
-				timestamp := time.Now().Unix()
-
-				offsets, err := getOffset(topicName, client)
-				if err != nil {
-					klog.Errorf("get offsets error: %s", err)
-					continue
-				}
-
-				partitions, err := getPartitions(topicName, client)
-				if err != nil {
-					klog.Errorf("get partitions of %s error: %s", topicName, err)
-					continue
-				}
-				committedOffsets, err := getCommittedOffset(topicName, partitions, groupID, client)
-				if err != nil {
-					klog.Errorf("get committed offsets [%s/%s] error: %s", groupID, topicName, err)
-					continue
-				}
-
-				var (
-					offsetSum    int64 = 0
-					committedSum int64 = 0
-					pendingSum   int64 = 0
-				)
-
-				if header {
-					fmt.Println("timestamp  topic  groupID  pid  offset  commited  lag  owner")
-				}
-
-				for _, partitionID := range partitions {
-					pending := offsets[partitionID] - committedOffsets[partitionID]
-					offsetSum += offsets[partitionID]
-					committedSum += committedOffsets[partitionID]
-					pendingSum += pending
-					fmt.Printf("%d  %s  %s  %d  %d  %d  %d  %s\n", timestamp, topicName, groupID, partitionID, offsets[partitionID], committedOffsets[partitionID], pending, v[partitionID])
-				}
-				if total {
-					fmt.Printf("TOTAL  %s  %s  %d  %d  %d\n", topicName, groupID, offsetSum, committedSum, pendingSum)
 				}
 			}
 		}
