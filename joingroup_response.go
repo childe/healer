@@ -57,7 +57,7 @@ func NewJoinGroupResponse(payload []byte) (r JoinGroupResponse, err error) {
 
 	r.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
-	if err == nil && r.ErrorCode != 0 {
+	if r.ErrorCode != 0 {
 		err = KafkaError(r.ErrorCode)
 	}
 

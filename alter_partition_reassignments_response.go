@@ -90,7 +90,7 @@ func NewAlterPartitionReassignmentsResponse(payload []byte, version uint16) (*Al
 
 	responseCount, o := compactArrayLength(payload[offset:])
 	offset += o
-	if responseCount < 0 {
+	if responseCount <= 0 {
 		r.Responses = nil
 	}
 
@@ -104,7 +104,7 @@ func NewAlterPartitionReassignmentsResponse(payload []byte, version uint16) (*Al
 
 		partitionCount, o := compactArrayLength(payload[offset:])
 		offset += o
-		if partitionCount < 0 {
+		if partitionCount <= 0 {
 			topic.Partitions = nil
 		}
 

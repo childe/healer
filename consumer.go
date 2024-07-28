@@ -95,7 +95,7 @@ func (c *Consumer) Consume(messageChan chan *FullMessage) (<-chan *FullMessage, 
 	for _, topicMetadatas := range metadataResponse.TopicMetadatas {
 		topicName := topicMetadatas.TopicName
 		var partitions = make([]int, 0)
-		if pids, ok := c.assign[topicName]; ok == false || len(pids) == 0 { // consume all partitions
+		if pids, ok := c.assign[topicName]; !ok || len(pids) == 0 { // consume all partitions
 			for _, partitionMetadataInfo := range topicMetadatas.PartitionMetadatas {
 				partitions = append(partitions, int(partitionMetadataInfo.PartitionID))
 			}

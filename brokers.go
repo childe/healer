@@ -300,11 +300,7 @@ func (brokers *Brokers) RequestOffsets(clientID, topic string, partitionID int32
 	// try to get all partition offsets
 	offsetsRequestsMapping := make(map[int32][]int32, 0) //nodeID: partitionIDs
 	for _, x := range topicMetadata.PartitionMetadatas {
-		if _, ok := offsetsRequestsMapping[x.Leader]; ok {
-			offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionID)
-		} else {
-			offsetsRequestsMapping[x.Leader] = []int32{x.PartitionID}
-		}
+		offsetsRequestsMapping[x.Leader] = append(offsetsRequestsMapping[x.Leader], x.PartitionID)
 	}
 
 	rst := make([]OffsetsResponse, 0)

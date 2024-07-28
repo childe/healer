@@ -30,7 +30,7 @@ func NewOffsetsResponse(payload []byte) (r OffsetsResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
-		//TODO lenght does not match
+		return r, fmt.Errorf("offsets response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 	offset += 4
 

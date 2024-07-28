@@ -168,7 +168,7 @@ var (
 
 func (config *ConsumerConfig) checkValid() error {
 	if config.BootstrapServers == "" {
-		return bootstrapServersNotSet
+		return errBootstrapServersNotSet
 	}
 	if config.GroupID == "" {
 		return errEmptyGroupID
@@ -239,7 +239,7 @@ var defaultProducerConfig = DefaultProducerConfig()
 // create ProducerConfig from map or return directly if config is ProducerConfig
 // return defaultProducerConfig if config is nil
 func createProducerConfig(config interface{}) (c ProducerConfig, err error) {
-	switch config.(type) {
+	switch v := config.(type) {
 	case nil:
 		return defaultProducerConfig, nil
 	case map[string]interface{}:
@@ -248,7 +248,7 @@ func createProducerConfig(config interface{}) (c ProducerConfig, err error) {
 			return defaultProducerConfig, fmt.Errorf("decode producer config error: %w", err)
 		}
 	case ProducerConfig:
-		c = config.(ProducerConfig)
+		c = v
 	default:
 		return c, fmt.Errorf("producer only accept config from map[string]interface{} or ProducerConfig")
 	}
@@ -257,21 +257,21 @@ func createProducerConfig(config interface{}) (c ProducerConfig, err error) {
 }
 
 var (
-	messageMaxCountError   = errors.New("message.max.count must > 0")
-	flushIntervalMSError   = errors.New("flush.interval.ms must > 0")
-	unknownCompressionType = errors.New("unknown compression type")
-	bootstrapServersNotSet = errors.New("bootstrap servers not set")
+	errMessageMaxCount        = errors.New("message.max.count must > 0")
+	errFlushIntervalMS        = errors.New("flush.interval.ms must > 0")
+	errUnknownCompressionType = errors.New("unknown compression type")
+	errBootstrapServersNotSet = errors.New("bootstrap servers not set")
 )
 
 func (config *ProducerConfig) checkValid() error {
 	if config.BootstrapServers == "" {
-		return bootstrapServersNotSet
+		return errBootstrapServersNotSet
 	}
 	if config.MessageMaxCount <= 0 {
-		return messageMaxCountError
+		return errMessageMaxCount
 	}
 	if config.FlushIntervalMS <= 0 {
-		return flushIntervalMSError
+		return errFlushIntervalMS
 	}
 
 	switch config.CompressionType {
@@ -280,7 +280,7 @@ func (config *ProducerConfig) checkValid() error {
 	case "snappy":
 	case "lz4":
 	default:
-		return unknownCompressionType
+		return errUnknownCompressionType
 	}
 	return nil
 }

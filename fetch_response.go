@@ -12,37 +12,7 @@ import (
 	"github.com/pierrec/lz4"
 )
 
-var errFetchResponseTooShortNoMagic = errors.New("fetch response too short, could not get magic value")
 var errFetchResponseTooShortNoRecordsMeta = errors.New("fetch response too short, could not get records metadata(form baseOffset to baseSequence)")
-
-type abortedTransaction struct {
-	producerID  int64
-	firstOffset int64
-}
-
-// PartitionResponse stores partitionID and MessageSet in the partition
-type PartitionResponse struct {
-	Partition           int32
-	ErrorCode           int16
-	HighwaterMarkOffset int64
-	lastStableOffset    int64
-	logStartOffset      int64
-	abortedTransactions []*abortedTransaction
-	MessageSetSizeBytes int32
-	MessageSet          MessageSet
-}
-
-// FetchResponse stores topicname and arrya of PartitionResponse
-type FetchResponse struct {
-	CorrelationID  int32
-	throttleTimeMs int32
-	errorCode      int16
-	sessionID      int32
-	Responses      []struct {
-		TopicName          string
-		PartitionResponses []PartitionResponse
-	}
-}
 
 type fetchResponseStreamDecoder struct {
 	ctx context.Context
@@ -296,11 +266,11 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) (err error) {
 	defer func() {
 		if err == io.EOF || err == &maxBytesTooSmall {
-			if streamDecoder.hasOneMessage == true {
+			if streamDecoder.hasOneMessage {
 				err = nil
 			}
 		}
-		if streamDecoder.hasOneMessage == false && err == nil {
+		if !streamDecoder.hasOneMessage && err == nil {
 			err = &maxBytesTooSmall
 		}
 	}()

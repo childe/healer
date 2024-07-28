@@ -13,7 +13,7 @@ import (
 	snappy "github.com/eapache/go-xerial-snappy"
 )
 
-var errUncompleteRecord = errors.New("Uncomplete Record, The last bytes are not enough to decode the record")
+var errUncompleteRecord = errors.New("uncomplete Record, The last bytes are not enough to decode the record")
 
 // RecordHeader is concluded in Record
 type RecordHeader struct {
@@ -169,7 +169,7 @@ func (message *Message) decompress() ([]byte, error) {
 	case COMPRESSION_LZ4:
 		return lz4.Decode(nil, message.Value)
 	}
-	return nil, fmt.Errorf("Unknown Compression Code %d", compression)
+	return nil, fmt.Errorf("unknown Compression Code %d", compression)
 }
 
 func (messageSet *MessageSet) Length() int {
