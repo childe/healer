@@ -19,6 +19,16 @@ func TestNewBroker(t *testing.T) {
 		convey.So(broker, convey.ShouldNotBeNil)
 	})
 }
+func TestLockInNewBroker(t *testing.T) {
+	mockey.PatchConvey("test lock in NewBroker", t, func() {
+		errMock := errors.New("mock dial error")
+		dial := mockey.Mock((*net.Dialer).Dial).Return(nil, errMock).Build()
+		broker, err := NewBroker("127.0.0.1:9092", 0, DefaultBrokerConfig())
+		convey.So(dial.Times(), convey.ShouldEqual, 1)
+		convey.So(err, convey.ShouldNotBeNil)
+		convey.So(broker, convey.ShouldBeNil)
+	})
+}
 
 func TestGetHighestAvailableAPIVersion(t *testing.T) {
 	mockey.PatchConvey("TestgetHighestAvailableAPIVersion", t, func() {

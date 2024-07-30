@@ -71,7 +71,6 @@ func (broker *Broker) createConn() error {
 	defer broker.mux.Unlock()
 
 	if conn, err := newConn(broker.GetAddress(), broker.config); err != nil {
-		broker.mux.Unlock()
 		return err
 	} else {
 		broker.conn = conn
@@ -81,7 +80,9 @@ func (broker *Broker) createConn() error {
 
 // create a new connection to the broker, and then do the sasl authenticate if needed
 func (broker *Broker) createConnAndAuth() error {
-	broker.createConn()
+	if err := broker.createConn(); err != nil {
+		return err
+	}
 
 	clientID := "healer-init"
 	apiVersionsResponse, err := broker.requestAPIVersions(clientID)
@@ -110,6 +111,7 @@ func (broker *Broker) createConnAndAuth() error {
 }
 
 func newConn(address string, config *BrokerConfig) (net.Conn, error) {
+	logger.V(5).Info("dial to create connection to a broker", "address", address)
 	dialer := net.Dialer{
 		Timeout:   time.Millisecond * time.Duration(config.Net.ConnectTimeoutMS),
 		KeepAlive: time.Millisecond * time.Duration(config.Net.KeepAliveMS),
