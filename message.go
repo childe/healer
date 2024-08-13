@@ -18,7 +18,7 @@ var errUncompleteRecord = errors.New("uncomplete Record, The last bytes are not 
 // RecordHeader is concluded in Record
 type RecordHeader struct {
 	headerKeyLength   int32
-	headerKey         string
+	Key         string
 	headerValueLength int32
 	Value             []byte
 }
@@ -27,7 +27,7 @@ func decodeHeader(payload []byte) (header RecordHeader, offset int) {
 	keyLength, o := binary.Varint(payload[offset:])
 	header.headerKeyLength = int32(keyLength)
 	offset += o
-	header.headerKey = string(payload[offset : offset+int(header.headerKeyLength)])
+	header.Key = string(payload[offset : offset+int(header.headerKeyLength)])
 	offset += int(header.headerKeyLength)
 
 	valueLength, o := binary.Varint(payload[offset:])
@@ -138,6 +138,9 @@ type Message struct {
 	Timestamp  uint64
 	Key        []byte
 	Value      []byte
+
+	// only for version 2
+	Headers []RecordHeader
 }
 
 // MessageSet is a batch of messages

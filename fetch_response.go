@@ -245,6 +245,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 			MagicByte:  2,
 			Key:        record.key,
 			Value:      record.value,
+			Headers:    record.Headers,
 		}
 		if message.Offset >= streamDecoder.startOffset {
 			msg := &FullMessage{
