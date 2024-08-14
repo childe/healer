@@ -10,6 +10,15 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 )
 
+func newMockBroker() *Broker {
+	return &Broker{
+		address: "localhost:9092",
+		nodeID:  0,
+		config:  &BrokerConfig{},
+		conn:    &MockConn{},
+	}
+}
+
 func TestNewBroker(t *testing.T) {
 	mockey.PatchConvey("TestNewBroker", t, func() {
 		mockey.Mock((*Broker).requestAPIVersions).Return(APIVersionsResponse{}, nil).Build()

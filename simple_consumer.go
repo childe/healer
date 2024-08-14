@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -352,7 +355,7 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 	for !c.stop {
 		if err = c.getLeaderBroker(); err != nil {
-			logger.Error(err, "get leader broker of [%s/%d] error: %s", "topic", c.topic, "partitionID", c.partitionID)
+			logger.Error(err, "get leader broker error", "topic", c.topic, "partitionID", c.partitionID)
 			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
 		} else {
 			break
@@ -464,7 +467,9 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 		}
 		if message.Error != nil {
 			logger.Error(message.Error, "message error", "topic", c.topic, "partitionID", c.partitionID)
-			if message.Error == &maxBytesTooSmall {
+			if os.IsTimeout(message.Error) || errors.Is(message.Error, io.EOF) || errors.Is(message.Error, syscall.EPIPE) {
+				c.leaderBroker.Close()
+			} else if message.Error == &maxBytesTooSmall {
 				c.config.FetchMaxBytes *= 2
 				logger.Info("fetch.max.bytes is too small, double it", "new FetchMaxBytes", c.config.FetchMaxBytes)
 			}
