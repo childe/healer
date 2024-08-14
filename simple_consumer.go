@@ -405,7 +405,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 
 	wg := &sync.WaitGroup{}
 	for !c.stop {
-		innerMessages := make(chan *FullMessage, 1)
+		innerMessages := make(chan *FullMessage, 100)
 
 		// fetch
 		logger.V(5).Info("send fetch request", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
