@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/childe/healer"
 	"github.com/spf13/cobra"
@@ -50,8 +52,9 @@ func catResponse(metadataResponse *healer.MetadataResponse) {
 	fmt.Println("brokers:")
 	bs := make(map[int32]string)
 	for _, b := range metadataResponse.Brokers {
-		fmt.Printf("%d %s:%d\n", b.NodeID, b.Host, b.Port)
-		bs[b.NodeID] = fmt.Sprintf("%s:%d", b.Host, b.Port)
+		address := net.JoinHostPort(b.Host, strconv.Itoa(int(b.Port)))
+		fmt.Printf("%d %s\n", b.NodeID, address)
+		bs[b.NodeID] = address
 	}
 
 	fmt.Println("topics:")

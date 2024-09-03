@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/childe/healer/command/cmd/apicontrollers"
 
@@ -28,7 +29,7 @@ var apiCmd = &cobra.Command{
 			client = "healer"
 		}
 
-		fullAddress := fmt.Sprintf("%s:%d", address, port)
+		fullAddress := net.JoinHostPort(address, strconv.Itoa(int(port)))
 		router := gin.Default()
 
 		if cors {

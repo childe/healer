@@ -5,6 +5,8 @@ package healer
 import (
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -103,7 +105,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	brokers.controllerID = metadataResponse.ControllerID
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokers.brokersInfo[brokerInfo.NodeID] = brokerInfo
-		if broker.GetAddress() == fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port) {
+		if broker.GetAddress() == net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))) {
 			brokers.brokers[brokerInfo.NodeID] = broker
 		}
 	}
@@ -157,7 +159,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 	logger.Info("update metadata from latest brokersInfo")
 	// from latest brokersinfo
 	for _, brokerInfo := range brokers.brokersInfo {
-		brokerAddr := fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port)
+		brokerAddr := net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port)))
 		broker, err := NewBroker(brokerAddr, -1, brokers.config)
 		if err != nil {
 			logger.Error(err, "create broker failed", "brokerAddress", brokerAddr)
@@ -188,7 +190,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	if nodeID == -1 {
 		for nodeID, brokerInfo := range brokers.brokersInfo {
-			broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), nodeID, brokers.config)
+			broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), nodeID, brokers.config)
 			if err == nil {
 				return broker, nil
 			}
@@ -198,11 +200,11 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
+		broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d), error: :%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s), error: :%w", nodeID, net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), err)
 		}
 	} else {
 		logger.Info("could not get broker from cache, referesh medadata", "nodeID", nodeID)
@@ -213,11 +215,11 @@ func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
 
 	// try again after refereshing metadata
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
+		broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			return broker, nil
 		}
-		return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+		return nil, fmt.Errorf("could not init broker for node[%d](%s):%w", nodeID, net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), err)
 	}
 	return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
 }
@@ -232,12 +234,12 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 	}
 
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(fmt.Sprintf("%s:%d", brokerInfo.Host, brokerInfo.Port), brokerInfo.NodeID, brokers.config)
+		broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			brokers.brokers[nodeID] = broker
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s:%d):%w", nodeID, brokerInfo.Host, brokerInfo.Port, err)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s):%w", nodeID, net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), err)
 		}
 	} else {
 		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
