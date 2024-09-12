@@ -63,5 +63,5 @@ var describeGroupsCmd = &cobra.Command{
 }
 
 func init() {
-	describeGroupsCmd.Flags().String("group", "", "group names")
+	describeGroupsCmd.Flags().StringP("group", "g", "", "group names")
 }

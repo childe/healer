@@ -62,5 +62,5 @@ var deleteGroupsCmd = &cobra.Command{
 }
 
 func init() {
-	deleteGroupsCmd.Flags().StringSlice("groups", nil, "group names, separated by comma")
+	deleteGroupsCmd.Flags().StringSliceP("groups", "g", nil, "group names, separated by comma")
 }

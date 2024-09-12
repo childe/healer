@@ -48,7 +48,7 @@ var deleteTopicsCmd = &cobra.Command{
 }
 
 func init() {
-	deleteTopicsCmd.Flags().StringSlice("topics", nil, "topic names, separated by comma")
+	deleteTopicsCmd.Flags().StringSliceP("topics", "t", nil, "topic names, separated by comma")
 
 	rootCmd.AddCommand(deleteTopicsCmd)
 }
