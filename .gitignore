@@ -1,7 +1,6 @@
 /healer
 target/
 /tools/bin/
-/command/healer
 vendor/
 /_vendor-*
 .idea

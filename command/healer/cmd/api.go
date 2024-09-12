@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/childe/healer/command/cmd/apicontrollers"
+	"github.com/childe/healer/command/healer/cmd/apicontrollers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"

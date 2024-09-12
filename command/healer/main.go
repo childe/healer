@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"github.com/childe/healer"
-	"github.com/childe/healer/command/cmd"
+	"github.com/childe/healer/command/healer/cmd"
 	"github.com/spf13/pflag"
 	"k8s.io/klog/v2"
 )
