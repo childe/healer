@@ -67,9 +67,6 @@ func (broker *Broker) getHighestAvailableAPIVersion(apiKey uint16) uint16 {
 }
 
 func (broker *Broker) createConn() error {
-	broker.mux.Lock()
-	defer broker.mux.Unlock()
-
 	if conn, err := newConn(broker.GetAddress(), broker.config); err != nil {
 		return err
 	} else {
@@ -240,12 +237,12 @@ func (broker *Broker) Request(r Request) (ReadParser, error) {
 
 // RequestAndGet sends a request to the broker and returns the response
 func (broker *Broker) RequestAndGet(r Request) (resp Response, err error) {
+	broker.mux.Lock()
+	defer broker.mux.Unlock()
+
 	if err := broker.ensureOpen(); err != nil {
 		return nil, err
 	}
-
-	broker.mux.Lock()
-	defer broker.mux.Unlock()
 
 	defer func() {
 		if os.IsTimeout(err) || errors.Is(err, io.EOF) || errors.Is(err, syscall.EPIPE) {
@@ -320,13 +317,23 @@ func (broker *Broker) requestStreamingly(payload []byte, timeout int) (r io.Read
 	return reader, responseLength, nil
 }
 
+// used in broker init and reopen after close.
+// not use RequeAndResponse to avoid dead lock
 func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse, err error) {
 	apiVersionRequest := NewApiVersionsRequest(clientID)
-	resp, err := broker.RequestAndGet(apiVersionRequest)
-	if v, ok := resp.(APIVersionsResponse); ok {
-		return v, err
+	rp, err := broker.Request(apiVersionRequest)
+	if err != nil {
+		return r, err
 	}
-	return r, err
+
+	resp, err := rp.ReadAndParse()
+	if err != nil {
+		return r, err
+	}
+	if err = resp.Error(); err != nil {
+		return r, err
+	}
+	return resp.(APIVersionsResponse), nil
 }
 
 func (broker *Broker) RequestListGroups(clientID string) (r ListGroupsResponse, err error) {

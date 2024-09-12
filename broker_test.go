@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"testing"
 
 	"github.com/bytedance/mockey"
@@ -82,7 +83,7 @@ func TestReopenConn(t *testing.T) {
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(broker, convey.ShouldNotBeNil)
 
-		convey.So(ensureOpen.Times(), convey.ShouldEqual, 1)
+		convey.So(ensureOpen.Times(), convey.ShouldEqual, 0)
 		convey.So(createConn.Times(), convey.ShouldEqual, 1)
 
 		failCount := 0
@@ -95,15 +96,53 @@ func TestReopenConn(t *testing.T) {
 				return make([]byte, 0), nil
 			}).Build()
 
-		req := NewMetadataRequest("test-clientID", []string{"test-topic"})
+		req := NewMetadataRequest("healer-unittest", []string{"test-topic"})
 		_, err = broker.RequestAndGet(req) // EOF
 		convey.So(errors.Is(err, io.EOF), convey.ShouldBeTrue)
+		convey.So(brokerClose.Times(), convey.ShouldEqual, 1)
+		convey.So(ensureOpen.Times(), convey.ShouldEqual, 1)
+		convey.So(createConn.Times(), convey.ShouldEqual, 1)
 
 		_, err = broker.RequestAndGet(req)
 		convey.So(err, convey.ShouldBeNil)
 
 		convey.So(brokerClose.Times(), convey.ShouldEqual, 1)
-		convey.So(ensureOpen.Times(), convey.ShouldEqual, 4)
+		convey.So(ensureOpen.Times(), convey.ShouldEqual, 2)
 		convey.So(createConn.Times(), convey.ShouldEqual, 2)
+	})
+}
+
+func TestRequestLock(t *testing.T) {
+	mockey.PatchConvey("ONE broker do Request in multi goroutines in the same time. One closes because of EOF, others should reopen and then complete Request, no nil point panic", t, func() {
+		mockey.Mock(newAPIVersionsResponse).Return(APIVersionsResponse{}, nil).Build()
+		mockey.Mock((*net.Dialer).Dial).Return(&MockConn{}, nil).Build()
+		mockey.Mock(NewMetadataResponse).Return(MetadataResponse{}, nil).Build()
+
+		broker, err := NewBroker("127.0.0.1:9092", 0, DefaultBrokerConfig())
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(broker, convey.ShouldNotBeNil)
+
+		failCount := 0
+		mockey.Mock(defaultReadParser.Read).
+			To(func() ([]byte, error) {
+				if failCount%2 == 0 {
+					failCount++
+					return nil, io.EOF
+				}
+				return make([]byte, 0), nil
+			}).Build()
+
+		count := 10
+		wg := sync.WaitGroup{}
+		wg.Add(count)
+		for i := 0; i < count; i++ {
+			go func() {
+				req := NewMetadataRequest("healer-unittest", []string{"test-topic"})
+				_, err = broker.RequestAndGet(req)
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		convey.So(err, convey.ShouldBeNil)
 	})
 }
