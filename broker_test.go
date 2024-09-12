@@ -29,7 +29,7 @@ func TestNewBroker(t *testing.T) {
 	})
 }
 func TestLockInNewBroker(t *testing.T) {
-	mockey.PatchConvey("test lock in NewBroker", t, func() {
+	mockey.PatchConvey("failed Dial could not result in dead lock", t, func() {
 		errMock := errors.New("mock dial error")
 		dial := mockey.Mock((*net.Dialer).Dial).Return(nil, errMock).Build()
 		broker, err := NewBroker("127.0.0.1:9092", 0, DefaultBrokerConfig())
