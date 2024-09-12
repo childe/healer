@@ -1,86 +1,55 @@
+# INSTALL
+
+```sh
+go install github.com/childe/healer/command/healer@latest
+```
+
+# Docker
+
+```sh
+docker pull rmself/healer:latest
+```
+
+# what can healer command do
+
+- produce messages
+- consume messages
+- get metadata
+- create topics
+- delete topics
+- create(increase) partitons
+- describe configs
+- alter configs
+- alter partiton assignments
+- get offsets
+- get pendings
+- reset offsets
+- (re)elect leaders
+- rest apis of doing jobs above
+
+# Code Examples
+
 ## Group Consumer
 
-```
-package main
+group consumer(cluster style)
 
-import (
-	"flag"
-	"fmt"
+[https://github.com/childe/healer/blob/master/command/healer/cmd/group-consumer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/group-consumer.go)
 
-	"github.com/childe/healer"
-	"github.com/golang/glog"
-)
-
-func main() {
-	flag.Parse()
-
-	configMap := make(map[string]interface{})
-	configMap["bootstrap.servers"] = "127.0.0.1:9092,127.0.0.1:9093"
-	configMap["group.id"] = "mygroup"
-
-	config, err := healer.GetConsumerConfig(configMap)
-	if err != nil {
-		glog.Errorf("could not create consumer config: %s", err)
-	}
-
-	c, err := healer.NewGroupConsumer("TOPICNAME", config)
-	if err != nil {
-		glog.Errorf("could not create GroupConsumer: %s", err)
-	}
-	defer c.Close()
-
-	messages, err := c.Consume(nil)
-	if err != nil {
-		glog.Fatalf("failed to consume: %s", err)
-	}
-
-	for {
-		message := <-messages
-		fmt.Printf("%s:%d:%d:%s\n", message.TopicName, message.PartitionID, message.Message.Offset, message.Message.Value)
-	}
-}
-```
 
 ## Producer
 
-```
-package main
+[https://github.com/childe/healer/blob/master/command/healer/cmd/console-producer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/console-producer.go)
 
-import (
-	"flag"
-
-	"github.com/childe/healer"
-	"github.com/golang/glog"
-)
-
-func main() {
-	flag.Parse()
-
-	configMap := make(map[string]interface{})
-	configMap["bootstrap.servers"] = "127.0.0.1:9092,127.0.0.1:9093"
-	config, err := healer.GetProducerConfig(configMap)
-
-	if err != nil {
-		glog.Errorf("coult not create producer config: %s", err)
-		return
-	}
-
-	producer := healer.NewProducer("TOPICNAME", config)
-	if producer == nil {
-		glog.Error("could not create producer")
-	}
-	defer producer.Close()
-
-	key := []byte("")
-	msg := []byte("")
-	producer.AddMessage(key, msg)
-	// producer.AddMessage(nil, msg)
-}
-
-```
 
 ## Console Consumer
 
+one consumer consume messages from all partitons
+
+[https://github.com/childe/healer/blob/master/command/healer/cmd/console-consumer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/console-consumer.go)
+
+
 ## Simple Consumer
 
-## Group Consumer (assign certain parititons, do not need join group)
+consume from only one certain partition
+
+[https://github.com/childe/healer/blob/master/command/healer/cmd/simple-consumer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/simple-consumer.go)
