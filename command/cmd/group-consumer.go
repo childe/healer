@@ -50,8 +50,10 @@ var groupConsumerCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		// printOffset, err := cmd.Flags().GetBool("printoffset")
-		// jsonFormat, err := cmd.Flags().GetBool("json")
+		jsonFormat, err := cmd.Flags().GetBool("json")
+		if err != nil {
+			return err
+		}
 		config, err := cmd.Flags().GetString("config")
 		if err != nil {
 			return err
@@ -78,7 +80,16 @@ var groupConsumerCmd = &cobra.Command{
 			case <-sigChan:
 				return nil
 			case message := <-messages:
-				fmt.Printf("%d: %s\n", message.Message.Offset, message.Message.Value)
+				if jsonFormat {
+					b, err := json.Marshal(message)
+					if err != nil {
+						fmt.Printf("marshal message error:%s\n", err)
+					} else {
+						fmt.Println(string(b))
+					}
+				} else {
+					fmt.Printf("%s:%d:%d: %s\n", message.TopicName, message.PartitionID, message.Message.Offset, message.Message.Value)
+				}
 				i++
 				if maxMessages > 0 && i >= maxMessages {
 					return nil
@@ -93,6 +104,5 @@ func init() {
 	groupConsumerCmd.Flags().StringP("group", "g", "", "group id")
 	groupConsumerCmd.Flags().String("config", "", `{"xx"="yy","aa"="zz"} refer to https://github.com/childe/healer/blob/master/config.go`)
 	groupConsumerCmd.Flags().Int("max-messages", math.MaxInt, "the number of messages to output")
-	groupConsumerCmd.Flags().Bool("printoffset", true, "if print offset of each message")
 	groupConsumerCmd.Flags().Bool("json", false, "print message in json format")
 }
