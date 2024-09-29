@@ -30,8 +30,10 @@ var getOffsetsCmd = &cobra.Command{
 			return err
 		}
 		if timestamp == -1 {
+			// Cannot use the current timestamp because if there has been no data written in the last few time, no data will be returned
 			//timestamp = time.Now().UnixMilli()
 		} else if timestamp == -2 {
+			// use 0 as timestamp, response will return correct earliest timestamp associated with the offset. if use -2 , timestamp returned is -1. weird.
 			timestamp = 0
 		}
 
