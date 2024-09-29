@@ -14,10 +14,26 @@ var getOffsetsCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		bs, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		topic, err := cmd.Flags().GetString("topic")
-		offsets, err := cmd.Flags().GetUint32("offsets")
+		if err != nil {
+			return err
+		}
 		timestamp, err := cmd.Flags().GetInt64("timestamp")
+		if err != nil {
+			return err
+		}
+		if timestamp == -1 {
+			//timestamp = time.Now().UnixMilli()
+		} else if timestamp == -2 {
+			timestamp = 0
+		}
 
 		brokers, err := healer.NewBrokers(bs)
 
@@ -25,28 +41,33 @@ var getOffsetsCmd = &cobra.Command{
 			return fmt.Errorf("failed to create brokers from %s: %w", bs, err)
 		}
 
+		var offsets uint32 = 1
 		offsetsResponse, err := brokers.RequestOffsets(client, topic, -1, timestamp, offsets)
 
 		if err != nil {
 			return fmt.Errorf("failed to get offsets: %w", err)
 		}
 
-		rst := make([]healer.PartitionOffset, 0)
+		allPartitions := make([]healer.PartitionOffset, 0)
 
 		for _, x := range offsetsResponse {
 			for _, partitionOffsetsList := range x.TopicPartitionOffsets {
-				rst = append(rst, partitionOffsetsList...)
+				allPartitions = append(allPartitions, partitionOffsetsList...)
 			}
 		}
 
-		sort.Slice(rst, func(i, j int) bool { return rst[i].Partition < rst[j].Partition })
-		for _, partitionOffset := range rst {
-			fmt.Printf("%s:%d:", topic, partitionOffset.Partition)
-			for i, offset := range partitionOffset.OldStyleOffsets {
-				if i != 0 {
-					fmt.Print(",")
+		sort.Slice(allPartitions, func(i, j int) bool { return allPartitions[i].Partition < allPartitions[j].Partition })
+		for _, p := range allPartitions {
+			fmt.Printf("%s:%d:", topic, p.Partition)
+			if len(p.OldStyleOffsets) > 0 {
+				for i, offset := range p.OldStyleOffsets {
+					if i != 0 {
+						fmt.Print(",")
+					}
+					fmt.Printf("%d", offset)
 				}
-				fmt.Printf("%d", offset)
+			} else {
+				fmt.Printf("%d %d", p.Timestamp, p.Offset)
 			}
 			fmt.Println()
 		}
@@ -56,7 +77,6 @@ var getOffsetsCmd = &cobra.Command{
 }
 
 func init() {
-	getOffsetsCmd.Flags().Uint32("offsets", 1, "get how many offsets")
 	getOffsetsCmd.Flags().Int64("timestamp", -1, "-1(latest)/-2(earliest). timestamp of the offsets before that")
 	getOffsetsCmd.Flags().StringP("topic", "t", "", "topic name")
 }

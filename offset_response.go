@@ -9,9 +9,12 @@ type PartitionOffset struct {
 	Partition       int32
 	ErrorCode       int16
 	OldStyleOffsets []int64
+	Timestamp       int64
+	Offset          int64
 }
 type OffsetsResponse struct {
 	CorrelationID         uint32
+	ThrottleTimeMs        int32
 	TopicPartitionOffsets map[string][]PartitionOffset
 }
 
@@ -26,7 +29,7 @@ func (r OffsetsResponse) Error() error {
 	return nil
 }
 
-func NewOffsetsResponse(payload []byte) (r OffsetsResponse, err error) {
+func NewOffsetsResponse(payload []byte, version uint16) (r OffsetsResponse, err error) {
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
@@ -36,6 +39,10 @@ func NewOffsetsResponse(payload []byte) (r OffsetsResponse, err error) {
 
 	r.CorrelationID = uint32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
+
+	if version > 0 {
+		r.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
+	}
 
 	topicLenght := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
@@ -50,21 +57,28 @@ func NewOffsetsResponse(payload []byte) (r OffsetsResponse, err error) {
 		offset += 4
 		r.TopicPartitionOffsets[topicName] = make([]PartitionOffset, partitionOffsetLength)
 		for j := uint32(0); j < partitionOffsetLength; j++ {
-			partition := int32(binary.BigEndian.Uint32(payload[offset:]))
+			p := PartitionOffset{}
+
+			p.Partition = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
-			errorCode := int16(binary.BigEndian.Uint16(payload[offset:]))
+			p.ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
-			offsetLength := binary.BigEndian.Uint32(payload[offset:])
-			offset += 4
-			r.TopicPartitionOffsets[topicName][j] = PartitionOffset{
-				Partition:       partition,
-				ErrorCode:       errorCode,
-				OldStyleOffsets: make([]int64, offsetLength),
-			}
-			for k := uint32(0); k < offsetLength; k++ {
-				r.TopicPartitionOffsets[topicName][j].OldStyleOffsets[k] = int64(binary.BigEndian.Uint64(payload[offset:]))
+
+			if version == 0 {
+				offsetLength := binary.BigEndian.Uint32(payload[offset:])
+				offset += 4
+
+				for k := uint32(0); k < offsetLength; k++ {
+					p.OldStyleOffsets = append(p.OldStyleOffsets, int64(binary.BigEndian.Uint64(payload[offset:])))
+					offset += 8
+				}
+			} else {
+				p.Timestamp = int64(binary.BigEndian.Uint64(payload[offset:]))
+				offset += 8
+				p.Offset = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
 			}
+			r.TopicPartitionOffsets[topicName][j] = p
 		}
 	}
 	return r, nil

@@ -100,7 +100,7 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 	case API_SaslAuthenticate:
 		return NewSaslAuthenticateResponse(data)
 	case API_OffsetRequest:
-		return NewOffsetsResponse(data)
+		return NewOffsetsResponse(data, p.version)
 	case API_OffsetFetchRequest:
 		return NewOffsetFetchResponse(data)
 	case API_FindCoordinator:

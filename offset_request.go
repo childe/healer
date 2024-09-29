@@ -1,25 +1,5 @@
 package healer
 
-/*
-This API describes the valid offset range available for a set of topic-partitions. As with the produce and fetch APIs requests must be directed to the broker that is currently the leader for the partitions in question. This can be determined using the metadata API.
-
-The response contains the starting offset of each segment for the requested partition as well as the "log end offset" i.e. the offset of the next message that would be appended to the given partition.
-
-We agree that this API is slightly funky.
-
-Offset Request
-
-	OffsetRequest => ReplicaId [TopicName [Partition Time MaxNumberOfOffsets]]
-	  ReplicaId => int32
-	  TopicName => string
-	  Partition => int32
-	  Time => int64
-	  MaxNumberOfOffsets => int32
-
-Field	Decription
-Time	Used to ask for all messages before a certain time (ms). There are two special values. Specify -1 to receive the latest offset (i.e. the offset of the next coming message) and -2 to receive the earliest available offset. Note that because offsets are pulled in descending order, asking for the earliest offset will always return you a single element.
-*/
-
 import (
 	"encoding/binary"
 )
@@ -38,9 +18,8 @@ type OffsetsRequest struct {
 // request only ONE topic
 func NewOffsetsRequest(topic string, partitionIDs []int32, timeValue int64, offsets uint32, clientID string) *OffsetsRequest {
 	requestHeader := &RequestHeader{
-		APIKey:     API_OffsetRequest,
-		APIVersion: 0,
-		ClientID:   clientID,
+		APIKey:   API_OffsetRequest,
+		ClientID: clientID,
 	}
 
 	partitionOffsetRequestInfos := make(map[int32]*PartitionOffsetRequestInfo)
@@ -68,8 +47,13 @@ func (offsetR *OffsetsRequest) Encode(version uint16) []byte {
 	for topicName, partitionInfo := range offsetR.RequestInfo {
 		requestLength += 2 + len(topicName) + 4 + len(partitionInfo)*16
 	}
+
 	payload := make([]byte, 4+requestLength)
 	offset := 0
+
+	defer func() {
+		binary.BigEndian.PutUint32(payload, uint32(offset-4))
+	}()
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
@@ -95,10 +79,13 @@ func (offsetR *OffsetsRequest) Encode(version uint16) []byte {
 
 			binary.BigEndian.PutUint64(payload[offset:], uint64(partitionOffsetRequestInfo.Time))
 			offset += 8
-			binary.BigEndian.PutUint32(payload[offset:], partitionOffsetRequestInfo.MaxNumberOfOffsets)
-			offset += 4
+			if version == 0 {
+				binary.BigEndian.PutUint32(payload[offset:], partitionOffsetRequestInfo.MaxNumberOfOffsets)
+				offset += 4
+
+			}
 		}
 	}
 
-	return payload
+	return payload[:offset]
 }
