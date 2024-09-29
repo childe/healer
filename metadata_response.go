@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
+	"strconv"
 )
 
 var (
@@ -44,6 +46,10 @@ type BrokerInfo struct {
 	Host   string
 	Port   int32
 	Rack   string
+}
+
+func (b *BrokerInfo) NetAddress() string {
+	return net.JoinHostPort(b.Host, strconv.Itoa(int(b.Port)))
 }
 
 func decodeToBrokerInfo(payload []byte, version uint16) (b BrokerInfo, offset int) {

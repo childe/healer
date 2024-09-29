@@ -5,8 +5,6 @@ package healer
 import (
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -51,22 +49,8 @@ func NewBrokersWithConfig(bootstrapServers string, config *BrokerConfig) (*Broke
 		} else {
 			brokers, err := newBrokersFromOne(broker, clientID, config)
 			if err != nil {
-				logger.Error(err, "could not create broker list", "address", broker.GetAddress())
+				logger.Error(err, "could not create broker list", "address", broker)
 			} else {
-				go func() {
-					ticker := time.NewTicker(time.Duration(config.MetadataRefreshIntervalMS) * time.Millisecond)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ticker.C:
-							if !brokers.refreshMetadata() {
-								logger.Info("refresh metadata failed")
-							}
-						case <-brokers.closeChan:
-							return
-						}
-					}
-				}()
 				brokers.bootstrapServers = bootstrapServers
 				return brokers, nil
 			}
@@ -105,7 +89,7 @@ func newBrokersFromOne(broker *Broker, clientID string, config *BrokerConfig) (*
 	brokers.controllerID = metadataResponse.ControllerID
 	for _, brokerInfo := range metadataResponse.Brokers {
 		brokers.brokersInfo[brokerInfo.NodeID] = brokerInfo
-		if broker.GetAddress() == net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))) {
+		if broker.GetAddress() == brokerInfo.NetAddress() {
 			brokers.brokers[brokerInfo.NodeID] = broker
 		}
 	}
@@ -159,7 +143,7 @@ func (brokers *Brokers) refreshMetadata() bool {
 	logger.Info("update metadata from latest brokersInfo")
 	// from latest brokersinfo
 	for _, brokerInfo := range brokers.brokersInfo {
-		brokerAddr := net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port)))
+		brokerAddr := brokerInfo.NetAddress()
 		broker, err := NewBroker(brokerAddr, -1, brokers.config)
 		if err != nil {
 			logger.Error(err, "create broker failed", "brokerAddress", brokerAddr)
@@ -188,40 +172,23 @@ func (brokers *Brokers) refreshMetadata() bool {
 
 // TODO merge with GetBroker
 func (brokers *Brokers) NewBroker(nodeID int32) (*Broker, error) {
-	if nodeID == -1 {
-		for nodeID, brokerInfo := range brokers.brokersInfo {
-			broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), nodeID, brokers.config)
-			if err == nil {
-				return broker, nil
-			}
-			logger.Error(err, "create broker failed", "host", brokerInfo.Host, "port", brokerInfo.Port)
-		}
-		return nil, fmt.Errorf("could not get broker from nodeID[%d]", nodeID)
-	}
-
-	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), brokerInfo.NodeID, brokers.config)
-		if err == nil {
-			return broker, nil
-		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s), error: :%w", nodeID, net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), err)
-		}
-	} else {
+	if _, ok := brokers.brokersInfo[nodeID]; !ok {
 		logger.Info("could not get broker from cache, referesh medadata", "nodeID", nodeID)
 		if !brokers.refreshMetadata() {
-			logger.Info("refresh metadata failed")
+			logger.Info("failed to refresh metadata")
 		}
 	}
 
 	// try again after refereshing metadata
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), brokerInfo.NodeID, brokers.config)
+		broker, err := NewBroker(brokerInfo.NetAddress(), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			return broker, nil
 		}
-		return nil, fmt.Errorf("could not init broker for node[%d](%s):%w", nodeID, net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), err)
+		return nil, fmt.Errorf("could not create broker for node[%d](%s):%w", nodeID, brokerInfo.NetAddress(), err)
+	} else {
+		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
 	}
-	return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
 }
 
 // GetBroker returns broker from cache or create a new one
@@ -233,13 +200,20 @@ func (brokers *Brokers) GetBroker(nodeID int32) (*Broker, error) {
 		return broker, nil
 	}
 
+	if _, ok := brokers.brokersInfo[nodeID]; !ok {
+		logger.Info("could not get broker from cache, referesh medadata", "nodeID", nodeID)
+		if !brokers.refreshMetadata() {
+			logger.Info("failed to refresh metadata")
+		}
+	}
+
 	if brokerInfo, ok := brokers.brokersInfo[nodeID]; ok {
-		broker, err := NewBroker(net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), brokerInfo.NodeID, brokers.config)
+		broker, err := NewBroker(brokerInfo.NetAddress(), brokerInfo.NodeID, brokers.config)
 		if err == nil {
 			brokers.brokers[nodeID] = broker
 			return broker, nil
 		} else {
-			return nil, fmt.Errorf("could not init broker for node[%d](%s):%w", nodeID, net.JoinHostPort(brokerInfo.Host, strconv.Itoa(int(brokerInfo.Port))), err)
+			return nil, fmt.Errorf("could not init broker for node[%d](%s):%w", nodeID, brokerInfo.NetAddress(), err)
 		}
 	} else {
 		return nil, fmt.Errorf("could not get broker info with nodeID[%d]", nodeID)
