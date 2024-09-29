@@ -57,14 +57,14 @@ func getOffset(topic, client string) (map[int32]int64, error) {
 	for _, offsetsResponse := range offsetsResponses {
 		for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
 			for _, partitionOffset := range partitionOffsets {
-				if len(partitionOffset.Offsets) == 0 {
+				if len(partitionOffset.OldStyleOffsets) == 0 {
 					rst[partitionOffset.Partition] = -1
 					continue
 				}
-				if len(partitionOffset.Offsets) != 1 {
-					return nil, fmt.Errorf("%s[%d] offsets length mismatch: %v", topic, partitionOffset.Partition, partitionOffset.Offsets)
+				if len(partitionOffset.OldStyleOffsets) != 1 {
+					return nil, fmt.Errorf("%s[%d] offsets length mismatch: %v", topic, partitionOffset.Partition, partitionOffset.OldStyleOffsets)
 				}
-				rst[partitionOffset.Partition] = partitionOffset.Offsets[0]
+				rst[partitionOffset.Partition] = partitionOffset.OldStyleOffsets[0]
 			}
 		}
 	}

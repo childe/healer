@@ -6,9 +6,9 @@ import (
 )
 
 type PartitionOffset struct {
-	Partition int32
-	ErrorCode int16
-	Offsets   []int64
+	Partition       int32
+	ErrorCode       int16
+	OldStyleOffsets []int64
 }
 type OffsetsResponse struct {
 	CorrelationID         uint32
@@ -57,12 +57,12 @@ func NewOffsetsResponse(payload []byte) (r OffsetsResponse, err error) {
 			offsetLength := binary.BigEndian.Uint32(payload[offset:])
 			offset += 4
 			r.TopicPartitionOffsets[topicName][j] = PartitionOffset{
-				Partition: partition,
-				ErrorCode: errorCode,
-				Offsets:   make([]int64, offsetLength),
+				Partition:       partition,
+				ErrorCode:       errorCode,
+				OldStyleOffsets: make([]int64, offsetLength),
 			}
 			for k := uint32(0); k < offsetLength; k++ {
-				r.TopicPartitionOffsets[topicName][j].Offsets[k] = int64(binary.BigEndian.Uint64(payload[offset:]))
+				r.TopicPartitionOffsets[topicName][j].OldStyleOffsets[k] = int64(binary.BigEndian.Uint64(payload[offset:]))
 				offset += 8
 			}
 		}

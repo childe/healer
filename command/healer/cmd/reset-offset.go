@@ -53,11 +53,11 @@ var resetOffsetCmd = &cobra.Command{
 			for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
 				for _, partitionOffset := range partitionOffsets {
 					partition := partitionOffset.Partition
-					if len(partitionOffset.Offsets) == 0 {
+					if len(partitionOffset.OldStyleOffsets) == 0 {
 						return fmt.Errorf("offsets of %s[%d] is blank", topic, partition)
 					}
-					klog.Infof("%s:%d:%v", topic, partition, partitionOffset.Offsets)
-					offset := int64(partitionOffset.Offsets[0])
+					klog.Infof("%s:%d:%v", topic, partition, partitionOffset.OldStyleOffsets)
+					offset := int64(partitionOffset.OldStyleOffsets[0])
 					offsets[partition] = offset
 				}
 			}
