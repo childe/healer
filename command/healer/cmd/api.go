@@ -69,6 +69,7 @@ var apiCmd = &cobra.Command{
 		router.GET("/group/:group/pending/:topic", wrap(apicontrollers.GetPending, client))
 
 		router.POST("/alter-partition-reassignments", wrap(apicontrollers.AlterPartitionReassignments, client))
+		router.POST("/elect-leaders", wrap(apicontrollers.ElectLeaders, client))
 
 		router.POST("/list-partition-reassignments", wrap(apicontrollers.ListPartitionReassignments, client))
 
