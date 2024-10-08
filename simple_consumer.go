@@ -218,7 +218,7 @@ func (c *SimpleConsumer) getOffset(fromBeginning bool) (int64, error) {
 	if err := offsetsResponse.Error(); err != nil {
 		return -1, err
 	}
-	return int64(offsetsResponse.TopicPartitionOffsets[c.topic][0].OldStyleOffsets[0]), nil
+	return int64(offsetsResponse.TopicPartitionOffsets[c.topic][0].GetOffset()), nil
 }
 
 func (c *SimpleConsumer) getCommitedOffet() error {

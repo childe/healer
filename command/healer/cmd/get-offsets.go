@@ -61,16 +61,7 @@ var getOffsetsCmd = &cobra.Command{
 		sort.Slice(allPartitions, func(i, j int) bool { return allPartitions[i].Partition < allPartitions[j].Partition })
 		for _, p := range allPartitions {
 			fmt.Printf("%s:%d:", topic, p.Partition)
-			if len(p.OldStyleOffsets) > 0 {
-				for i, offset := range p.OldStyleOffsets {
-					if i != 0 {
-						fmt.Print(",")
-					}
-					fmt.Printf("%d", offset)
-				}
-			} else {
-				fmt.Printf("%d %d", p.Timestamp, p.Offset)
-			}
+			fmt.Printf("%d %d", p.Timestamp, p.GetOffset())
 			fmt.Println()
 		}
 

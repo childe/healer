@@ -12,6 +12,18 @@ type PartitionOffset struct {
 	Timestamp       int64
 	Offset          int64
 }
+
+// get the offset of the given partition from OldStyleOffsets or Offset
+func (p *PartitionOffset) GetOffset() int64 {
+	if len(p.OldStyleOffsets) == 0 {
+		return p.Offset
+	}
+	if len(p.OldStyleOffsets) == 1 {
+		return p.OldStyleOffsets[0]
+	}
+	panic("more than one old style offset found in offset response")
+}
+
 type OffsetsResponse struct {
 	CorrelationID         uint32
 	ThrottleTimeMs        int32

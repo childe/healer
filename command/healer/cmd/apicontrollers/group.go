@@ -1,7 +1,6 @@
 package apicontrollers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/childe/healer"
@@ -85,16 +84,9 @@ func getOffset(brokers *healer.Brokers, topic, client string) (map[int32]int64, 
 
 	rst := make(map[int32]int64)
 	for _, offsetsResponse := range offsetsResponses {
-		for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
+		for _, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
 			for _, partitionOffset := range partitionOffsets {
-				if len(partitionOffset.OldStyleOffsets) == 0 {
-					rst[partitionOffset.Partition] = -1
-					continue
-				}
-				if len(partitionOffset.OldStyleOffsets) != 1 {
-					return nil, fmt.Errorf("%s[%d] offsets length mismatch: %v", topic, partitionOffset.Partition, partitionOffset.OldStyleOffsets)
-				}
-				rst[partitionOffset.Partition] = partitionOffset.OldStyleOffsets[0]
+				rst[partitionOffset.Partition] = partitionOffset.GetOffset()
 			}
 		}
 	}

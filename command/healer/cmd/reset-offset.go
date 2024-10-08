@@ -50,15 +50,10 @@ var resetOffsetCmd = &cobra.Command{
 			if err := offsetsResponse.Error(); err != nil {
 				return fmt.Errorf("request offsets error: %w. topic: %s, timestmap: %d", err, topic, timestamp)
 			}
-			for topic, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
+			for _, partitionOffsets := range offsetsResponse.TopicPartitionOffsets {
 				for _, partitionOffset := range partitionOffsets {
 					partition := partitionOffset.Partition
-					if len(partitionOffset.OldStyleOffsets) == 0 {
-						return fmt.Errorf("offsets of %s[%d] is blank", topic, partition)
-					}
-					klog.Infof("%s:%d:%v", topic, partition, partitionOffset.OldStyleOffsets)
-					offset := int64(partitionOffset.OldStyleOffsets[0])
-					offsets[partition] = offset
+					offsets[partition] = partitionOffset.GetOffset()
 				}
 			}
 		}
