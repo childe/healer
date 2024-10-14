@@ -356,7 +356,7 @@ func (broker *Broker) requestMetaData(clientID string, topics []string) (r Metad
 	return r, err
 }
 
-// RequestOffsets return the offset values array from ther broker. all partitionID in partitionIDs must be in THIS broker
+// RequestOffsets return the offset from ther broker. all partitionID in partitionIDs must be in THIS broker
 func (broker *Broker) requestOffsets(clientID, topic string, partitionIDs []int32, timeValue int64, offsets uint32) (r OffsetsResponse, err error) {
 	offsetsRequest := NewOffsetsRequest(topic, partitionIDs, timeValue, offsets, clientID)
 
