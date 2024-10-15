@@ -114,13 +114,22 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 	for {
 		if firstMessageSet {
 			firstMessageSet = false
+
+			// messageSize doesn't include the size of messageSize itself.
 			messageSize := int(binary.BigEndian.Uint32(header17[8:]))
-			value = make([]byte, 12+messageSize) // messageSize doesn't include the size of messageSize itself. 12 equals to the size of the header of offset & message_size.
+			if messageSize < 6 {
+				return
+			}
+
+			// 12 is the size of offset(int64) & message_size(int32) in header17
+			value = make([]byte, 12+messageSize)
 			copy(value, header17)
 			n, e := streamDecoder.Read(value[17:])
 			if e != nil {
 				return offset, e
 			}
+
+			// remaining bytes is not complete
 			if n < messageSize-17 {
 				return
 			}
