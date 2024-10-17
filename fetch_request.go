@@ -58,7 +58,7 @@ func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, 
 	}
 
 	if value, ok := fetchRequest.Topics[topic]; ok {
-		value = append(value, partitionBlock)
+		fetchRequest.Topics[topic] = append(value, partitionBlock)
 	} else {
 		fetchRequest.Topics[topic] = []*PartitionBlock{partitionBlock}
 	}
@@ -94,17 +94,17 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.MinBytes))
 	offset += 4
 
-	if version >= 10 {
+	if version >= 7 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.MaxBytes))
 		offset += 4
 		payload[offset] = byte(fetchRequest.ISOLationLevel)
 		offset++
 	}
-	if version >= 10 {
+	if version >= 7 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.SessionID))
 		offset += 4
 	}
-	if version >= 10 {
+	if version >= 7 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(fetchRequest.SessionEpoch))
 		offset += 4
 	}
@@ -127,7 +127,7 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 			}
 			binary.BigEndian.PutUint64(payload[offset:], uint64(partitionBlock.FetchOffset))
 			offset += 8
-			if version >= 10 {
+			if version >= 7 {
 				binary.BigEndian.PutUint64(payload[offset:], uint64(partitionBlock.LogStartOffset))
 				offset += 8
 			}
@@ -136,7 +136,7 @@ func (fetchRequest *FetchRequest) Encode(version uint16) []byte {
 		}
 	}
 
-	if version >= 10 {
+	if version >= 7 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(fetchRequest.ForgottenTopicsDatas)))
 		offset += 4
 		for topicName, partitions := range fetchRequest.ForgottenTopicsDatas {
