@@ -344,7 +344,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 	switch version {
 	case 0:
 		bytesBeforeRecordsLength = 18
-	case 10:
+	case 7, 10:
 		bytesBeforeRecordsLength = 38
 	}
 	buffer, n, err = streamDecoder.read(bytesBeforeRecordsLength)
@@ -424,7 +424,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeHeader(version uint16) er
 	case 0:
 		headerLength = 8
 		countOffset = 4
-	case 10:
+	case 7, 10:
 		headerLength = 18
 		countOffset = 14
 	}
