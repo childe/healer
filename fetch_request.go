@@ -58,7 +58,7 @@ func (fetchRequest *FetchRequest) addPartition(topic string, partitionID int32, 
 	}
 
 	if value, ok := fetchRequest.Topics[topic]; ok {
-		value = append(value, partitionBlock)
+		fetchRequest.Topics[topic] = append(value, partitionBlock)
 	} else {
 		fetchRequest.Topics[topic] = []*PartitionBlock{partitionBlock}
 	}
