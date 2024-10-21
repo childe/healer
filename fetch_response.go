@@ -12,6 +12,43 @@ import (
 	"github.com/pierrec/lz4"
 )
 
+type RecordBatch struct {
+	BaseOffset           int64
+	BatchLength          int32
+	PartitionLeaderEpoch int32
+	Magic                int8
+	CRC                  uint32
+	Attributes           int16
+	LastOffsetDelta      int32
+	BaseTimestamp        int64
+	MaxTimestamp         int64
+	ProducerID           int64
+	ProducerEpoch        int16
+	BaseSequence         int32
+	Records              []Record
+}
+type PartitionResponse struct {
+	PartitionIndex      int32
+	ErrorCode           int16
+	HighWatermark       int64
+	LastStableOffset    int64
+	LogStartOffset      int64
+	AbortedTransactions []struct {
+		ProducerID  int64
+		FirstOffset int64
+	}
+	RecordBatchLength int32
+	RecordBatch       RecordBatch
+}
+
+type FetchResponse struct {
+	CorrelationID  int32
+	ThrottleTimeMs int32
+	ErrorCode      int16
+	SessionID      int32
+	Responses      map[string][]PartitionResponse
+}
+
 var errFetchResponseTooShortNoRecordsMeta = errors.New("fetch response too short, could not get records metadata(form baseOffset to baseSequence)")
 
 type fetchResponseStreamDecoder struct {
@@ -340,7 +377,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 		n      int
 	)
 
-	var bytesBeforeRecordsLength int // (partition_index, messageSetSizeBytes]
+	var bytesBeforeRecordsLength int // (partition_index, RecordBatchLength]
 	switch version {
 	case 0:
 		bytesBeforeRecordsLength = 18
