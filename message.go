@@ -18,7 +18,7 @@ var errUncompleteRecord = errors.New("uncomplete Record, The last bytes are not 
 // RecordHeader is concluded in Record
 type RecordHeader struct {
 	headerKeyLength   int32
-	Key         string
+	Key               string
 	headerValueLength int32
 	Value             []byte
 }
@@ -99,23 +99,6 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	}
 
 	return
-}
-
-// Records is batch of Record
-type Records struct {
-	baseOffset           int64
-	batchLength          int32
-	partitionLeaderEpoch int32
-	magic                int8
-	crc                  int32
-	attributes           int16
-	lastOffsetDelta      int32
-	baseTimestamp        int64
-	maxTimestamp         int64
-	producerID           int64
-	producerEpoch        int16
-	baseSequence         int32
-	records              []Record
 }
 
 // FullMessage contains message value and topic and partition
