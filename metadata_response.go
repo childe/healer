@@ -2,18 +2,13 @@ package healer
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"sort"
 	"strconv"
 )
 
-var (
-	errNoTopicsInMetadata = errors.New("no topic returned in metadata response")
-)
-
-// MetadataResponse holds all the parameters of metadata response, including the brokers and topics
+// MetadataResponse holds all the fields of metadata response, including the brokers and topics
 type MetadataResponse struct {
 	CorrelationID  uint32
 	ThrottleTimeMs int32
@@ -23,7 +18,15 @@ type MetadataResponse struct {
 	TopicMetadatas []TopicMetadata
 }
 
-// Error returns the error abstracted from the error code, actually it always returns nil
+// TopicMetadata holds all the fields of topic metadata, which is used in metadata response
+type TopicMetadata struct {
+	TopicErrorCode     int16
+	TopicName          string
+	IsInternal         bool
+	PartitionMetadatas []*PartitionMetadataInfo
+}
+
+// Error returns the error from the error code
 func (r MetadataResponse) Error() error {
 	for _, topic := range r.TopicMetadatas {
 		if topic.TopicErrorCode != 0 {
@@ -40,7 +43,7 @@ func (r MetadataResponse) Error() error {
 	return nil
 }
 
-// BrokerInfo holds all the parameters of broker info, which is used in metadata response
+// BrokerInfo holds all the fields of broker info, which is used in metadata response
 type BrokerInfo struct {
 	NodeID int32
 	Host   string
@@ -71,14 +74,6 @@ func decodeToBrokerInfo(payload []byte, version uint16) (b BrokerInfo, offset in
 	return
 }
 
-// TopicMetadata holds all the parameters of topic metadata, which is used in metadata response
-type TopicMetadata struct {
-	TopicErrorCode     int16
-	TopicName          string
-	IsInternal         bool
-	PartitionMetadatas []*PartitionMetadataInfo
-}
-
 func decodeToTopicMetadata(payload []byte, version uint16) (tm TopicMetadata, offset int) {
 	tm.TopicErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 	offset += 2
@@ -101,7 +96,7 @@ func decodeToTopicMetadata(payload []byte, version uint16) (tm TopicMetadata, of
 	return
 }
 
-// PartitionMetadataInfo holds all the parameters of partition metadata info, which is used in metadata response
+// PartitionMetadataInfo holds all the fields of partition metadata info, which is used in metadata response
 type PartitionMetadataInfo struct {
 	PartitionErrorCode int16
 	PartitionID        int32
