@@ -28,7 +28,7 @@ type RecordBatch struct {
 	Records              []Record
 }
 type PartitionResponse struct {
-	PartitionIndex      int32
+	PartitionID         int32
 	ErrorCode           int16
 	HighWatermark       int64
 	LastStableOffset    int64
@@ -365,53 +365,86 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 	return nil
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicName string, version uint16) error {
+func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicName string, version uint16) (err error) {
 	var (
-		partition int32
-		errorCode int16
-		//highwaterMarkOffset int64
-		messageSetSizeBytes int32
-		err                 error
-
-		buffer []byte
-		n      int
+		p   PartitionResponse
+		buf []byte = make([]byte, 8)
 	)
 
-	var bytesBeforeRecordsLength int // (partition_index, RecordBatchLength]
-	switch version {
-	case 0:
-		bytesBeforeRecordsLength = 18
-	case 7, 10:
-		bytesBeforeRecordsLength = 38
-	}
-	buffer, n, err = streamDecoder.read(bytesBeforeRecordsLength)
-	if err != nil {
+	defer func() {
+		if err == io.EOF {
+			err = &maxBytesTooSmall
+		}
+	}()
+
+	if _, err = streamDecoder.Read(buf[:4]); err != nil {
 		return err
 	}
+	p.PartitionID = int32(binary.BigEndian.Uint32(buf))
 
-	if n < bytesBeforeRecordsLength {
-		return &maxBytesTooSmall
+	if _, err = streamDecoder.Read(buf[:2]); err != nil {
+		return err
+	}
+	p.ErrorCode = int16(binary.BigEndian.Uint16(buf))
+	if p.ErrorCode != 0 {
+		return KafkaError(p.ErrorCode)
 	}
 
-	partition = int32(binary.BigEndian.Uint32(buffer))
+	if _, err = streamDecoder.Read(buf[:8]); err != nil {
+		return err
+	}
+	// p.HighWatermark = int64(binary.BigEndian.Uint64(buf))
 
-	errorCode = int16(binary.BigEndian.Uint16(buffer[4:]))
-	if errorCode != 0 {
-		return KafkaError(errorCode)
+	switch version {
+	case 7, 10:
+		if _, err = streamDecoder.Read(buf[:8]); err != nil {
+			return err
+		}
+		// p.LastStableOffset = int64(binary.BigEndian.Uint64(buf))
+
+		if _, err = streamDecoder.Read(buf[:8]); err != nil {
+			return err
+		}
+		// p.LogStartOffset = int64(binary.BigEndian.Uint64(buf))
+
+		if _, err = streamDecoder.Read(buf[:4]); err != nil {
+			return err
+		}
+		abortedTransactionsCount := int32(binary.BigEndian.Uint32(buf))
+		if abortedTransactionsCount > 0 {
+			p.AbortedTransactions = make([]struct {
+				ProducerID  int64
+				FirstOffset int64
+			}, abortedTransactionsCount)
+			for i := 0; i < int(abortedTransactionsCount); i++ {
+				if _, err = streamDecoder.Read(buf[:8]); err != nil {
+					return err
+				}
+				p.AbortedTransactions[i].ProducerID = int64(binary.BigEndian.Uint64(buf))
+
+				if _, err = streamDecoder.Read(buf[:8]); err != nil {
+					return err
+				}
+				p.AbortedTransactions[i].FirstOffset = int64(binary.BigEndian.Uint64(buf))
+			}
+		}
 	}
 
-	messageSetSizeBytes = int32(binary.BigEndian.Uint32((buffer[bytesBeforeRecordsLength-4:])))
-	if messageSetSizeBytes == 0 {
+	if _, err = streamDecoder.Read(buf[:4]); err != nil {
+		return err
+	}
+	p.RecordBatchLength = int32(binary.BigEndian.Uint32(buf))
+	if p.RecordBatchLength <= 0 {
 		return nil
 	}
 
-	// if we use fetch request with version 0 and not big enough fetch.max.bytes, kafka server may return partial records, and the NOT begins with the requests offset.
+	// if we use fetch request with version 0 and fetch.max.bytes is not big enough, kafka server may return partial records
 	// healer will ignore the records, double fetch.max.bytes, and then retry.
-	if int(messageSetSizeBytes) > streamDecoder.totalLength-streamDecoder.offset {
+	if int(p.RecordBatchLength) > streamDecoder.totalLength-streamDecoder.offset {
 		return &maxBytesTooSmall
 	}
 
-	err = streamDecoder.decodeMessageSet(topicName, partition, messageSetSizeBytes, version)
+	err = streamDecoder.decodeMessageSet(topicName, p.PartitionID, p.RecordBatchLength, version)
 	return err
 }
 

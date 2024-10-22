@@ -48,7 +48,7 @@ func (r FetchResponse) Encode(version uint16) ([]byte, error) {
 
 		for _, partition := range partitions {
 			// 编码 PartitionIndex
-			if err := binary.Write(buf, binary.BigEndian, partition.PartitionIndex); err != nil {
+			if err := binary.Write(buf, binary.BigEndian, partition.PartitionID); err != nil {
 				return nil, err
 			}
 

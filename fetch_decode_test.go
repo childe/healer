@@ -15,12 +15,17 @@ func TestFetchResponseDecode(t *testing.T) {
 		Responses: map[string][]PartitionResponse{
 			"test-topic": {
 				{
-					PartitionIndex:      1,
-					ErrorCode:           0,
-					HighWatermark:       90,
-					LastStableOffset:    100,
-					LogStartOffset:      110,
-					AbortedTransactions: nil,
+					PartitionID:      1,
+					ErrorCode:        0,
+					HighWatermark:    90,
+					LastStableOffset: 100,
+					LogStartOffset:   110,
+					AbortedTransactions: []struct {
+						ProducerID  int64
+						FirstOffset int64
+					}{
+						{ProducerID: 1, FirstOffset: 2},
+					},
 					RecordBatch: RecordBatch{
 						BaseOffset:           120,
 						PartitionLeaderEpoch: 130,
