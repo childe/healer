@@ -109,7 +109,7 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 
 	// RecordBatch 的 BatchLength 是变长的，所以先预留空间
 	defer func() {
-		binary.BigEndian.PutUint32(payload[4:8], uint32(buf.Len()-8))
+		binary.BigEndian.PutUint32(payload[8:], uint32(buf.Len()-8))
 	}()
 
 	// 编码 RecordBatch
@@ -168,40 +168,40 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 
 // Encode encodes a record to a byte slice
 // just for test
-func (r *Record) Encode(version uint16) ([]byte, error) {
+func (r *Record) Encode(version uint16) (payload []byte, err error) {
 	buf := new(bytes.Buffer)
+	defer func() {
+		lengthBuf := make([]byte, binary.MaxVarintLen64)
+		n := binary.PutVarint(lengthBuf, int64(len(payload)))
+		payload = append(lengthBuf[:n], payload...)
+	}()
 
 	// 编码 length
-	lengthBuf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutUvarint(lengthBuf, uint64(r.length))
-	if _, err := buf.Write(lengthBuf[:n]); err != nil {
-		return nil, err
-	}
 
 	// 编码 attributes
 	attrBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutUvarint(attrBuf, uint64(r.attributes))
+	n := binary.PutVarint(attrBuf, int64(r.attributes))
 	if _, err := buf.Write(attrBuf[:n]); err != nil {
 		return nil, err
 	}
 
 	// 编码 timestampDelta
 	timeBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutUvarint(timeBuf, uint64(r.timestampDelta))
+	n = binary.PutVarint(timeBuf, r.timestampDelta)
 	if _, err := buf.Write(timeBuf[:n]); err != nil {
 		return nil, err
 	}
 
 	// 编码 offsetDelta
 	offsetBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutUvarint(offsetBuf, uint64(r.offsetDelta))
+	n = binary.PutVarint(offsetBuf, int64(r.offsetDelta))
 	if _, err := buf.Write(offsetBuf[:n]); err != nil {
 		return nil, err
 	}
 
 	// 编码 key 长度
 	keyLenBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutUvarint(keyLenBuf, uint64(len(r.key)))
+	n = binary.PutVarint(keyLenBuf, int64(len(r.key)))
 	if _, err := buf.Write(keyLenBuf[:n]); err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (r *Record) Encode(version uint16) ([]byte, error) {
 
 	// 编码 value 长度
 	valueLenBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutUvarint(valueLenBuf, uint64(len(r.value)))
+	n = binary.PutVarint(valueLenBuf, int64(len(r.value)))
 	if _, err := buf.Write(valueLenBuf[:n]); err != nil {
 		return nil, err
 	}
@@ -225,7 +225,7 @@ func (r *Record) Encode(version uint16) ([]byte, error) {
 
 	// 编码 Headers 数量
 	headerCountBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutUvarint(headerCountBuf, uint64(len(r.Headers)))
+	n = binary.PutVarint(headerCountBuf, int64(len(r.Headers)))
 	if _, err := buf.Write(headerCountBuf[:n]); err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func (r *Record) Encode(version uint16) ([]byte, error) {
 	for _, header := range r.Headers {
 		// 编码 Key 长度
 		keyLenBuf := make([]byte, binary.MaxVarintLen64)
-		n = binary.PutUvarint(keyLenBuf, uint64(len(header.Key)))
+		n = binary.PutVarint(keyLenBuf, int64(len(header.Key)))
 		if _, err := buf.Write(keyLenBuf[:n]); err != nil {
 			return nil, err
 		}
@@ -246,7 +246,7 @@ func (r *Record) Encode(version uint16) ([]byte, error) {
 
 		// 编码 Value 长度
 		valueLenBuf := make([]byte, binary.MaxVarintLen64)
-		n = binary.PutUvarint(valueLenBuf, uint64(len(header.Value)))
+		n = binary.PutVarint(valueLenBuf, int64(len(header.Value)))
 		if _, err := buf.Write(valueLenBuf[:n]); err != nil {
 			return nil, err
 		}
