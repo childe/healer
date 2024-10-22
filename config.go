@@ -193,6 +193,7 @@ type ProducerConfig struct {
 	MetadataMaxAgeMS         int        `json:"metadata.max.age.ms,string" mapstructure:"metadata.max.age.ms"`
 	FetchTopicMetaDataRetrys int        `json:"fetch.topic.metadata.retrys,string" mapstructure:"fetch.topic.metadata.retrys"`
 	ConnectionsMaxIdleMS     int        `json:"connections.max.idle.ms,string" mapstructure:"connections.max.idle.ms"`
+	RetryBackOffMS           int        `json:"retry.backoff.ms,string" mapstructure:"retry.backoff.ms"`
 
 	MetadataRefreshIntervalMS int `json:"metadata.refresh.interval.ms,string" mapstructure:"metadata.refresh.interval.ms"`
 
@@ -226,6 +227,7 @@ func DefaultProducerConfig() ProducerConfig {
 		MetadataMaxAgeMS:         300000,
 		FetchTopicMetaDataRetrys: 3,
 		ConnectionsMaxIdleMS:     540000,
+		RetryBackOffMS:           200,
 
 		TLSEnabled: false,
 
