@@ -333,7 +333,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName stri
 		o      int
 	)
 	for offset < int(messageSetSizeBytes) {
-		// payload before magic
+		// payload before magic: [BaseOffset: Magic]
 		header17, n, e := streamDecoder.read(17)
 		if e != nil {
 			if e == io.ErrUnexpectedEOF {
