@@ -4,28 +4,6 @@ import (
 	"encoding/binary"
 )
 
-/*
-This API answers the following questions:
-- What topics exist?
-- How many partitions does each topic have?
-- Which broker is currently the leader for each partition?
-- What is the host and port for each of these brokers?
-
-This is the only request that can be addressed to any broker in the cluster.
-
-Since there may be many topics the client can give an optional list of topic names in order to only return metadata for a subset of topics.
-
-The metadata returned is at the partition level, but grouped together by topic for convenience and to avoid redundancy. For each partition the metadata contains the information for the leader as well as for all the replicas and the list of replicas that are currently in-sync.
-
-Topics Metadata Request
-
-	TopicsMetadataRequest => [TopicsName]
-	  TopicsName => string
-
-Field			Description
-TopicsName		The topics to produce metadata for. If empty the request will yield metadata for all topics.
-*/
-
 type MetadataRequest struct {
 	*RequestHeader
 	Topics                 []string
@@ -86,7 +64,8 @@ func NewMetadataRequest(clientID string, topics []string) *MetadataRequest {
 			APIKey:   API_MetadataRequest,
 			ClientID: clientID,
 		},
-		Topics: topics,
+		Topics:                 topics,
+		AllowAutoTopicCreation: true,
 	}
 
 	return r

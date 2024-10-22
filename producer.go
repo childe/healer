@@ -54,10 +54,13 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 		return nil, err
 	}
 
-	err = p.updateCurrentSimpleProducer()
-	if err != nil {
-		err = fmt.Errorf("update current simple consumer of %s error: %w", p.topic, err)
-		return nil, err
+	for {
+		if err = p.updateCurrentSimpleProducer(); err != nil {
+			logger.Error(err, "update current simple consumer, sleep and retry", "topic", p.topic, "retry_backoff_ms", p.config.RetryBackOffMS)
+			time.Sleep(time.Duration(p.config.RetryBackOffMS) * time.Millisecond)
+		} else {
+			break
+		}
 	}
 
 	ctx := context.Background()
