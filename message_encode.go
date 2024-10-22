@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-func (r FetchResponse) Encode(version uint16) ([]byte, error) {
+func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err := binary.Write(buf, binary.BigEndian, r.CorrelationID); err != nil {
