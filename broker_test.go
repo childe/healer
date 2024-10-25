@@ -48,9 +48,9 @@ func TestGetHighestAvailableAPIVersion(t *testing.T) {
 			want       uint16
 		}{
 			{apiVersion: APIVersion{ApiKey(key), 1, 10}, want: 7},
-			{apiVersion: APIVersion{ApiKey(key), 1, 6}, want: 1},
+			{apiVersion: APIVersion{ApiKey(key), 1, 6}, want: 4},
 			{apiVersion: APIVersion{ApiKey(key), 2, 10}, want: 7},
-			{apiVersion: APIVersion{ApiKey(key), 2, 6}, want: 0},
+			{apiVersion: APIVersion{ApiKey(key), 5, 6}, want: 0},
 		} {
 			broker := &Broker{
 				apiVersions: []APIVersion{

@@ -114,7 +114,7 @@ func decodeToPartitionMetadataInfo(payload []byte, version uint16) (p PartitionM
 	offset += 4
 	p.Leader = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
-	if version == 7 {
+	if version >= 7 {
 		p.LeaderEpoch = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 	}
@@ -133,7 +133,7 @@ func decodeToPartitionMetadataInfo(payload []byte, version uint16) (p PartitionM
 		offset += 4
 	}
 
-	if version == 7 {
+	if version >= 7 {
 		count := binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
 		p.OfflineReplicas = make([]int32, count)
@@ -160,7 +160,7 @@ func NewMetadataResponse(payload []byte, version uint16) (r MetadataResponse, er
 	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	if version == 7 {
+	if version >= 4 {
 		r.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 	}
@@ -175,7 +175,7 @@ func NewMetadataResponse(payload []byte, version uint16) (r MetadataResponse, er
 		offset += o
 	}
 
-	if version == 7 {
+	if version >= 4 {
 		l := int(binary.BigEndian.Uint16(payload[offset:]))
 		r.ClusterID = string(payload[offset : offset+l])
 		offset += 2 + l
