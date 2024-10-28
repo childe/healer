@@ -34,8 +34,8 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 		mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
 		mockey.Mock((*SimpleConsumer).getOffset).Return(0, nil).Build()
 		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(version).Build()
+		payload, _ := resp.Encode(version)
 		mockey.Mock((*Broker).requestFetchStreamingly).To(func(fetchRequest *FetchRequest) (io.Reader, uint32, error) {
-			payload, _ := resp.Encode(version)
 			reader := bytes.NewReader(payload)
 			return reader, uint32(len(payload)), nil
 		}).Build()
@@ -45,10 +45,8 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			simpleConsumer, _ := NewSimpleConsumer(topic, int32(partitionID), config)
 			messages, _ := simpleConsumer.Consume(-1, nil)
-			count := 99
-			for count > 0 {
+			for i := 0; i < 1000; i++ {
 				<-messages
-				count--
 			}
 			simpleConsumer.Stop()
 		}
