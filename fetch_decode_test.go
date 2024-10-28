@@ -93,6 +93,9 @@ func TestFetchResponseDecodeComplete(t *testing.T) {
 		for msg := range messages {
 			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
 				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
+			if msg.Error != nil {
+				t.Error(msg.Error)
+			}
 			i++
 		}
 		if i != 2 {
@@ -132,6 +135,9 @@ func TestFetchResponseDecodeWithPartialRecords1(t *testing.T) {
 		for msg := range messages {
 			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
 				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
+			if msg.Error != nil {
+				t.Error(msg.Error)
+			}
 			i++
 		}
 		if i != 2 {
@@ -171,6 +177,9 @@ func TestFetchResponseDecodeWithPartialRecords2(t *testing.T) {
 		for msg := range messages {
 			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
 				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
+			if msg.Error != nil {
+				t.Error(msg.Error)
+			}
 			i++
 		}
 		if i != 1 {
