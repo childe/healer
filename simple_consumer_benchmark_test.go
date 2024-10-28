@@ -6,10 +6,13 @@ import (
 	"testing"
 
 	"github.com/bytedance/mockey"
+	"k8s.io/klog/v2"
 )
 
 func BenchmarkSimpleConsumer(b *testing.B) {
 	mockey.PatchConvey("benchmark simple consumer", b, func() {
+		SetLogger(klog.NewKlogr().WithName("healer-test").WithSink(nil))
+
 		topic := "testTopic"
 		partitionID := 1
 		config := map[string]interface{}{
