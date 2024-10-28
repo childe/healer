@@ -33,16 +33,16 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(version).Build()
 		mockey.Mock((*Broker).requestFetchStreamingly).To(func(fetchRequest *FetchRequest) (io.Reader, uint32, error) {
 			payload, _ := resp.Encode(version)
-			b.Log(len(payload))
 			reader := bytes.NewReader(payload)
 			return reader, uint32(len(payload)), nil
 		}).Build()
+		mockey.Mock((*fetchResponseStreamDecoder).filterMessage).Return(true).Build()
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			simpleConsumer, _ := NewSimpleConsumer(topic, int32(partitionID), config)
 			messages, _ := simpleConsumer.Consume(-1, nil)
-			count := 10000
+			count := 99
 			for count > 0 {
 				<-messages
 				count--

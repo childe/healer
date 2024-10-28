@@ -71,14 +71,6 @@ type fetchResponseStreamDecoder struct {
 	hasOneMessage bool
 }
 
-func (streamDecoder *fetchResponseStreamDecoder) putMessage(msg *FullMessage) error {
-	select {
-	case <-streamDecoder.ctx.Done():
-		return streamDecoder.ctx.Err()
-	case streamDecoder.messages <- msg:
-		return nil
-	}
-}
 func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int, err error) {
 	defer func() {
 		streamDecoder.offset += length
@@ -208,18 +200,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 
 		// TODO send each message to the channel directly?
 		for i := range messageSet {
-			if messageSet[i].Offset >= streamDecoder.startOffset {
-				msg := &FullMessage{
-					TopicName:   topicName,
-					PartitionID: partitionID,
-					Message:     messageSet[i],
-				}
-				if err = streamDecoder.putMessage(msg); err != nil {
-					return offset, err
-				}
-				streamDecoder.hasOneMessage = true
-			} else {
-				logger.Info("offset smaller than startOffset", "offset", "topic", topicName, "partition", partitionID, messageSet[i].Offset, "startOffset", streamDecoder.startOffset)
+			if err = streamDecoder.filterAndPutMessage(messageSet[i], topicName, partitionID); err != nil {
+				return offset, err
 			}
 		}
 	}
@@ -291,20 +273,42 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 			Value:      record.value,
 			Headers:    record.Headers,
 		}
-		if message.Offset >= streamDecoder.startOffset {
-			msg := &FullMessage{
-				TopicName:   topicName,
-				PartitionID: partitionID,
-				Message:     message,
-			}
-			if err = streamDecoder.putMessage(msg); err != nil {
-				return offset, err
-			}
-			streamDecoder.hasOneMessage = true
+		if err = streamDecoder.filterAndPutMessage(message, topicName, partitionID); err != nil {
+			return offset, err
 		}
 	}
 
 	return offset, nil
+}
+
+func (streamDecoder *fetchResponseStreamDecoder) filterAndPutMessage(message *Message, topicName string, partitionID int32) (err error) {
+	if streamDecoder.filterMessage(message) {
+		msg := &FullMessage{
+			TopicName:   topicName,
+			PartitionID: partitionID,
+			Message:     message,
+		}
+		if err = streamDecoder.putMessage(msg); err != nil {
+			return err
+		}
+		streamDecoder.hasOneMessage = true
+	} else {
+		logger.Info("offset smaller than startOffset", "offset", message.Offset, "topic", topicName, "partition", partitionID, "startOffset", streamDecoder.startOffset)
+	}
+	return nil
+}
+
+func (streamDecoder *fetchResponseStreamDecoder) filterMessage(message *Message) bool {
+	return message.Offset >= streamDecoder.startOffset
+}
+
+func (streamDecoder *fetchResponseStreamDecoder) putMessage(msg *FullMessage) error {
+	select {
+	case <-streamDecoder.ctx.Done():
+		return streamDecoder.ctx.Err()
+	case streamDecoder.messages <- msg:
+		return nil
+	}
 }
 
 // messageSetSizeBytes may include more the one `Record Batch`,
