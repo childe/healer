@@ -25,7 +25,7 @@ func TestRefreshPartiton(t *testing.T) {
 
 		err := simpleConsumer.refreshPartiton()
 
-		convey.So(err.Error(), convey.ShouldEqual, "partition not found in meetadata response")
+		convey.So(err.Error(), convey.ShouldEqual, "partition not found in metadata response")
 	})
 
 	mockey.PatchConvey("TestNotFoundMeta", t, func() {
@@ -54,7 +54,7 @@ func TestRefreshPartiton(t *testing.T) {
 
 		err := simpleConsumer.refreshPartiton()
 
-		convey.So(err.Error(), convey.ShouldEqual, "partition not found in meetadata response")
+		convey.So(err.Error(), convey.ShouldEqual, "partition not found in metadata response")
 	})
 
 	mockey.PatchConvey("TestNormal", t, func() {

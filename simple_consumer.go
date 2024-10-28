@@ -125,7 +125,7 @@ func (c *SimpleConsumer) refreshPartiton() error {
 			}
 		}
 	}
-	return errors.New("partition not found in meetadata response")
+	return errors.New("partition not found in metadata response")
 }
 func (c *SimpleConsumer) getCoordinator() error {
 	coordinatorResponse, err := c.brokers.FindCoordinator(c.config.ClientID, c.config.GroupID)
