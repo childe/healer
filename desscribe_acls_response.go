@@ -17,6 +17,7 @@ type DescribeAclsResponse struct {
 type AclResource struct {
 	ResourceType int8
 	ResourceName string
+	PatternType  int8
 	Acls         []Acl
 }
 
@@ -75,6 +76,12 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 			offset += n
 		}
 
+		// PatternType
+		if version >= 1 {
+			response.Resources[i].PatternType = int8(payload[offset])
+			offset++
+		}
+
 		// Acls array
 		aclCount := binary.BigEndian.Uint32(payload[offset:])
 		offset += 4
@@ -127,6 +134,10 @@ func (r *DescribeAclsResponse) Encode(version uint16) (rst []byte, err error) {
 		buf.WriteByte(byte(resource.ResourceType))
 
 		writeNullableString(buf, resource.ResourceName)
+
+		if version >= 1 {
+			buf.WriteByte(byte(resource.PatternType))
+		}
 
 		binary.Write(buf, binary.BigEndian, uint32(len(resource.Acls)))
 

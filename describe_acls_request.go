@@ -5,11 +5,15 @@ import (
 	"encoding/binary"
 )
 
+const DescribeAclsTypeGroup = 1
+const DescribeAclsTypeTopic = 2
+
 type DescribeAclsRequest struct {
 	RequestHeader
 
 	ResourceTypeFilter int8
 	ResourceNameFilter string
+	PatternTypeFilter  int8
 	PrincipalFilter    string
 	HostFilter         string
 	Operation          int8
@@ -20,6 +24,7 @@ func NewDescribeAclsRequest(
 	clientID string,
 	resourceTypeFilter int8,
 	resourceNameFilter string,
+	PatternTypeFilter int8,
 	principalFilter string,
 	hostFilter string,
 	operation int8,
@@ -29,6 +34,7 @@ func NewDescribeAclsRequest(
 	r.ClientID = clientID
 	r.ResourceTypeFilter = resourceTypeFilter
 	r.ResourceNameFilter = resourceNameFilter
+	r.PatternTypeFilter = PatternTypeFilter
 	r.PrincipalFilter = principalFilter
 	r.HostFilter = hostFilter
 	r.Operation = operation
@@ -36,7 +42,7 @@ func NewDescribeAclsRequest(
 	return
 }
 
-func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte, err error) {
+func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
 	buf := new(bytes.Buffer)
 
 	// length
@@ -50,25 +56,26 @@ func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte, err error) {
 	r.RequestHeader.Encode(header)
 	buf.Write(header)
 
-	if err := binary.Write(buf, binary.BigEndian, r.ResourceTypeFilter); err != nil {
-		return nil, err
-	}
+	binary.Write(buf, binary.BigEndian, r.ResourceTypeFilter)
 
 	writeNullableString(buf, r.ResourceNameFilter)
+
+	if version >= 1 {
+		binary.Write(buf, binary.BigEndian, r.PatternTypeFilter)
+	}
+
 	writeNullableString(buf, r.PrincipalFilter)
+
 	writeNullableString(buf, r.HostFilter)
 
-	if err := binary.Write(buf, binary.BigEndian, r.Operation); err != nil {
-		return nil, err
-	}
+	binary.Write(buf, binary.BigEndian, r.Operation)
 
-	if err := binary.Write(buf, binary.BigEndian, r.PermissionType); err != nil {
-		return nil, err
-	}
+	binary.Write(buf, binary.BigEndian, r.PermissionType)
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
+// just for test
 func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRequest, err error) {
 	offset := 0
 
@@ -86,6 +93,11 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 	resourceNameFilter, o := compactNullableString(payload[offset:])
 	offset += o
 	r.ResourceNameFilter = resourceNameFilter
+
+	if version >= 1 {
+		r.PatternTypeFilter = int8(payload[offset])
+		offset++
+	}
 
 	principalFilter, o := compactNullableString(payload[offset:])
 	offset += o
