@@ -34,6 +34,22 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 		mockey.Mock((*SimpleConsumer).initOffset).Return().Build()
 		mockey.Mock((*SimpleConsumer).getOffset).Return(0, nil).Build()
 		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(version).Build()
+
+		records := make([]Record, 0)
+		for i := 0; i < 20; i++ {
+			records = append(records, Record{
+				length:         100,
+				attributes:     0,
+				timestampDelta: 1000,
+				offsetDelta:    0,
+				key:            []byte("key-1"),
+				value: []byte(`192.168.1.100 - - [16/Apr/2024:00:01:22 +0800] "GET /index.html HTTP/1.1" 200 1534 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+`),
+				Headers: []RecordHeader{},
+			})
+		}
+		t := resp.Responses["test-topic"]
+		t[0].RecordBatch.Records = records
 		payload, _ := resp.Encode(version)
 		mockey.Mock((*Broker).requestFetchStreamingly).To(func(fetchRequest *FetchRequest) (io.Reader, uint32, error) {
 			reader := bytes.NewReader(payload)
