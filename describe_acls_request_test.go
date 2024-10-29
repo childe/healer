@@ -12,12 +12,12 @@ func TestDescribeAclsRequestEncodeAndDecodeVersion0(t *testing.T) {
 			APIVersion:    version,
 			CorrelationID: 10,
 		},
-		ResourceTypeFilter: 1,
-		ResourceNameFilter: "test-resource",
-		PrincipalFilter:    "test-principal",
-		HostFilter:         "test-host",
-		Operation:          2,
-		PermissionType:     3,
+		ResourceType:   1,
+		ResourceName:   "test-resource",
+		Principal:      "test-principal",
+		Host:           "test-host",
+		Operation:      2,
+		PermissionType: 3,
 	}
 
 	encoded := original.Encode(version)
@@ -41,13 +41,13 @@ func TestDescribeAclsRequestEncodeAndDecodeVersion1(t *testing.T) {
 			APIVersion:    version,
 			CorrelationID: 10,
 		},
-		ResourceTypeFilter: 1,
-		ResourceNameFilter: "test-resource",
-		PatternTypeFilter:  3,
-		PrincipalFilter:    "test-principal",
-		HostFilter:         "test-host",
-		Operation:          2,
-		PermissionType:     3,
+		ResourceType:   1,
+		ResourceName:   "test-resource",
+		PatternType:    3,
+		Principal:      "test-principal",
+		Host:           "test-host",
+		Operation:      2,
+		PermissionType: 3,
 	}
 
 	encoded := original.Encode(version)

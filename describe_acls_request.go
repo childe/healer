@@ -5,19 +5,35 @@ import (
 	"encoding/binary"
 )
 
-const DescribeAclsTypeGroup = 1
-const DescribeAclsTypeTopic = 2
+const DescribeAclsResourceTypeGroup = 1
+const DescribeAclsResourceTypeTopic = 2
+
+const DescribeAclsPatternTypeLiteral = 0
+const DescribeAclsPatternTypePrefix = 1
+
+const DescribeAclsOperationAny = 0
+const DescribeAclsOperationAll = 1
+const DescribeAclsOperationRead = 2
+const DescribeAclsOperationWrite = 3
+const DescribeAclsOperationCreate = 4
+const DescribeAclsOperationDelete = 5
+const DescribeAclsOperationAlter = 6
+const DescribeAclsOperationDescribe = 7
+const DescribeAclsOperationClusterAction = 8
+const DescribeAclsOperationDescribeConfigs = 9
+const DescribeAclsOperationAlterConfigs = 10
+const DescribeAclsOperationIdempotentWrite = 11
 
 type DescribeAclsRequest struct {
 	RequestHeader
 
-	ResourceTypeFilter int8
-	ResourceNameFilter string
-	PatternTypeFilter  int8
-	PrincipalFilter    string
-	HostFilter         string
-	Operation          int8
-	PermissionType     int8
+	ResourceType   int8
+	ResourceName   string
+	PatternType    int8
+	Principal      string
+	Host           string
+	Operation      int8
+	PermissionType int8
 }
 
 func NewDescribeAclsRequest(
@@ -32,11 +48,11 @@ func NewDescribeAclsRequest(
 ) (r DescribeAclsRequest) {
 	r.APIKey = API_DescribeAcls
 	r.ClientID = clientID
-	r.ResourceTypeFilter = resourceTypeFilter
-	r.ResourceNameFilter = resourceNameFilter
-	r.PatternTypeFilter = PatternTypeFilter
-	r.PrincipalFilter = principalFilter
-	r.HostFilter = hostFilter
+	r.ResourceType = resourceTypeFilter
+	r.ResourceName = resourceNameFilter
+	r.PatternType = PatternTypeFilter
+	r.Principal = principalFilter
+	r.Host = hostFilter
 	r.Operation = operation
 	r.PermissionType = permissionType
 	return
@@ -56,17 +72,17 @@ func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
 	r.RequestHeader.Encode(header)
 	buf.Write(header)
 
-	binary.Write(buf, binary.BigEndian, r.ResourceTypeFilter)
+	binary.Write(buf, binary.BigEndian, r.ResourceType)
 
-	writeNullableString(buf, r.ResourceNameFilter)
+	writeNullableString(buf, r.ResourceName)
 
 	if version >= 1 {
-		binary.Write(buf, binary.BigEndian, r.PatternTypeFilter)
+		binary.Write(buf, binary.BigEndian, r.PatternType)
 	}
 
-	writeNullableString(buf, r.PrincipalFilter)
+	writeNullableString(buf, r.Principal)
 
-	writeNullableString(buf, r.HostFilter)
+	writeNullableString(buf, r.Host)
 
 	binary.Write(buf, binary.BigEndian, r.Operation)
 
@@ -87,25 +103,25 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 	r.RequestHeader = header
 	offset += o
 
-	r.ResourceTypeFilter = int8(payload[offset])
+	r.ResourceType = int8(payload[offset])
 	offset++
 
 	resourceNameFilter, o := compactNullableString(payload[offset:])
 	offset += o
-	r.ResourceNameFilter = resourceNameFilter
+	r.ResourceName = resourceNameFilter
 
 	if version >= 1 {
-		r.PatternTypeFilter = int8(payload[offset])
+		r.PatternType = int8(payload[offset])
 		offset++
 	}
 
 	principalFilter, o := compactNullableString(payload[offset:])
 	offset += o
-	r.PrincipalFilter = principalFilter
+	r.Principal = principalFilter
 
 	hostFilter, o := compactNullableString(payload[offset:])
 	offset += o
-	r.HostFilter = hostFilter
+	r.Host = hostFilter
 
 	r.Operation = int8(payload[offset])
 	offset++
