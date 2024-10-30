@@ -156,17 +156,14 @@ func (c *Client) DeleteTopics(topics []string, timeoutMs int32) (r DeleteTopicsR
 	return resp.(DeleteTopicsResponse), err
 }
 
-func (c *Client) DescribeAcls(resourceType int8, resourceName, principal string, patternType int8, host string, operation, permissionType int8) (DescribeAclsResponse, error) {
-	c.logger.Info("describe acls",
-		"resourceType", resourceType,
-		"resourceName", resourceName,
-		"principal", principal,
-		"patternType", patternType,
-		"host", host,
-		"operation", operation,
-		"permissionType", permissionType)
-
-	req := NewDescribeAclsRequest(c.clientID, resourceType, resourceName, patternType, principal, host, operation, permissionType)
+func (c *Client) DescribeAcls(r DescribeAclsRequestBody) (DescribeAclsResponse, error) {
+	req := DescribeAclsRequest{
+		RequestHeader{
+			APIKey:   API_DescribeAcls,
+			ClientID: c.clientID,
+		},
+		r,
+	}
 
 	controller, err := c.brokers.GetController()
 	if err != nil {
