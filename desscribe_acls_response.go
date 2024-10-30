@@ -44,6 +44,8 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 	response.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
+	offset++ // TaggedFields
+
 	// ThrottleTimeMs
 	response.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
@@ -61,11 +63,11 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 	}
 
 	// Resources array
-	resourceCount := binary.BigEndian.Uint32(payload[offset:])
-	offset += 4
+	resourceCount, o := compactArrayLength(payload[offset:])
+	offset += o
 	response.Resources = make([]AclResource, resourceCount)
 
-	for i := uint32(0); i < resourceCount; i++ {
+	for i := uint64(0); i < resourceCount; i++ {
 		// ResourceType
 		response.Resources[i].ResourceType = int8(payload[offset])
 		offset++
@@ -83,11 +85,11 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 		}
 
 		// Acls array
-		aclCount := binary.BigEndian.Uint32(payload[offset:])
-		offset += 4
+		aclCount, o := compactArrayLength(payload[offset:])
+		offset += o
 		response.Resources[i].Acls = make([]Acl, aclCount)
 
-		for j := uint32(0); j < aclCount; j++ {
+		for j := uint64(0); j < aclCount; j++ {
 			// Principal
 			if str, n := compactString(payload[offset:]); n > 0 {
 				response.Resources[i].Acls[j].Principal = str
@@ -107,8 +109,12 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 			// PermissionType
 			response.Resources[i].Acls[j].PermissionType = int8(payload[offset])
 			offset++
+
+			offset++ // TaggedFields
 		}
+		offset++ // TaggedFields
 	}
+	offset++ // TaggedFields
 
 	return response, nil
 }
