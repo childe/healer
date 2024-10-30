@@ -215,6 +215,7 @@ func (c *GroupConsumer) join() error {
 	if joinGroupResponse.LeaderID == c.memberID {
 		c.ifLeader = true
 		c.members = joinGroupResponse.Members
+		logger.Info("I am the leader", "members", c.members)
 	} else {
 		c.ifLeader = false
 	}
