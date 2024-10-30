@@ -41,7 +41,7 @@ func (t DescribeAclsResourceType) String() string {
 	case DescribeAclsResourceTypeUser:
 		return "USER"
 	default:
-		return "UNKNOWN"
+		return "ERROR"
 	}
 }
 func (t DescribeAclsResourceType) MarshalText() ([]byte, error) {
@@ -101,7 +101,7 @@ func (t DescribeAclsPatternType) String() string {
 	case DescribeAclsPatternTypePrefixed:
 		return "PREFIXED"
 	default:
-		return "UNKNOWN"
+		return "ERROR"
 	}
 }
 
@@ -127,23 +127,27 @@ func (t *DescribeAclsPatternType) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/acl/AclOperation.java
 type DescribeAclsOperation int8
 
-const DescribeAclsOperationAny = 0
-const DescribeAclsOperationAll = 1
-const DescribeAclsOperationRead = 2
-const DescribeAclsOperationWrite = 3
-const DescribeAclsOperationCreate = 4
-const DescribeAclsOperationDelete = 5
-const DescribeAclsOperationAlter = 6
-const DescribeAclsOperationDescribe = 7
-const DescribeAclsOperationClusterAction = 8
-const DescribeAclsOperationDescribeConfigs = 9
-const DescribeAclsOperationAlterConfigs = 10
-const DescribeAclsOperationIdempotentWrite = 11
+const DescribeAclsOperationUnknown = 0
+const DescribeAclsOperationAny = 1
+const DescribeAclsOperationAll = 2
+const DescribeAclsOperationRead = 3
+const DescribeAclsOperationWrite = 4
+const DescribeAclsOperationCreate = 5
+const DescribeAclsOperationDelete = 6
+const DescribeAclsOperationAlter = 7
+const DescribeAclsOperationDescribe = 8
+const DescribeAclsOperationClusterAction = 9
+const DescribeAclsOperationDescribeConfigs = 10
+const DescribeAclsOperationAlterConfigs = 11
+const DescribeAclsOperationIdempotentWrite = 12
 
 func (o DescribeAclsOperation) String() string {
 	switch o {
+	case DescribeAclsOperationUnknown:
+		return "UNKNOWN"
 	case DescribeAclsOperationAny:
 		return "ANY"
 	case DescribeAclsOperationAll:
@@ -169,7 +173,7 @@ func (o DescribeAclsOperation) String() string {
 	case DescribeAclsOperationIdempotentWrite:
 		return "IDEMPOTENT_WRITE"
 	default:
-		return "UNKNOWN"
+		return "ERROR"
 	}
 }
 
@@ -179,29 +183,31 @@ func (o DescribeAclsOperation) MarshalText() ([]byte, error) {
 
 func (o *DescribeAclsOperation) UnmarshalText(text []byte) error {
 	switch strings.ToUpper(string(text)) {
-	case "ANY", "0":
+	case "UNKNOWN", "0":
 		*o = DescribeAclsOperationAny
-	case "ALL", "1":
+	case "ANY", "1":
+		*o = DescribeAclsOperationAny
+	case "ALL", "2":
 		*o = DescribeAclsOperationAll
-	case "READ", "2":
+	case "READ", "3":
 		*o = DescribeAclsOperationRead
-	case "WRITE", "3":
+	case "WRITE", "4":
 		*o = DescribeAclsOperationWrite
-	case "CREATE", "4":
+	case "CREATE", "5":
 		*o = DescribeAclsOperationCreate
-	case "DELETE", "5":
+	case "DELETE", "6":
 		*o = DescribeAclsOperationDelete
-	case "ALTER", "6":
+	case "ALTER", "7":
 		*o = DescribeAclsOperationAlter
-	case "DESCRIBE", "7":
+	case "DESCRIBE", "8":
 		*o = DescribeAclsOperationDescribe
-	case "CLUSTER_ACTION", "8":
+	case "CLUSTER_ACTION", "9":
 		*o = DescribeAclsOperationClusterAction
-	case "DESCRIBE_CONFIGS", "9":
+	case "DESCRIBE_CONFIGS", "10":
 		*o = DescribeAclsOperationDescribeConfigs
-	case "ALTER_CONFIGS", "10":
+	case "ALTER_CONFIGS", "11":
 		*o = DescribeAclsOperationAlterConfigs
-	case "IDEMPOTENT_WRITE", "11":
+	case "IDEMPOTENT_WRITE", "12":
 		*o = DescribeAclsOperationIdempotentWrite
 	default:
 		return fmt.Errorf("unknown DescribeAclsOperation: %s", text)
@@ -209,16 +215,20 @@ func (o *DescribeAclsOperation) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/acl/AclPermissionType.java
 type DescribeAclsPermissionType int8
 
 const (
-	DescribeAclsPermissionTypeAny   DescribeAclsPermissionType = 0
-	DescribeAclsPermissionTypeDeny  DescribeAclsPermissionType = 1
-	DescribeAclsPermissionTypeAllow DescribeAclsPermissionType = 2
+	DescribeAclsPermissionTypeUnkown DescribeAclsPermissionType = 0
+	DescribeAclsPermissionTypeAny    DescribeAclsPermissionType = 1
+	DescribeAclsPermissionTypeDeny   DescribeAclsPermissionType = 2
+	DescribeAclsPermissionTypeAllow  DescribeAclsPermissionType = 3
 )
 
 func (p DescribeAclsPermissionType) String() string {
 	switch p {
+	case DescribeAclsPermissionTypeUnkown:
+		return "UNKNOWN"
 	case DescribeAclsPermissionTypeAny:
 		return "ANY"
 	case DescribeAclsPermissionTypeDeny:
@@ -236,11 +246,13 @@ func (p DescribeAclsPermissionType) MarshalText() ([]byte, error) {
 
 func (p *DescribeAclsPermissionType) UnmarshalText(text []byte) error {
 	switch strings.ToUpper(string(text)) {
-	case "ANY", "0":
+	case "UNKNOWN", "0":
 		*p = DescribeAclsPermissionTypeAny
-	case "DENY", "1":
+	case "ANY", "1":
+		*p = DescribeAclsPermissionTypeAny
+	case "DENY", "2":
 		*p = DescribeAclsPermissionTypeDeny
-	case "ALLOW", "2":
+	case "ALLOW", "3":
 		*p = DescribeAclsPermissionTypeAllow
 	default:
 		return fmt.Errorf("unknown DescribeAclsPermissionType: %s", text)
@@ -298,6 +310,8 @@ func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
 	r.RequestHeader.Encode(header)
 	buf.Write(header)
 
+	buf.WriteByte(0) // TaggedFields
+
 	binary.Write(buf, binary.BigEndian, r.ResourceType)
 
 	writeNullableString(buf, r.ResourceName)
@@ -313,6 +327,8 @@ func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
 	binary.Write(buf, binary.BigEndian, r.Operation)
 
 	binary.Write(buf, binary.BigEndian, r.PermissionType)
+
+	buf.WriteByte(0) // TaggedFields
 
 	return buf.Bytes()
 }
