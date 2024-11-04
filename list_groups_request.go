@@ -13,7 +13,7 @@ func NewListGroupsRequest(clientID string) *ListGroupsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_ListGroups,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return &ListGroupsRequest{requestHeader}
 }

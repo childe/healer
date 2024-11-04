@@ -32,7 +32,7 @@ func NewFetchRequest(clientID string, maxWaitTime int32, minBytes int32) *FetchR
 	requestHeader := &RequestHeader{
 		APIKey:     API_FetchRequest,
 		APIVersion: 10,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	topics := make(map[string][]*PartitionBlock)

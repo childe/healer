@@ -18,7 +18,7 @@ type DescribeLogDirsRequest struct {
 func NewDescribeLogDirsRequest(clientID string, topics []string) (r DescribeLogDirsRequest) {
 	r.RequestHeader = &RequestHeader{
 		APIKey:   API_DescribeLogDirs,
-		ClientID: clientID,
+		ClientID: &clientID,
 	}
 	r.Topics = make([]DescribeLogDirsRequestTopic, len(topics))
 	for i, topic := range topics {

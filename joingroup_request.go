@@ -30,7 +30,7 @@ func NewJoinGroupRequest(apiVersion uint16, clientID string) *JoinGroupRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_JoinGroup,
 		APIVersion: apiVersion,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	return &JoinGroupRequest{

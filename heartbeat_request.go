@@ -28,7 +28,7 @@ func NewHeartbeatRequest(clientID, groupID string, generationID int32, memberID 
 	requestHeader := &RequestHeader{
 		APIKey:     API_Heartbeat,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return &HeartbeatRequest{
 		RequestHeader: requestHeader,

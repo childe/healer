@@ -67,7 +67,7 @@ func NewIncrementalAlterConfigsRequest(clientID string) IncrementalAlterConfigsR
 	requestHeader := &RequestHeader{
 		APIKey:     API_IncrementalAlterConfigs,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return IncrementalAlterConfigsRequest{requestHeader, nil, false}
 }
@@ -162,7 +162,7 @@ func (r IncrementalAlterConfigsRequest) Encode(version uint16) []byte {
 
 // DecodeIncrementalAlterConfigsRequest decodes []byte to IncrementalAlterConfigsRequest, just used in test cases
 func DecodeIncrementalAlterConfigsRequest(payload []byte, version uint16) (r IncrementalAlterConfigsRequest) {
-	header, offset := DecodeRequestHeader(payload[4:])
+	header, offset := DecodeRequestHeader(payload[4:], version)
 	r.RequestHeader = &header
 	offset += 4
 

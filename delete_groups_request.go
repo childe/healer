@@ -15,7 +15,7 @@ func NewDeleteGroupsRequest(clientID string, groupsNames []string) DeleteGroupsR
 	requestHeader := &RequestHeader{
 		APIKey:     API_Delete_Groups,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return DeleteGroupsRequest{
 		RequestHeader: requestHeader,

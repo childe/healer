@@ -37,7 +37,7 @@ func NewOffsetFetchRequest(apiVersion uint16, clientID, groupID string) *OffsetF
 	requestHeader := &RequestHeader{
 		APIKey:     API_OffsetFetchRequest,
 		APIVersion: apiVersion,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	r := &OffsetFetchRequest{

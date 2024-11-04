@@ -23,7 +23,7 @@ func NewLeaveGroupRequest(clientID, groupID, memberID string) *LeaveGroupRequest
 	requestHeader := &RequestHeader{
 		APIKey:     API_LeaveGroup,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	return &LeaveGroupRequest{

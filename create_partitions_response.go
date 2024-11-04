@@ -14,9 +14,9 @@ type CreatePartitionsResponse struct {
 }
 
 type createPartitionsResponseResultBlock struct {
-	TopicName    string `json:"topic_name"`
-	ErrorCode    int16  `json:"error_code"`
-	ErrorMessage string `json:"error_message"`
+	TopicName    string  `json:"topic_name"`
+	ErrorCode    int16   `json:"error_code"`
+	ErrorMessage *string `json:"error_message"`
 	// TAG_BUFFER
 }
 
@@ -24,7 +24,7 @@ type createPartitionsResponseResultBlock struct {
 func (r CreatePartitionsResponse) Error() error {
 	for _, result := range r.Results {
 		if result.ErrorCode != 0 {
-			return fmt.Errorf("create partitions error(%d): %s: %w", result.ErrorCode, result.ErrorMessage, KafkaError(result.ErrorCode))
+			return fmt.Errorf("create partitions error(%d): %s: %w", result.ErrorCode, *result.ErrorMessage, KafkaError(result.ErrorCode))
 		}
 	}
 	return nil
@@ -53,11 +53,11 @@ func NewCreatePartitionsResponse(payload []byte, version uint16) (r CreatePartit
 	offset += 4
 
 	var blockCount int
-	if version == 2 {
+	if version >= 2 {
 		_blockCount, o := compactArrayLength(payload[offset:])
 		offset += o
 		blockCount = int(_blockCount)
-	} else if version == 0 {
+	} else {
 		blockCount = int(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 	}
@@ -66,11 +66,11 @@ func NewCreatePartitionsResponse(payload []byte, version uint16) (r CreatePartit
 	for i := 0; i < blockCount; i++ {
 		r.Results[i] = createPartitionsResponseResultBlock{}
 
-		if version == 2 {
+		if version >= 2 {
 			name, o := compactString(payload[offset:])
 			offset += o
 			r.Results[i].TopicName = name
-		} else if version == 0 {
+		} else {
 			l := int(binary.BigEndian.Uint16(payload[offset:]))
 			offset += 2
 			r.Results[i].TopicName = string(payload[offset : offset+l])
@@ -80,17 +80,14 @@ func NewCreatePartitionsResponse(payload []byte, version uint16) (r CreatePartit
 		r.Results[i].ErrorCode = int16(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 
-		if version == 2 {
+		if version >= 2 {
 			msg, o := compactNullableString(payload[offset:])
 			offset += o
 			r.Results[i].ErrorMessage = msg
-		} else if version == 0 {
-			l := int16(binary.BigEndian.Uint16(payload[offset:]))
-			offset += 2
-			if l > 0 {
-				r.Results[i].ErrorMessage = string(payload[offset : offset+int(l)])
-				offset += int(l)
-			}
+		} else {
+			msg, o := nullableString(payload[offset:])
+			offset += o
+			r.Results[i].ErrorMessage = msg
 		}
 		// TAG_BUFFER
 		offset++

@@ -19,7 +19,7 @@ type OffsetsRequest struct {
 func NewOffsetsRequest(topic string, partitionIDs []int32, timeValue int64, offsets uint32, clientID string) *OffsetsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:   API_OffsetRequest,
-		ClientID: clientID,
+		ClientID: &clientID,
 	}
 
 	partitionOffsetRequestInfos := make(map[int32]*PartitionOffsetRequestInfo)
@@ -42,7 +42,7 @@ func NewOffsetsRequest(topic string, partitionIDs []int32, timeValue int64, offs
 }
 
 func (offsetR *OffsetsRequest) Encode(version uint16) []byte {
-	requestLength := 8 + 2 + len(offsetR.RequestHeader.ClientID) + 4
+	requestLength := 8 + 2 + len(*offsetR.RequestHeader.ClientID) + 4
 	requestLength += 4
 	for topicName, partitionInfo := range offsetR.RequestInfo {
 		requestLength += 2 + len(topicName) + 4 + len(partitionInfo)*16

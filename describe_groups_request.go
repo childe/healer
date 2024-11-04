@@ -15,7 +15,7 @@ func NewDescribeGroupsRequest(clientID string, groups []string) *DescribeGroupsR
 	requestHeader := &RequestHeader{
 		APIKey:     API_DescribeGroups,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return &DescribeGroupsRequest{requestHeader, groups}
 }

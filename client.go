@@ -160,7 +160,7 @@ func (c *Client) DescribeAcls(r DescribeAclsRequestBody) (DescribeAclsResponse, 
 	req := DescribeAclsRequest{
 		RequestHeader{
 			APIKey:   API_DescribeAcls,
-			ClientID: c.clientID,
+			ClientID: &c.clientID,
 		},
 		r,
 	}

@@ -266,34 +266,13 @@ type DescribeAclsRequest struct {
 }
 type DescribeAclsRequestBody struct {
 	ResourceType   DescribeAclsResourceType
-	ResourceName   string
+	ResourceName   *string
 	PatternType    DescribeAclsPatternType
-	Principal      string
-	Host           string
+	Principal      *string
+	Host           *string
 	Operation      DescribeAclsOperation
 	PermissionType DescribeAclsPermissionType
-}
-
-func NewDescribeAclsRequest(
-	clientID string,
-	resourceTypeFilter DescribeAclsResourceType,
-	resourceNameFilter string,
-	PatternTypeFilter DescribeAclsPatternType,
-	principalFilter string,
-	hostFilter string,
-	operation DescribeAclsOperation,
-	permissionType DescribeAclsPermissionType,
-) (r DescribeAclsRequest) {
-	r.APIKey = API_DescribeAcls
-	r.ClientID = clientID
-	r.ResourceType = resourceTypeFilter
-	r.ResourceName = resourceNameFilter
-	r.PatternType = PatternTypeFilter
-	r.Principal = principalFilter
-	r.Host = hostFilter
-	r.Operation = operation
-	r.PermissionType = permissionType
-	return
+	TaggedFields   TaggedFields
 }
 
 func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
@@ -302,33 +281,39 @@ func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
 	// length
 	binary.Write(buf, binary.BigEndian, uint32(0))
 	defer func() {
-		length := buf.Len() - 4
+		length := len(rst) - 4
 		binary.BigEndian.PutUint32(rst, uint32(length))
 	}()
 
 	header := make([]byte, r.RequestHeader.length())
-	r.RequestHeader.Encode(header)
-	buf.Write(header)
-
-	buf.WriteByte(0) // TaggedFields
+	l := r.RequestHeader.Encode(header)
+	buf.Write(header[:l])
 
 	binary.Write(buf, binary.BigEndian, r.ResourceType)
 
-	writeNullableString(buf, r.ResourceName)
+	if version < 2 {
+		writeNullableString(buf, r.ResourceName)
+	} else {
+		writeCompactNullableString(buf, r.ResourceName)
+	}
 
 	if version >= 1 {
 		binary.Write(buf, binary.BigEndian, r.PatternType)
 	}
 
-	writeNullableString(buf, r.Principal)
-
-	writeNullableString(buf, r.Host)
+	if version < 2 {
+		writeNullableString(buf, r.Principal)
+		writeNullableString(buf, r.Host)
+	} else {
+		writeCompactNullableString(buf, r.Principal)
+		writeCompactNullableString(buf, r.Host)
+	}
 
 	binary.Write(buf, binary.BigEndian, r.Operation)
 
 	binary.Write(buf, binary.BigEndian, r.PermissionType)
 
-	buf.WriteByte(0) // TaggedFields
+	buf.Write(r.DescribeAclsRequestBody.TaggedFields.Encode())
 
 	return buf.Bytes()
 }
@@ -341,29 +326,45 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 	binary.BigEndian.Uint32(payload)
 	offset += 4
 
-	header, o := DecodeRequestHeader(payload[offset:])
+	header, o := DecodeRequestHeader(payload[offset:], version)
 	r.RequestHeader = header
 	offset += o
 
 	r.ResourceType = DescribeAclsResourceType(payload[offset])
 	offset++
 
-	resourceNameFilter, o := compactNullableString(payload[offset:])
-	offset += o
-	r.ResourceName = resourceNameFilter
+	if version < 2 {
+		resourceName, o := nullableString(payload[offset:])
+		offset += o
+		r.ResourceName = resourceName
+	} else {
+		resourceName, o := compactNullableString(payload[offset:])
+		offset += o
+		r.ResourceName = resourceName
+	}
 
 	if version >= 1 {
 		r.PatternType = DescribeAclsPatternType(payload[offset])
 		offset++
 	}
 
-	principalFilter, o := compactNullableString(payload[offset:])
-	offset += o
-	r.Principal = principalFilter
+	if version < 2 {
+		principal, o := nullableString(payload[offset:])
+		offset += o
+		r.Principal = principal
 
-	hostFilter, o := compactNullableString(payload[offset:])
-	offset += o
-	r.Host = hostFilter
+		host, o := nullableString(payload[offset:])
+		offset += o
+		r.Host = host
+	} else {
+		principal, o := compactNullableString(payload[offset:])
+		offset += o
+		r.Principal = principal
+
+		host, o := compactNullableString(payload[offset:])
+		offset += o
+		r.Host = host
+	}
 
 	r.Operation = DescribeAclsOperation(payload[offset])
 	offset++

@@ -17,8 +17,16 @@ func encodeCompactString(s string) []byte {
 	return payload[:offset]
 }
 
+func writeString(w io.Writer, s string) (n int, err error) {
+	n, err = w.Write(binary.BigEndian.AppendUint16(nil, uint16(len(s))))
+	if err != nil {
+		return
+	}
+	nn, err := w.Write([]byte(s))
+	return n + nn, err
+}
 func writeCompactString(w io.Writer, s string) (n int, err error) {
-	payload := make([]byte, len(s)+binary.MaxVarintLen64)
+	payload := make([]byte, binary.MaxVarintLen64)
 	offset := binary.PutUvarint(payload, 1+uint64(len(s)))
 	if n, err = w.Write(payload[:offset]); err != nil {
 		return
@@ -117,4 +125,10 @@ func encodeCompactNullableBytes(s []byte) []byte {
 	offset := binary.PutVarint(payload, 1+int64(len(s)))
 	offset += copy(payload[offset:], s)
 	return payload[:offset]
+}
+
+func encodeCompactArrayLength(l int) []byte {
+	payload := make([]byte, binary.MaxVarintLen64)
+	o := binary.PutUvarint(payload, uint64(1+l))
+	return payload[:o]
 }

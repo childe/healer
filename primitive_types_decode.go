@@ -8,6 +8,14 @@ some types, such as boolean or int32, are easy to be decoded. I don't write them
 I only write the types that are not easy to be decoded, including COMPACT_STRING and COMPACT_BYTES etc.
 ***/
 
+func nonnullableString(payload []byte) (r string, offset int) {
+	l := int(binary.BigEndian.Uint16(payload[offset:]))
+	offset += 2
+	r = string(payload[offset : offset+l])
+	offset += l
+	return
+}
+
 // Represents a sequence of characters.
 // First the length N + 1 is given as an UNSIGNED_VARINT.
 // Then N bytes follow which are the UTF-8 encoding of the character sequence.
@@ -25,10 +33,10 @@ func compactString(payload []byte) (r string, offset int) {
 func nullableString(payload []byte) (r *string, offset int) {
 	length := int16(binary.BigEndian.Uint16(payload))
 	if length == -1 {
-		return nil, 4
+		return nil, 2
 	}
-	s := string(payload[4 : 4+int(length)])
-	return &s, 4 + int(length)
+	s := string(payload[2 : 2+int(length)])
+	return &s, 2 + int(length)
 }
 
 // Represents a sequence of characters.
@@ -88,7 +96,7 @@ func compactNullableBytes(payload []byte) (r []byte, offset int) {
 // Then N instances of type T follow.
 // A null array is represented with a length of 0.
 // In protocol documentation an array of T instances is referred to as [T].
-func compactArrayLength(payload []byte) (length uint64, offset int) {
-	length, offset = binary.Uvarint(payload)
-	return length - 1, offset
+func compactArrayLength(payload []byte) (length int32, offset int) {
+	l, offset := binary.Uvarint(payload)
+	return int32(l) - 1, offset
 }

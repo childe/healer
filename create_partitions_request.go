@@ -17,7 +17,7 @@ type CreatePartitionsRequest struct {
 func NewCreatePartitionsRequest(clientID string, timeout uint32, validateOnly bool) CreatePartitionsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:   API_CreatePartitions,
-		ClientID: clientID,
+		ClientID: &clientID,
 	}
 
 	return CreatePartitionsRequest{

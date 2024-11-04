@@ -29,7 +29,7 @@ func NewFindCoordinatorRequest(clientID, groupID string) *FindCoordinatorRequest
 	requestHeader := &RequestHeader{
 		APIKey:     API_FindCoordinator,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	return &FindCoordinatorRequest{

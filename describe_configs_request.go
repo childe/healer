@@ -59,7 +59,7 @@ func NewDescribeConfigsRequest(clientID string, resources []*DescribeConfigsRequ
 	requestHeader := &RequestHeader{
 		APIKey:     API_DescribeConfigs,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	if resources == nil {
 		resources = make([]*DescribeConfigsRequestResource, 0)

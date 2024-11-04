@@ -9,11 +9,11 @@ type ListPartitionReassignmentsRequest struct {
 	*RequestHeader
 	TimeoutMS int32
 	Topics    []struct {
-		Name       string
-		Partitions []int32
-		// TaggedFields interface{}
+		Name         string
+		Partitions   []int32
+		TaggedFields TaggedFields
 	}
-	// TaggedFields interface{}
+	TaggedFields TaggedFields
 }
 
 // NewListPartitionReassignmentsRequest creates a new ListPartitionReassignmentsRequest
@@ -21,7 +21,7 @@ func NewListPartitionReassignmentsRequest(clientID string, timeoutMS int32) List
 	requestHeader := &RequestHeader{
 		APIKey:     API_ListPartitionReassignments,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return ListPartitionReassignmentsRequest{
 		RequestHeader: requestHeader,
@@ -45,11 +45,13 @@ func (r *ListPartitionReassignmentsRequest) AddTP(topicName string, pid int32) {
 		}
 	}
 	r.Topics = append(r.Topics, struct {
-		Name       string
-		Partitions []int32
+		Name         string
+		Partitions   []int32
+		TaggedFields TaggedFields
 	}{
-		Name:       topicName,
-		Partitions: []int32{pid},
+		Name:         topicName,
+		Partitions:   []int32{pid},
+		TaggedFields: nil,
 	})
 }
 
@@ -82,7 +84,6 @@ func (r ListPartitionReassignmentsRequest) Encode(version uint16) []byte {
 	offset += 4
 
 	offset += r.RequestHeader.Encode(payload[offset:])
-	offset++ // TaggedFields
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.TimeoutMS))
 	offset += 4
@@ -103,9 +104,9 @@ func (r ListPartitionReassignmentsRequest) Encode(version uint16) []byte {
 			binary.BigEndian.PutUint32(payload[offset:], uint32(pid))
 			offset += 4
 		}
-		offset++ // TaggedFields
+		offset += copy(payload[offset:], topic.TaggedFields.Encode())
 	}
-	offset++ // TaggedFields
+	offset += copy(payload[offset:], r.TaggedFields.Encode())
 
 	return payload[:offset]
 }

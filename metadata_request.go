@@ -62,11 +62,42 @@ func NewMetadataRequest(clientID string, topics []string) *MetadataRequest {
 	r := &MetadataRequest{
 		RequestHeader: &RequestHeader{
 			APIKey:   API_MetadataRequest,
-			ClientID: clientID,
+			ClientID: &clientID,
 		},
 		Topics:                 topics,
 		AllowAutoTopicCreation: true,
 	}
 
 	return r
+}
+
+func DecodeMetadataRequest(payload []byte, version uint16) (r MetadataRequest, err error) {
+	offset := 0
+
+	// request payload length
+	binary.BigEndian.Uint32(payload)
+	offset += 4
+
+	// request header
+	header, n := DecodeRequestHeader(payload[offset:], version)
+	offset += n
+	r.RequestHeader = &header
+
+	// topics
+	topicCount := binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
+	r.Topics = make([]string, topicCount)
+	for i := uint32(0); i < topicCount; i++ {
+		topicLength := binary.BigEndian.Uint16(payload[offset:])
+		offset += 2
+		r.Topics[i] = string(payload[offset : offset+int(topicLength)])
+		offset += int(topicLength)
+	}
+
+	if version >= 4 {
+		r.AllowAutoTopicCreation = payload[offset] == 1
+		offset++
+	}
+
+	return r, nil
 }

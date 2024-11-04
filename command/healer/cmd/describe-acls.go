@@ -34,8 +34,10 @@ var describeAclsCmd = &cobra.Command{
 		resourcetype, _ := cmd.Flags().GetString("resourcetype")
 		json.Unmarshal([]byte(`"`+resourcetype+`"`), &req.ResourceType)
 
-		resource, _ := cmd.Flags().GetString("resource")
-		json.Unmarshal([]byte(`"`+resource+`"`), &req.ResourceName)
+		if cmd.Flags().Changed("resource") {
+			resource, _ := cmd.Flags().GetString("resource")
+			json.Unmarshal([]byte(`"`+resource+`"`), &req.ResourceName)
+		}
 
 		if resourcepatterntype, err := cmd.Flags().GetString("patterntype"); err != nil {
 			return err
@@ -43,9 +45,25 @@ var describeAclsCmd = &cobra.Command{
 			json.Unmarshal([]byte(`"`+resourcepatterntype+`"`), &req.PatternType)
 		}
 
-		req.Principal, _ = cmd.Flags().GetString("principal")
+		if !cmd.Flags().Changed("principal") {
+			req.Principal = nil
+		} else {
+			if principal, err := cmd.Flags().GetString("principal"); err != nil {
+				return err
+			} else {
+				req.Principal = &principal
+			}
+		}
 
-		req.Host, _ = cmd.Flags().GetString("host")
+		if !cmd.Flags().Changed("host") {
+			req.Host = nil
+		} else {
+			if host, err := cmd.Flags().GetString("host"); err != nil {
+				return err
+			} else {
+				req.Host = &host
+			}
+		}
 
 		operation, _ := cmd.Flags().GetString("operation")
 		json.Unmarshal([]byte(`"`+operation+`"`), &req.Operation)
@@ -69,13 +87,13 @@ var describeAclsCmd = &cobra.Command{
 }
 
 func init() {
-	describeAclsCmd.Flags().String("resourcetype", "", "resourcetype: any|topic|group|cluster")
+	describeAclsCmd.Flags().String("resourcetype", "any", "resourcetype: any|topic|group|cluster")
 	describeAclsCmd.Flags().String("resource", "", "resource")
-	describeAclsCmd.Flags().String("patterntype", "", "patterntype: any|match|literal|prefixed")
+	describeAclsCmd.Flags().String("patterntype", "match", "patterntype: any|match|literal|prefixed")
 	describeAclsCmd.Flags().String("principal", "", "principal")
 	describeAclsCmd.Flags().String("host", "", "host")
-	describeAclsCmd.Flags().String("operation", "", "operation: any|read|write|create|delete|alter|describe|clusteraction|describeconfigs|alterconfigs|idempotentwrite")
-	describeAclsCmd.Flags().String("permissiontype", "", "permissiontype: any|allow|deny")
+	describeAclsCmd.Flags().String("operation", "any", "operation: any|read|write|create|delete|alter|describe|clusteraction|describeconfigs|alterconfigs|idempotentwrite")
+	describeAclsCmd.Flags().String("permissiontype", "any", "permissiontype: any|allow|deny")
 
 	rootCmd.AddCommand(describeAclsCmd)
 }

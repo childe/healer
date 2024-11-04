@@ -62,7 +62,7 @@ func (c AlterConfigsRequestConfigEntry) encode(payload []byte) (offset int) {
 func NewAlterConfigsRequest(clientID string) AlterConfigsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:   API_AlterConfigs,
-		ClientID: clientID,
+		ClientID: &clientID,
 	}
 	return AlterConfigsRequest{requestHeader, nil, false}
 }

@@ -2,63 +2,48 @@ package healer
 
 import (
 	"testing"
+
+	"github.com/smartystreets/goconvey/convey"
 )
 
-func TestDescribeAclsRequestEncodeAndDecodeVersion0(t *testing.T) {
-	var version uint16 = 0
-	original := DescribeAclsRequest{
-		RequestHeader: RequestHeader{
-			APIKey:        API_DescribeAcls,
-			APIVersion:    version,
-			CorrelationID: 10,
-		},
-		ResourceType:   1,
-		ResourceName:   "test-resource",
-		Principal:      "test-principal",
-		Host:           "test-host",
-		Operation:      2,
-		PermissionType: 3,
-	}
+func TestDescribeAclsRequestEncodeAndDecode(t *testing.T) {
+	convey.Convey("Test DescribeAclsRequest Encode and Decode at version 1 and 2", t, func() {
+		var (
+			resourceName = "test-resource"
+			principal    = "test-principal"
+			host         = "test-host"
+		)
+		var version uint16
+		for version = 0; version <= 2; version++ {
+			original := DescribeAclsRequest{
+				RequestHeader: RequestHeader{
+					APIKey:        API_DescribeAcls,
+					APIVersion:    version,
+					CorrelationID: 10,
+				},
+				DescribeAclsRequestBody: DescribeAclsRequestBody{
+					ResourceType:   1,
+					ResourceName:   &resourceName,
+					PatternType:    3,
+					Principal:      &principal,
+					Host:           &host,
+					Operation:      2,
+					PermissionType: 3,
+				},
+			}
 
-	encoded := original.Encode(version)
+			if version == 0 {
+				original.PatternType = 0
+			}
 
-	decoded, err := DecodeDescribeAclsRequest(encoded, version)
-	if err != nil {
-		t.Errorf("decode error: %v", err)
-	}
+			encoded := original.Encode(version)
 
-	if original != decoded {
-		t.Errorf("dismatch: %+v, %+v", original, decoded)
-	}
+			decoded, err := DecodeDescribeAclsRequest(encoded, version)
+			if err != nil {
+				t.Errorf("decode error: %v", err)
+			}
 
-}
-
-func TestDescribeAclsRequestEncodeAndDecodeVersion1(t *testing.T) {
-	var version uint16 = 1
-	original := DescribeAclsRequest{
-		RequestHeader: RequestHeader{
-			APIKey:        API_DescribeAcls,
-			APIVersion:    version,
-			CorrelationID: 10,
-		},
-		ResourceType:   1,
-		ResourceName:   "test-resource",
-		PatternType:    3,
-		Principal:      "test-principal",
-		Host:           "test-host",
-		Operation:      2,
-		PermissionType: 3,
-	}
-
-	encoded := original.Encode(version)
-
-	decoded, err := DecodeDescribeAclsRequest(encoded, version)
-	if err != nil {
-		t.Errorf("decode error: %v", err)
-	}
-
-	if original != decoded {
-		t.Errorf("dismatch: %+v, %+v", original, decoded)
-	}
-
+			convey.So(decoded, convey.ShouldResemble, original)
+		}
+	})
 }

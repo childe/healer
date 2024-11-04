@@ -132,7 +132,7 @@ func NewCreateTopicsRequest(clientID string, timeout uint32) *CreateTopicsReques
 	requestHeader := &RequestHeader{
 		APIKey:     API_CreateTopics,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	return &CreateTopicsRequest{

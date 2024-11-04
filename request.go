@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 // TODO type define ApiKey and change api_XXX to ApiKey type
@@ -55,48 +56,83 @@ type RequestHeader struct {
 	APIKey        uint16
 	APIVersion    uint16
 	CorrelationID uint32
-	ClientID      string
+	ClientID      *string
+	TaggedFields  TaggedFields
 }
 
-func (requestHeader *RequestHeader) length() int {
-	return 10 + len(requestHeader.ClientID)
+// not exactly the same as the kafka protocol, but it's enough for now
+func (h *RequestHeader) length() int {
+	r := 10
+	if h.ClientID != nil {
+		r += len(*h.ClientID)
+	}
+	if h.headerVersion() >= 2 {
+		if h.TaggedFields != nil {
+			r += h.TaggedFields.length()
+		} else {
+			r++
+		}
+	}
+	return r
 }
 
 // Encode encodes request header to []byte. this is used the all request
 // If the playload is too small, Encode will panic.
-func (requestHeader *RequestHeader) Encode(payload []byte) int {
+// https://cwiki.apache.org/confluence/display/KAFKA/KIP-482%3A+The+Kafka+Protocol+should+Support+Optional+Tagged+Fields
+// https://kafka.apache.org/protocol#protocol_messages
+func (h *RequestHeader) Encode(payload []byte) int {
 	offset := 0
-	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIKey)
+	binary.BigEndian.PutUint16(payload[offset:], h.APIKey)
 	offset += 2
 
-	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIVersion)
+	binary.BigEndian.PutUint16(payload[offset:], h.APIVersion)
 	offset += 2
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(requestHeader.CorrelationID))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(h.CorrelationID))
 	offset += 4
 
-	binary.BigEndian.PutUint16(payload[offset:], uint16(len(requestHeader.ClientID)))
-	offset += 2
-	copy(payload[offset:], requestHeader.ClientID)
-	offset += len(requestHeader.ClientID)
+	headerVersion := h.headerVersion()
+	switch headerVersion {
+	case 1:
+		encoded := encodeNullableString(h.ClientID)
+		offset += copy(payload[offset:], encoded)
+	case 2:
+		encoded := encodeNullableString(h.ClientID)
+		offset += copy(payload[offset:], encoded)
+
+		tag := h.TaggedFields.Encode()
+		offset += copy(payload[offset:], tag)
+	}
 
 	return offset
 }
+func (h *RequestHeader) Read(payload []byte) (n int, err error) {
+	n = h.Encode(payload)
+	return
+}
 
 // DecodeRequestHeader decodes request header from []byte, just used in test cases
-func DecodeRequestHeader(payload []byte) (requestHeader RequestHeader, offset int) {
-	requestHeader.APIKey = binary.BigEndian.Uint16(payload)
+func DecodeRequestHeader(payload []byte, version uint16) (h RequestHeader, offset int) {
+	h.APIKey = binary.BigEndian.Uint16(payload)
 	offset += 2
-	requestHeader.APIVersion = binary.BigEndian.Uint16(payload[offset:])
+	h.APIVersion = binary.BigEndian.Uint16(payload[offset:])
 	offset += 2
 
-	requestHeader.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
+	h.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	clientIDLength := binary.BigEndian.Uint16(payload[offset:])
-	offset += 2
-	requestHeader.ClientID = string(payload[offset : offset+int(clientIDLength)])
-	offset += int(clientIDLength)
+	headerVersion := h.headerVersion()
+	if headerVersion >= 1 {
+		clientID, n := nullableString(payload[offset:])
+		h.ClientID = clientID
+		offset += n
+	}
+	if headerVersion >= 2 {
+		taggedFields, n := DecodeTaggedFields(payload[offset:], version)
+		h.TaggedFields = taggedFields
+		offset += n
+	}
+
 	return
 }
 
@@ -129,4 +165,339 @@ type Request interface {
 	API() uint16
 	SetCorrelationID(uint32)
 	SetVersion(uint16)
+}
+
+// https://github.com/apache/kafka/tree/trunk/clients/src/main/resources/common/message
+func (h *RequestHeader) headerVersion() uint16 {
+	_version := h.APIVersion
+	switch h.APIKey {
+	case 0: // Produce
+		if _version >= 9 {
+			return 2
+		} else {
+			return 1
+		}
+	case 1: // Fetch
+		if _version >= 12 {
+			return 2
+		} else {
+			return 1
+		}
+	case 2: // ListOffsets
+		if _version >= 6 {
+			return 2
+		} else {
+			return 1
+		}
+	case 3: // Metadata
+		if _version >= 9 {
+			return 2
+		} else {
+			return 1
+		}
+	case 4: // LeaderAndIsr
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 5: // StopReplica
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 6: // UpdateMetadata
+		if _version >= 6 {
+			return 2
+		} else {
+			return 1
+		}
+	case 7: // ControlledShutdown
+		// Version 0 of ControlledShutdownRequest has a non-standard request header
+		// which does not include clientId.  Version 1 of ControlledShutdownRequest
+		// and later use the standard request header.
+		if _version == 0 {
+			return 0
+		}
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 8: // OffsetCommit
+		if _version >= 8 {
+			return 2
+		} else {
+			return 1
+		}
+	case 9: // OffsetFetch
+		if _version >= 6 {
+			return 2
+		} else {
+			return 1
+		}
+	case 10: // FindCoordinator
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 11: // JoinGroup
+		if _version >= 6 {
+			return 2
+		} else {
+			return 1
+		}
+	case 12: // Heartbeat
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 13: // LeaveGroup
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 14: // SyncGroup
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 15: // DescribeGroups
+		if _version >= 5 {
+			return 2
+		} else {
+			return 1
+		}
+	case 16: // ListGroups
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 17: // SaslHandshake
+		return 1
+	case 18: // ApiVersions
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 19: // CreateTopics
+		if _version >= 5 {
+			return 2
+		} else {
+			return 1
+		}
+	case 20: // DeleteTopics
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 21: // DeleteRecords
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 22: // InitProducerId
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 23: // OffsetForLeaderEpoch
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 24: // AddPartitionsToTxn
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 25: // AddOffsetsToTxn
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 26: // EndTxn
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 27: // WriteTxnMarkers
+		if _version >= 1 {
+			return 2
+		} else {
+			return 1
+		}
+	case 28: // TxnOffsetCommit
+		if _version >= 3 {
+			return 2
+		} else {
+			return 1
+		}
+	case 29: // DescribeAcls
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 30: // CreateAcls
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 31: // DeleteAcls
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 32: // DescribeConfigs
+		if _version >= 4 {
+			return 2
+		} else {
+			return 1
+		}
+	case 33: // AlterConfigs
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 34: // AlterReplicaLogDirs
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 35: // DescribeLogDirs
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 36: // SaslAuthenticate
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 37: // CreatePartitions
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 38: // CreateDelegationToken
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 39: // RenewDelegationToken
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 40: // ExpireDelegationToken
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 41: // DescribeDelegationToken
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 42: // DeleteGroups
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 43: // ElectLeaders
+		if _version >= 2 {
+			return 2
+		} else {
+			return 1
+		}
+	case 44: // IncrementalAlterConfigs
+		if _version >= 1 {
+			return 2
+		} else {
+			return 1
+		}
+	case 45: // AlterPartitionReassignments
+		return 2
+	case 46: // ListPartitionReassignments
+		return 2
+	case 47: // OffsetDelete
+		return 1
+	case 48: // DescribeClientQuotas
+		if _version >= 1 {
+			return 2
+		} else {
+			return 1
+		}
+	case 49: // AlterClientQuotas
+		if _version >= 1 {
+			return 2
+		} else {
+			return 1
+		}
+	case 50: // DescribeUserScramCredentials
+		return 2
+	case 51: // AlterUserScramCredentials
+		return 2
+	case 52: // Vote
+		return 2
+	case 53: // BeginQuorumEpoch
+		return 1
+	case 54: // EndQuorumEpoch
+		return 1
+	case 55: // DescribeQuorum
+		return 2
+	case 56: // AlterPartition
+		return 2
+	case 57: // UpdateFeatures
+		return 2
+	case 58: // Envelope
+		return 2
+	case 59: // FetchSnapshot
+		return 2
+	case 60: // DescribeCluster
+		return 2
+	case 61: // DescribeProducers
+		return 2
+	case 62: // BrokerRegistration
+		return 2
+	case 63: // BrokerHeartbeat
+		return 2
+	case 64: // UnregisterBroker
+		return 2
+	case 65: // DescribeTransactions
+		return 2
+	case 66: // ListTransactions
+		return 2
+	case 67: // AllocateProducerIds
+		return 2
+	default:
+		panic(fmt.Sprintf("Unsupported API key %v", h.APIKey))
+	}
 }

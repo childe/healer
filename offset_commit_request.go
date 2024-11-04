@@ -1,51 +1,5 @@
 package healer
 
-//TODO v1
-/*
-OffsetCommit Request (Version: 0) => group_id [topics]
-  group_id => STRING
-  topics => topic [partitions]
-    topic => STRING
-    partitions => partition offset metadata
-      partition => INT32
-      offset => INT64
-      metadata => NULLABLE_STRING
-
-OffsetCommit Request (Version: 1) => group_id generation_id member_id [topics]
-  group_id => STRING
-  generation_id => INT32
-  member_id => STRING
-  topics => topic [partitions]
-    topic => STRING
-    partitions => partition offset timestamp metadata
-      partition => INT32
-      offset => INT64
-      timestamp => INT64
-      metadata => NULLABLE_STRING
-
-OffsetCommit Request (Version: 2) => group_id generation_id member_id retention_time [topics]
-  group_id => STRING
-  generation_id => INT32
-  member_id => STRING
-  retention_time => INT64
-  topics => topic [partitions]
-    topic => STRING
-    partitions => partition offset metadata
-      partition => INT32
-      offset => INT64
-      metadata => NULLABLE_STRING
-
-group_id	The unique group identifier
-generation_id	The generation of the group.
-member_id	The member id assigned by the group coordinator or null if joining for the first time.
-retention_time	Time period in ms to retain the offset.
-topics	Topics to commit offsets.
-topic	Name of topic
-partitions	Partitions to commit offsets.
-partition	Topic partition id
-offset	Message offset to be committed.
-metadata	Any associated metadata the client wants to keep.*/
-
 import (
 	"encoding/binary"
 )
@@ -74,7 +28,7 @@ func NewOffsetCommitRequest(apiVersion uint16, clientID, groupID string) *Offset
 	requestHeader := &RequestHeader{
 		APIKey:     API_OffsetCommitRequest,
 		APIVersion: apiVersion,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 
 	r := &OffsetCommitRequest{

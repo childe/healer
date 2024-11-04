@@ -185,7 +185,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 	produceRequest.RequestHeader = &RequestHeader{
 		APIKey:     API_ProduceRequest,
 		APIVersion: 0,
-		ClientID:   p.config.ClientID,
+		ClientID:   &p.config.ClientID,
 	}
 
 	produceRequest.TopicBlocks = make([]struct {

@@ -16,7 +16,7 @@ func NewDeleteTopicsRequest(clientID string, topicsNames []string, timeoutMS int
 	requestHeader := &RequestHeader{
 		APIKey:     API_DeleteTopics,
 		APIVersion: 0,
-		ClientID:   clientID,
+		ClientID:   &clientID,
 	}
 	return DeleteTopicsRequest{
 		RequestHeader: requestHeader,
