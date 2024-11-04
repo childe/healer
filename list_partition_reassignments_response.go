@@ -10,7 +10,7 @@ type ListPartitionReassignmentsResponse struct {
 	CorrelationID  uint32                                 `json:"correlation_id"`
 	ThrottleTimeMS int32                                  `json:"throttle_time_ms"`
 	ErrorCode      int16                                  `json:"error_code"`
-	ErrorMessage   string                                 `json:"error_message"`
+	ErrorMessage   *string                                `json:"error_message"`
 	Topics         []listPartitionReassignmentsTopicBlock `json:"topics"`
 
 	// TAG_BUFFER interface{}
@@ -31,7 +31,7 @@ func decodeToListPartitionReassignmentsTopicBlock(payload []byte) (r listPartiti
 	offset += o
 	if partitionCount > 0 {
 		r.Partitions = make([]listPartitionReassignmentsPartitionBlock, partitionCount)
-		for i := uint64(0); i < partitionCount; i++ {
+		for i := int32(0); i < partitionCount; i++ {
 			r.Partitions[i], o = decodeToListPartitionReassignmentsPartitionBlock(payload[offset:])
 			offset += o
 		}
@@ -60,7 +60,7 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 
 	if replicaCount > 0 {
 		r.Replicas = make([]int32, replicaCount)
-		for i := uint64(0); i < replicaCount; i++ {
+		for i := int32(0); i < replicaCount; i++ {
 			r.Replicas[i] = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 		}
@@ -70,7 +70,7 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 	offset += o
 	if addingReplicaCount > 0 {
 		r.AddingReplicas = make([]int32, addingReplicaCount)
-		for i := uint64(0); i < addingReplicaCount; i++ {
+		for i := int32(0); i < addingReplicaCount; i++ {
 			r.AddingReplicas[i] = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 		}
@@ -80,7 +80,7 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 	offset += o
 	if removingReplicaCount > 0 {
 		r.RemovingReplicas = make([]int32, removingReplicaCount)
-		for i := uint64(0); i < removingReplicaCount; i++ {
+		for i := int32(0); i < removingReplicaCount; i++ {
 			r.RemovingReplicas[i] = int32(binary.BigEndian.Uint32(payload[offset:]))
 			offset += 4
 		}
@@ -125,7 +125,7 @@ func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r Li
 	if topicCount > 0 {
 		r.Topics = make([]listPartitionReassignmentsTopicBlock, topicCount)
 
-		for i := uint64(0); i < topicCount; i++ {
+		for i := int32(0); i < topicCount; i++ {
 			r.Topics[i], o = decodeToListPartitionReassignmentsTopicBlock(payload[offset:])
 			offset += o
 		}

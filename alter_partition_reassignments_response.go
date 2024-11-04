@@ -10,19 +10,19 @@ type AlterPartitionReassignmentsResponse struct {
 	CorrelationID  uint32                                      `json:"correlation_id"`
 	ThrottleTimeMs int32                                       `json:"throttle_time_ms"`
 	ErrorCode      int16                                       `json:"error_code"`
-	ErrorMsg       string                                      `json:"error_msg"`
+	ErrorMsg       *string                                     `json:"error_msg"`
 	Responses      []*alterPartitionReassignmentsResponseTopic `json:"responses"`
 	// TAG_BUFFER
 }
 
 func (r *AlterPartitionReassignmentsResponse) Error() error {
 	if r.ErrorCode != 0 {
-		return fmt.Errorf("%w: %s", KafkaError(r.ErrorCode), r.ErrorMsg)
+		return fmt.Errorf("%w: %s", KafkaError(r.ErrorCode), *r.ErrorMsg)
 	}
 	for _, t := range r.Responses {
 		for _, p := range t.Partitions {
 			if p.ErrorCode != 0 {
-				return fmt.Errorf("%w: %s", KafkaError(p.ErrorCode), p.ErrorMsg)
+				return fmt.Errorf("%w: %s", KafkaError(p.ErrorCode), *p.ErrorMsg)
 			}
 		}
 	}
@@ -37,9 +37,9 @@ type alterPartitionReassignmentsResponseTopic struct {
 }
 
 type alterPartitionReassignmentsResponseTopicPartition struct {
-	PartitionID int32  `json:"partition_id"`
-	ErrorCode   int16  `json:"error_code"`
-	ErrorMsg    string `json:"error_msg"`
+	PartitionID int32   `json:"partition_id"`
+	ErrorCode   int16   `json:"error_code"`
+	ErrorMsg    *string `json:"error_msg"`
 	// TAG_BUFFER
 }
 

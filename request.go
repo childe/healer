@@ -1,7 +1,9 @@
 package healer
 
 import (
+	"bytes"
 	"encoding/binary"
+	"io"
 )
 
 // TODO type define ApiKey and change api_XXX to ApiKey type
@@ -56,35 +58,68 @@ type RequestHeader struct {
 	APIVersion    uint16
 	CorrelationID uint32
 	ClientID      string
+	TaggedFields  TaggedFields
 }
 
-func (requestHeader *RequestHeader) length() int {
-	return 10 + len(requestHeader.ClientID)
+func (h *RequestHeader) length() int {
+	r := 10 + len(h.ClientID)
+	if h.APIVersion >= 2 {
+		if h.TaggedFields != nil {
+			r += h.TaggedFields.length()
+		} else {
+			r++
+		}
+	}
+	return r
 }
 
 // Encode encodes request header to []byte. this is used the all request
 // If the playload is too small, Encode will panic.
-func (requestHeader *RequestHeader) Encode(payload []byte) int {
+func (h *RequestHeader) Encode(payload []byte) int {
 	offset := 0
-	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIKey)
+	binary.BigEndian.PutUint16(payload[offset:], h.APIKey)
 	offset += 2
 
-	binary.BigEndian.PutUint16(payload[offset:], requestHeader.APIVersion)
+	binary.BigEndian.PutUint16(payload[offset:], h.APIVersion)
 	offset += 2
 
-	binary.BigEndian.PutUint32(payload[offset:], uint32(requestHeader.CorrelationID))
+	binary.BigEndian.PutUint32(payload[offset:], uint32(h.CorrelationID))
 	offset += 4
 
-	binary.BigEndian.PutUint16(payload[offset:], uint16(len(requestHeader.ClientID)))
+	binary.BigEndian.PutUint16(payload[offset:], uint16(len(h.ClientID)))
 	offset += 2
-	copy(payload[offset:], requestHeader.ClientID)
-	offset += len(requestHeader.ClientID)
+	copy(payload[offset:], h.ClientID)
+	offset += len(h.ClientID)
+
+	if h.APIVersion >= 2 {
+		tag := h.TaggedFields.Encode()
+		offset += copy(payload[offset:], tag)
+	}
 
 	return offset
 }
+func (h *RequestHeader) Read(payload []byte) (n int, err error) {
+	n = h.Encode(payload)
+	return
+}
+
+// Encode encodes request header to []byte. this is used the all request
+// If the playload is too small, Encode will panic.
+func (h *RequestHeader) EncodeTo(w io.Writer) {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, h.APIKey)
+	binary.Write(buf, binary.BigEndian, h.APIVersion)
+	binary.Write(buf, binary.BigEndian, h.CorrelationID)
+	binary.Write(buf, binary.BigEndian, uint16(len(h.ClientID)))
+	buf.WriteString(h.ClientID)
+
+	if h.APIVersion >= 2 {
+		buf.Write(h.TaggedFields.Encode())
+	}
+}
 
 // DecodeRequestHeader decodes request header from []byte, just used in test cases
-func DecodeRequestHeader(payload []byte) (requestHeader RequestHeader, offset int) {
+func DecodeRequestHeader(payload []byte, version uint16) (requestHeader RequestHeader, offset int) {
 	requestHeader.APIKey = binary.BigEndian.Uint16(payload)
 	offset += 2
 	requestHeader.APIVersion = binary.BigEndian.Uint16(payload[offset:])
@@ -97,6 +132,12 @@ func DecodeRequestHeader(payload []byte) (requestHeader RequestHeader, offset in
 	offset += 2
 	requestHeader.ClientID = string(payload[offset : offset+int(clientIDLength)])
 	offset += int(clientIDLength)
+
+	if requestHeader.APIVersion >= 2 {
+		taggedFields, n := DecodeTaggedFields(payload[offset:], version)
+		requestHeader.TaggedFields = taggedFields
+		offset += n
+	}
 	return
 }
 

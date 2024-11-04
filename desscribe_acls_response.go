@@ -10,8 +10,9 @@ type DescribeAclsResponse struct {
 
 	ThrottleTimeMs int32
 	ErrorCode      int16
-	ErrorMessage   string
+	ErrorMessage   *string
 	Resources      []AclResource
+	TaggedFields   TaggedFields
 }
 
 type AclResource struct {
@@ -19,6 +20,7 @@ type AclResource struct {
 	ResourceName string
 	PatternType  int8
 	Acls         []Acl
+	TaggedFields TaggedFields
 }
 
 type Acl struct {
@@ -26,6 +28,7 @@ type Acl struct {
 	Host           string
 	Operation      int8
 	PermissionType int8
+	TaggedFields   TaggedFields
 }
 
 func (r DescribeAclsResponse) Error() error {
@@ -36,6 +39,7 @@ func (r DescribeAclsResponse) Error() error {
 }
 
 func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeAclsResponse, err error) {
+	var o int
 	offset := 0
 
 	// Skip message size
@@ -44,7 +48,10 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 	response.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
 
-	offset++ // TaggedFields
+	if version >= 1 {
+		_, o = DecodeTaggedFields(payload[offset:], version)
+		offset += o
+	}
 
 	// ThrottleTimeMs
 	response.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
@@ -55,25 +62,46 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 	offset += 2
 
 	// ErrorMessage
-	if str, n := compactNullableString(payload[offset:]); n > 0 {
+	if version <= 1 {
+		str, n := nullableString(payload[offset:])
 		response.ErrorMessage = str
 		offset += n
 	} else {
-		offset += 1
+		str, n := compactNullableString(payload[offset:])
+		response.ErrorMessage = str
+		offset += n
 	}
 
 	// Resources array
-	resourceCount, o := compactArrayLength(payload[offset:])
-	offset += o
-	response.Resources = make([]AclResource, resourceCount)
+	var (
+		resourceCount int32
+	)
+	if version <= 1 {
+		resourceCount = int32(binary.BigEndian.Uint32(payload[offset:]))
+		offset += 4
+	} else {
+		c, o := compactArrayLength(payload[offset:])
+		resourceCount = c
+		offset += o
+	}
+	if resourceCount == -1 {
+		response.Resources = nil
+	} else {
+		response.Resources = make([]AclResource, resourceCount)
+	}
 
-	for i := uint64(0); i < resourceCount; i++ {
+	for i := 0; i < len(response.Resources); i++ {
 		// ResourceType
 		response.Resources[i].ResourceType = int8(payload[offset])
 		offset++
 
 		// ResourceName
-		if str, n := compactString(payload[offset:]); n > 0 {
+		if version <= 1 {
+			str, n := nonnullableString(payload[offset:])
+			response.Resources[i].ResourceName = str
+			offset += n
+		} else {
+			str, n := compactString(payload[offset:])
 			response.Resources[i].ResourceName = str
 			offset += n
 		}
@@ -85,19 +113,32 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 		}
 
 		// Acls array
-		aclCount, o := compactArrayLength(payload[offset:])
-		offset += o
+		var aclCount uint32
+		if version <= 1 {
+			aclCount = binary.BigEndian.Uint32(payload[offset:])
+			offset += 4
+		} else {
+			c, o := compactArrayLength(payload[offset:])
+			aclCount = uint32(c)
+			offset += o
+		}
 		response.Resources[i].Acls = make([]Acl, aclCount)
 
-		for j := uint64(0); j < aclCount; j++ {
-			// Principal
-			if str, n := compactString(payload[offset:]); n > 0 {
+		for j := uint32(0); j < aclCount; j++ {
+			if version <= 1 {
+				str, n := nonnullableString(payload[offset:])
 				response.Resources[i].Acls[j].Principal = str
 				offset += n
-			}
 
-			// Host
-			if str, n := compactString(payload[offset:]); n > 0 {
+				str, n = nonnullableString(payload[offset:])
+				response.Resources[i].Acls[j].Host = str
+				offset += n
+			} else {
+				str, n := compactString(payload[offset:])
+				response.Resources[i].Acls[j].Principal = str
+				offset += n
+
+				str, n = compactString(payload[offset:])
 				response.Resources[i].Acls[j].Host = str
 				offset += n
 			}
@@ -110,15 +151,25 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 			response.Resources[i].Acls[j].PermissionType = int8(payload[offset])
 			offset++
 
-			offset++ // TaggedFields
+			if version >= 2 {
+				response.Resources[i].Acls[j].TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+				offset += o
+			}
 		}
-		offset++ // TaggedFields
+		if version >= 2 {
+			response.Resources[i].TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+			offset += o
+		}
 	}
-	offset++ // TaggedFields
+	if version >= 2 {
+		response.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+		offset += o
+	}
 
 	return response, nil
 }
 
+// just for test
 func (r *DescribeAclsResponse) Encode(version uint16) (rst []byte, err error) {
 	defer func() {
 		length := len(rst) - 4
@@ -126,37 +177,71 @@ func (r *DescribeAclsResponse) Encode(version uint16) (rst []byte, err error) {
 	}()
 
 	buf := new(bytes.Buffer)
+	// length
 	binary.Write(buf, binary.BigEndian, uint32(0))
 
 	binary.Write(buf, binary.BigEndian, r.CorrelationID)
+	if version >= 1 {
+		buf.Write(r.TaggedFields.Encode())
+	}
 	binary.Write(buf, binary.BigEndian, r.ThrottleTimeMs)
 	binary.Write(buf, binary.BigEndian, r.ErrorCode)
 
-	writeNullableString(buf, r.ErrorMessage)
+	if version <= 1 {
+		writeNullableString(buf, r.ErrorMessage)
+	} else {
+		writeCompactNullableString(buf, r.ErrorMessage)
+	}
 
-	binary.Write(buf, binary.BigEndian, uint32(len(r.Resources)))
+	if version <= 1 {
+		binary.Write(buf, binary.BigEndian, uint32(len(r.Resources)))
+	} else {
+		buf.Write(encodeCompactArrayLength(len(r.Resources)))
+	}
 
 	for _, resource := range r.Resources {
 		buf.WriteByte(byte(resource.ResourceType))
 
-		writeNullableString(buf, resource.ResourceName)
+		if version <= 1 {
+			writeString(buf, resource.ResourceName)
+		} else {
+			writeCompactString(buf, resource.ResourceName)
+		}
 
 		if version >= 1 {
 			buf.WriteByte(byte(resource.PatternType))
 		}
 
-		binary.Write(buf, binary.BigEndian, uint32(len(resource.Acls)))
+		if version <= 1 {
+			binary.Write(buf, binary.BigEndian, uint32(len(resource.Acls)))
+		} else {
+			buf.Write(encodeCompactArrayLength(len(resource.Acls)))
+		}
 
 		for _, acl := range resource.Acls {
-			writeNullableString(buf, acl.Principal)
-
-			writeNullableString(buf, acl.Host)
+			if version <= 1 {
+				writeString(buf, acl.Principal)
+				writeString(buf, acl.Host)
+			} else {
+				writeCompactString(buf, acl.Principal)
+				writeCompactString(buf, acl.Host)
+			}
 
 			buf.WriteByte(byte(acl.Operation))
 			buf.WriteByte(byte(acl.PermissionType))
+
+			if version >= 2 {
+				buf.Write(acl.TaggedFields.Encode())
+			}
+		}
+		if version >= 2 {
+			buf.Write(resource.TaggedFields.Encode())
 		}
 	}
 
+	if version >= 2 {
+		buf.Write(r.TaggedFields.Encode())
+	}
 	return buf.Bytes(), nil
 
 }

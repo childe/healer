@@ -162,7 +162,7 @@ func (r IncrementalAlterConfigsRequest) Encode(version uint16) []byte {
 
 // DecodeIncrementalAlterConfigsRequest decodes []byte to IncrementalAlterConfigsRequest, just used in test cases
 func DecodeIncrementalAlterConfigsRequest(payload []byte, version uint16) (r IncrementalAlterConfigsRequest) {
-	header, offset := DecodeRequestHeader(payload[4:])
+	header, offset := DecodeRequestHeader(payload[4:], version)
 	r.RequestHeader = &header
 	offset += 4
 
