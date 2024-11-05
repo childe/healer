@@ -9,13 +9,14 @@ type AlterPartitionReassignmentsRequest struct {
 	*RequestHeader
 	TimeoutMs int32                               `json:"timeout_ms"`
 	Topics    []*AlterPartitionReassignmentsTopic `json:"topics"`
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 // NewAlterPartitionReassignmentsRequest is used to create a new AlterPartitionReassignmentsRequest
 func NewAlterPartitionReassignmentsRequest(timeoutMs int32) (r AlterPartitionReassignmentsRequest) {
 	r.RequestHeader = &RequestHeader{
-		APIKey:     API_AlterPartitionReassignments,
-		APIVersion: 0,
+		APIKey: API_AlterPartitionReassignments,
 	}
 	r.TimeoutMs = timeoutMs
 	return r
@@ -67,7 +68,6 @@ func (r *AlterPartitionReassignmentsRequest) Encode(version uint16) []byte {
 	}()
 
 	offset += r.RequestHeader.Encode(payload[offset:])
-	offset++ // TAG_BUFFER in header
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.TimeoutMs))
 	offset += 4
@@ -78,7 +78,7 @@ func (r *AlterPartitionReassignmentsRequest) Encode(version uint16) []byte {
 		offset += topic.encode(payload[offset:])
 	}
 
-	offset++ // TAG_BUFFER
+	offset += copy(payload[offset:], r.TaggedFields.Encode())
 
 	binary.BigEndian.PutUint32(payload[0:], uint32(offset-4))
 
@@ -89,7 +89,8 @@ func (r *AlterPartitionReassignmentsRequest) Encode(version uint16) []byte {
 type AlterPartitionReassignmentsTopic struct {
 	TopicName  string                                  `json:"topic_name"`
 	Partitions []*AlterPartitionReassignmentsPartition `json:"partitions"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 func (r *AlterPartitionReassignmentsTopic) length(version uint16) (length int) {
@@ -113,7 +114,7 @@ func (r *AlterPartitionReassignmentsTopic) encode(payload []byte) (offset int) {
 		offset += partition.encode(payload[offset:])
 	}
 
-	offset++ // TAG_BUFFER
+	offset += copy(payload[offset:], r.TaggedFields.Encode())
 	return offset
 }
 
@@ -121,7 +122,8 @@ func (r *AlterPartitionReassignmentsTopic) encode(payload []byte) (offset int) {
 type AlterPartitionReassignmentsPartition struct {
 	PartitionID int32   `json:"partition_id"`
 	Replicas    []int32 `json:"replicas"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 func (r *AlterPartitionReassignmentsPartition) length(version uint16) (length int) {
@@ -143,6 +145,6 @@ func (r *AlterPartitionReassignmentsPartition) encode(payload []byte) (offset in
 		offset += 4
 	}
 
-	offset++ // TAG_BUFFER
+	offset += copy(payload[offset:], r.TaggedFields.Encode())
 	return offset
 }
