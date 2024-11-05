@@ -77,6 +77,8 @@ var apiCmd = &cobra.Command{
 
 		router.POST("/describe-logdirs", wrap(apicontrollers.DescribeLogdirs, client))
 
+		router.POST("/describe-acls", wrap(apicontrollers.DescribeAcls, client))
+
 		router.Run(fullAddress)
 		return nil
 	},
