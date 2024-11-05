@@ -10,7 +10,8 @@ type CreatePartitionsRequest struct {
 	Topics       []createPartitionsRequestTopicBlock `json:"topics"`
 	TimeoutMS    int32                               `json:"timeout_ms"`
 	ValidateOnly bool                                `json:"validate_only"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 // NewCreatePartitionsRequest creates a new CreatePartitionsRequest.
@@ -31,12 +32,14 @@ type createPartitionsRequestTopicBlock struct {
 	Name        string                                    `json:"name"`
 	Count       int32                                     `json:"count"`
 	Assignments []createPartitionsRequestAssignmentsBlock `json:"assignments"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 type createPartitionsRequestAssignmentsBlock struct {
 	BrokerIDs []int32 `json:"broker_ids"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 func (r createPartitionsRequestAssignmentsBlock) encode(payload []byte, version uint16) (offset int) {
@@ -52,9 +55,8 @@ func (r createPartitionsRequestAssignmentsBlock) encode(payload []byte, version 
 		offset += 4
 	}
 
-	// TAG_BUFFER
 	if version == 2 {
-		offset += binary.PutUvarint(payload[offset:], 0)
+		offset += copy(payload[offset:], r.TaggedFields.Encode())
 	}
 	return offset
 }
@@ -86,9 +88,8 @@ func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint1
 		offset += assignment.encode(payload[offset:], version)
 	}
 
-	// TAG_BUFFER
 	if version == 2 {
-		offset += binary.PutUvarint(payload[offset:], 0)
+		offset += copy(payload[offset:], r.TaggedFields.Encode())
 	}
 
 	return offset
@@ -150,11 +151,6 @@ func (r CreatePartitionsRequest) Encode(version uint16) []byte {
 
 	offset += r.RequestHeader.Encode(payload[offset:])
 
-	// TAG_BUFFER
-	if version == 2 {
-		offset += binary.PutUvarint(payload[offset:], 0)
-	}
-
 	if version == 2 {
 		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Topics)))
 	} else if version == 0 {
@@ -178,7 +174,7 @@ func (r CreatePartitionsRequest) Encode(version uint16) []byte {
 
 	// TAG_BUFFER
 	if version == 2 {
-		offset += binary.PutUvarint(payload[offset:], 0)
+		offset += copy(payload[offset:], r.TaggedFields.Encode())
 	}
 
 	return payload[:offset]
