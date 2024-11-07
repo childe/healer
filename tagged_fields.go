@@ -1,7 +1,6 @@
 package healer
 
 import (
-	"bytes"
 	"encoding/binary"
 )
 
@@ -27,15 +26,13 @@ func (r TaggedFields) Encode() []byte {
 	if r == nil {
 		return []byte{0}
 	}
-	buf := new(bytes.Buffer)
-	payload := make([]byte, binary.MaxVarintLen64)
+	payload := make([]byte, r.length())
 	offset := binary.PutUvarint(payload, uint64(len(r)))
-	buf.Write(payload[:offset])
 
 	for _, v := range r {
-		buf.Write(v.Encode())
+		offset += v.encode(payload[offset:])
 	}
-	return buf.Bytes()
+	return payload[:offset]
 }
 
 func DecodeTaggedFields(payload []byte, version uint16) (r TaggedFields, length int) {
@@ -57,10 +54,10 @@ func DecodeTaggedFields(payload []byte, version uint16) (r TaggedFields, length 
 func (r *TaggedField) length() int {
 	return binary.MaxVarintLen32 + +binary.MaxVarintLen32 + len(r.Data)
 }
-func (r *TaggedField) Encode() []byte {
-	payload := make([]byte, len(r.Data)+binary.MaxVarintLen64)
+
+func (r *TaggedField) encode(payload []byte) int {
 	offset := binary.PutUvarint(payload, uint64(r.Tag))
 	offset += binary.PutUvarint(payload[offset:], uint64(len(r.Data)))
-	n := copy(payload[offset:], r.Data)
-	return payload[:offset+n]
+	offset += copy(payload[offset:], r.Data)
+	return offset
 }
