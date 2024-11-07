@@ -13,6 +13,9 @@ type TaggedField struct {
 }
 
 func (r *TaggedFields) length() (l int) {
+	if r == nil {
+		return 1
+	}
 	l = binary.MaxVarintLen64
 	for _, v := range *r {
 		l += v.length()
@@ -52,7 +55,7 @@ func DecodeTaggedFields(payload []byte, version uint16) (r TaggedFields, length 
 }
 
 func (r *TaggedField) length() int {
-	return binary.MaxVarintLen64 + +binary.MaxVarintLen64 + len(r.Data)
+	return binary.MaxVarintLen32 + +binary.MaxVarintLen32 + len(r.Data)
 }
 func (r *TaggedField) Encode() []byte {
 	payload := make([]byte, len(r.Data)+binary.MaxVarintLen64)
