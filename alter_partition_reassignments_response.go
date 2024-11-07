@@ -31,6 +31,7 @@ func (r *AlterPartitionReassignmentsResponse) Error() error {
 	return nil
 }
 
+// just for test
 func (r *AlterPartitionReassignmentsResponse) Encode(version uint16) (payload []byte) {
 	defer func() {
 		length := len(payload)
