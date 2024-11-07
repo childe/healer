@@ -12,7 +12,6 @@ type DescribeConfigsResponse struct {
 	Resources      []describeConfigsResponseResource
 }
 
-// FIXME: multiple error code
 func (r DescribeConfigsResponse) Error() error {
 	for _, resource := range r.Resources {
 		if resource.ErrorCode != 0 {
