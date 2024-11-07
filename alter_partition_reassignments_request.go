@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 // AlterPartitionReassignmentsRequest is the request of AlterPartitionReassignmentsRequest
@@ -53,34 +54,31 @@ func (r *AlterPartitionReassignmentsRequest) length(version uint16) (requestLeng
 	for _, topic := range r.Topics {
 		requestLength += topic.length(version)
 	}
-	requestLength++ // TAG_BUFFER
+	requestLength += r.TaggedFields.length()
 	return requestLength
 }
 
 // Encode encodes AlterPartitionReassignmentsRequest to []byte
-func (r *AlterPartitionReassignmentsRequest) Encode(version uint16) []byte {
-	requestLength := r.length(version)
-	payload := make([]byte, requestLength+4)
+func (r *AlterPartitionReassignmentsRequest) Encode(version uint16) (payload []byte) {
+	payload = make([]byte, r.length(version)+4)
 
-	offset := 4 // skip length field
 	defer func() {
-		binary.BigEndian.PutUint32(payload, uint32(offset-4))
+		binary.BigEndian.PutUint32(payload, uint32(len(payload)-4))
 	}()
 
+	offset := 4
 	offset += r.RequestHeader.Encode(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.TimeoutMs))
 	offset += 4
 
-	offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Topics)))
+	offset += copy(payload[offset:], encodeCompactArrayLength(len(r.Topics)))
 
 	for _, topic := range r.Topics {
 		offset += topic.encode(payload[offset:])
 	}
 
 	offset += copy(payload[offset:], r.TaggedFields.Encode())
-
-	binary.BigEndian.PutUint32(payload[0:], uint32(offset-4))
 
 	return payload[:offset]
 }
@@ -100,15 +98,13 @@ func (r *AlterPartitionReassignmentsTopic) length(version uint16) (length int) {
 	for _, partition := range r.Partitions {
 		length += partition.length(version)
 	}
-	length++ // TAG_BUFFER
+	length += r.TaggedFields.length()
 	return
 }
 
 func (r *AlterPartitionReassignmentsTopic) encode(payload []byte) (offset int) {
-	offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.TopicName)))
-	offset += copy(payload[offset:], r.TopicName)
-
-	offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Partitions)))
+	offset = copy(payload, encodeCompactString(r.TopicName))
+	offset += copy(payload[offset:], encodeCompactArrayLength(len(r.Partitions)))
 
 	for _, partition := range r.Partitions {
 		offset += partition.encode(payload[offset:])
@@ -130,7 +126,7 @@ func (r *AlterPartitionReassignmentsPartition) length(version uint16) (length in
 	length = 4  // PartitionID
 	length += 4 // len(Replicas)
 	length += 4 * len(r.Replicas)
-	length++ // TAG_BUFFER
+	length += r.TaggedFields.length()
 	return
 }
 
@@ -138,7 +134,7 @@ func (r *AlterPartitionReassignmentsPartition) encode(payload []byte) (offset in
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.PartitionID))
 	offset += 4
 
-	offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Replicas)))
+	offset += copy(payload[offset:], encodeCompactArrayLength(len(r.Replicas)))
 
 	for _, replica := range r.Replicas {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(replica))
@@ -147,4 +143,75 @@ func (r *AlterPartitionReassignmentsPartition) encode(payload []byte) (offset in
 
 	offset += copy(payload[offset:], r.TaggedFields.Encode())
 	return offset
+}
+
+// just for test
+func DecodeAlterPartitionReassignmentsRequest(payload []byte, version uint16) (r AlterPartitionReassignmentsRequest, err error) {
+	responseLength := binary.BigEndian.Uint32(payload)
+	offset := 4
+	if responseLength+4 != uint32(len(payload)) {
+		return r, fmt.Errorf("AlterPartitionReassignmentsRequest length did not match: %d!=%d", responseLength+4, len(payload))
+	}
+
+	requestHeader, o := DecodeRequestHeader(payload[offset:], version)
+	r.RequestHeader = &requestHeader
+	offset += o
+
+	r.TimeoutMs = int32(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+
+	numTopics, o := compactArrayLength(payload[offset:])
+	offset += o
+
+	if numTopics < 0 {
+		r.Topics = nil
+	} else {
+		r.Topics = make([]*AlterPartitionReassignmentsTopic, numTopics)
+		for i := int32(0); i < numTopics; i++ {
+			topic := &AlterPartitionReassignmentsTopic{}
+			topic.TopicName, o = compactString(payload[offset:])
+			offset += o
+
+			numPartitions, bytesRead := compactArrayLength(payload[offset:])
+			offset += bytesRead
+
+			if numPartitions < 0 {
+				topic.Partitions = nil
+			} else {
+				topic.Partitions = make([]*AlterPartitionReassignmentsPartition, numPartitions)
+				for j := int32(0); j < numPartitions; j++ {
+					partition := &AlterPartitionReassignmentsPartition{}
+					partition.PartitionID = int32(binary.BigEndian.Uint32(payload[offset:]))
+					offset += 4
+
+					numReplicas, bytesRead := compactArrayLength(payload[offset:])
+					offset += bytesRead
+
+					if numReplicas < 0 {
+						partition.Replicas = nil
+					} else {
+
+						partition.Replicas = make([]int32, numReplicas)
+						for k := int32(0); k < numReplicas; k++ {
+							partition.Replicas[k] = int32(binary.BigEndian.Uint32(payload[offset:]))
+							offset += 4
+						}
+					}
+					partition.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+					offset += o
+
+					topic.Partitions[j] = partition
+				}
+			}
+
+			topic.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+			offset += o
+
+			r.Topics[i] = topic
+		}
+	}
+
+	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+	offset += o
+	return
 }
