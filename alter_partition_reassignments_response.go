@@ -1,18 +1,20 @@
 package healer
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 )
 
 // AlterPartitionReassignmentsResponse is the response of AlterPartitionReassignmentsRequest
 type AlterPartitionReassignmentsResponse struct {
-	CorrelationID  uint32                                      `json:"correlation_id"`
+	ResponseHeader
 	ThrottleTimeMs int32                                       `json:"throttle_time_ms"`
 	ErrorCode      int16                                       `json:"error_code"`
 	ErrorMsg       *string                                     `json:"error_msg"`
 	Responses      []*alterPartitionReassignmentsResponseTopic `json:"responses"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
 }
 
 func (r *AlterPartitionReassignmentsResponse) Error() error {
@@ -29,18 +31,64 @@ func (r *AlterPartitionReassignmentsResponse) Error() error {
 	return nil
 }
 
+func (r *AlterPartitionReassignmentsResponse) Encode(version uint16) (payload []byte) {
+	defer func() {
+		length := len(payload)
+		binary.BigEndian.PutUint32(payload, uint32(length-4))
+		payload = payload[:length]
+	}()
+	buf := &bytes.Buffer{}
+	binary.Write(buf, binary.BigEndian, uint32(0)) // length
+
+	buf.Write(r.ResponseHeader.Encode())
+	binary.Write(buf, binary.BigEndian, r.ThrottleTimeMs)
+	binary.Write(buf, binary.BigEndian, r.ErrorCode)
+	writeCompactNullableString(buf, r.ErrorMsg)
+
+	buf.Write(encodeCompactArrayLength(len(r.Responses)))
+	for _, t := range r.Responses {
+		buf.Write(t.encode())
+	}
+	buf.Write(r.TaggedFields.Encode())
+	return buf.Bytes()
+}
+
 // alterPartitionReassignmentsResponseTopic is the response of AlterPartitionReassignmentsRequest
 type alterPartitionReassignmentsResponseTopic struct {
 	Name       string                                               `json:"name"`
 	Partitions []*alterPartitionReassignmentsResponseTopicPartition `json:"partitions"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
+}
+
+func (r *alterPartitionReassignmentsResponseTopic) encode() []byte {
+	buf := &bytes.Buffer{}
+	writeCompactString(buf, r.Name)
+
+	buf.Write(encodeCompactArrayLength(len(r.Partitions)))
+	for _, p := range r.Partitions {
+		buf.Write(p.encode())
+	}
+
+	buf.Write(r.TaggedFields.Encode())
+	return buf.Bytes()
 }
 
 type alterPartitionReassignmentsResponseTopicPartition struct {
 	PartitionID int32   `json:"partition_id"`
 	ErrorCode   int16   `json:"error_code"`
 	ErrorMsg    *string `json:"error_msg"`
-	// TAG_BUFFER
+
+	TaggedFields TaggedFields `json:"tagged_fields"`
+}
+
+func (r *alterPartitionReassignmentsResponseTopicPartition) encode() []byte {
+	buf := &bytes.Buffer{}
+	binary.Write(buf, binary.BigEndian, r.PartitionID)
+	binary.Write(buf, binary.BigEndian, r.ErrorCode)
+	writeCompactNullableString(buf, r.ErrorMsg)
+	buf.Write(r.TaggedFields.Encode())
+	return buf.Bytes()
 }
 
 func decodeToAlterPartitionReassignmentsResponseTopicPartition(payload []byte, version uint16) (p *alterPartitionReassignmentsResponseTopicPartition, length int) {
@@ -56,27 +104,27 @@ func decodeToAlterPartitionReassignmentsResponseTopicPartition(payload []byte, v
 	offset += o
 	p.ErrorMsg = errorMsg
 
-	offset++ // TAG_BUFFER
+	taggedFields, n := DecodeTaggedFields(payload[offset:], version)
+	offset += n
+	p.TaggedFields = taggedFields
 
 	return p, offset
 }
 
 // NewAlterPartitionReassignmentsResponse create a new AlterPartitionReassignmentsResponse
 func NewAlterPartitionReassignmentsResponse(payload []byte, version uint16) (*AlterPartitionReassignmentsResponse, error) {
-	r := &AlterPartitionReassignmentsResponse{}
-	var (
-		offset int = 0
-	)
-	responseLength := int(binary.BigEndian.Uint32(payload))
-	if responseLength+4 != len(payload) {
-		return r, fmt.Errorf("AlterPartitionReassignments response length did not match: %d!=%d", responseLength+4, len(payload))
+	responseLength := int32(binary.BigEndian.Uint32(payload))
+	if int(responseLength)+4 != len(payload) {
+		return nil, fmt.Errorf("AlterPartitionReassignments response length did not match: %d!=%d", responseLength+4, len(payload))
 	}
-	offset += 4
 
-	r.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
-	offset += 4
+	offset := 4
+	header, o := DecodeResponseHeader(payload[offset:], API_AlterPartitionReassignments, version)
+	offset += o
 
-	offset++ // TAG_BUFFER
+	r := &AlterPartitionReassignmentsResponse{
+		ResponseHeader: header,
+	}
 
 	r.ThrottleTimeMs = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
@@ -90,34 +138,36 @@ func NewAlterPartitionReassignmentsResponse(payload []byte, version uint16) (*Al
 
 	responseCount, o := compactArrayLength(payload[offset:])
 	offset += o
-	if responseCount <= 0 {
+	if responseCount < 0 { // actually it should be -1
 		r.Responses = nil
-	}
+	} else {
+		r.Responses = make([]*alterPartitionReassignmentsResponseTopic, responseCount)
+		for i := 0; i < int(responseCount); i++ {
+			topic := &alterPartitionReassignmentsResponseTopic{}
+			r.Responses[i] = topic
 
-	r.Responses = make([]*alterPartitionReassignmentsResponseTopic, responseCount)
-	for i := 0; i < int(responseCount); i++ {
-		topic := &alterPartitionReassignmentsResponseTopic{}
-		r.Responses[i] = topic
+			topic.Name, o = compactString(payload[offset:])
+			offset += o
 
-		topic.Name, o = compactString(payload[offset:])
-		offset += o
+			partitionCount, o := compactArrayLength(payload[offset:])
+			offset += o
+			if partitionCount <= 0 {
+				topic.Partitions = nil
+			}
 
-		partitionCount, o := compactArrayLength(payload[offset:])
-		offset += o
-		if partitionCount <= 0 {
-			topic.Partitions = nil
-		}
+			topic.Partitions = make([]*alterPartitionReassignmentsResponseTopicPartition, partitionCount)
+			for j := 0; j < int(partitionCount); j++ {
+				topic.Partitions[j], o = decodeToAlterPartitionReassignmentsResponseTopicPartition(payload[offset:], version)
+				offset += o
+			}
 
-		topic.Partitions = make([]*alterPartitionReassignmentsResponseTopicPartition, partitionCount)
-		for j := 0; j < int(partitionCount); j++ {
-			topic.Partitions[j], o = decodeToAlterPartitionReassignmentsResponseTopicPartition(payload[offset:], version)
+			topic.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
 			offset += o
 		}
-
-		offset++ // TAG_BUFFER
 	}
 
-	offset++ // TAG_BUFFER
+	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+	offset += o
 
 	return r, nil
 }
