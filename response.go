@@ -163,7 +163,7 @@ func NewResponseHeader(apiKey, apiVersion uint16) ResponseHeader {
 }
 
 func (h *ResponseHeader) Encode() []byte {
-	buf := &bytes.Buffer{}
+	buf := bytes.NewBuffer(make([]byte, 0, h.TaggedFields.length()))
 	binary.Write(buf, binary.BigEndian, h.CorrelationID)
 	if h.headerVersion >= 1 {
 		buf.Write(h.TaggedFields.Encode())
