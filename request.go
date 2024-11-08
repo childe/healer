@@ -106,10 +106,6 @@ func (h *RequestHeader) Encode(payload []byte) int {
 
 	return offset
 }
-func (h *RequestHeader) Read(payload []byte) (n int, err error) {
-	n = h.Encode(payload)
-	return
-}
 
 // DecodeRequestHeader decodes request header from []byte, just used in test cases
 func DecodeRequestHeader(payload []byte, version uint16) (h RequestHeader, offset int) {
@@ -168,6 +164,9 @@ type Request interface {
 }
 
 // https://github.com/apache/kafka/tree/trunk/clients/src/main/resources/common/message
+// v0 correlation_id => INT32
+// v1 correlation_id => INT32 client_id => NULLABLE_STRING
+// v2 correlation_id => INT32 client_id => NULLABLE_STRING TAG_BUFFER
 func (h *RequestHeader) headerVersion() uint16 {
 	_version := h.APIVersion
 	switch h.APIKey {
