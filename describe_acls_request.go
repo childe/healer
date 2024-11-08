@@ -8,7 +8,7 @@ import (
 )
 
 // https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/resource/ResourceType.java
-type DescribeAclsResourceType int8
+type AclsResourceType int8
 
 const (
 	DescribeAclsResourceTypeUnknown         = 0
@@ -22,7 +22,7 @@ const (
 	DescribeAclsResourceTypeUser            = 7
 )
 
-func (t DescribeAclsResourceType) String() string {
+func (t AclsResourceType) String() string {
 	switch t {
 	case DescribeAclsResourceTypeUnknown:
 		return "UNKNOWN"
@@ -44,11 +44,11 @@ func (t DescribeAclsResourceType) String() string {
 		return "ERROR"
 	}
 }
-func (t DescribeAclsResourceType) MarshalText() ([]byte, error) {
+func (t AclsResourceType) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
-func (t *DescribeAclsResourceType) UnmarshalText(text []byte) error {
+func (t *AclsResourceType) UnmarshalText(text []byte) error {
 	switch strings.ToUpper(string(text)) {
 	case "UNKNOWN", "0":
 		*t = DescribeAclsResourceTypeUnknown
@@ -78,7 +78,7 @@ func (t *DescribeAclsResourceType) UnmarshalText(text []byte) error {
 
 // https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/resource/PatternType.java
 
-type DescribeAclsPatternType int8
+type AclsPatternType int8
 
 const (
 	DescribeAclsPatternTypeUnknown  = 0
@@ -88,7 +88,7 @@ const (
 	DescribeAclsPatternTypePrefixed = 4
 )
 
-func (t DescribeAclsPatternType) String() string {
+func (t AclsPatternType) String() string {
 	switch t {
 	case DescribeAclsPatternTypeUnknown:
 		return "UNKNOWN"
@@ -105,11 +105,11 @@ func (t DescribeAclsPatternType) String() string {
 	}
 }
 
-func (t DescribeAclsPatternType) MarshalText() ([]byte, error) {
+func (t AclsPatternType) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
-func (t *DescribeAclsPatternType) UnmarshalText(text []byte) error {
+func (t *AclsPatternType) UnmarshalText(text []byte) error {
 	switch strings.ToUpper(string(text)) {
 	case "UNKNOWN", "0":
 		*t = DescribeAclsPatternTypeUnknown
@@ -128,7 +128,7 @@ func (t *DescribeAclsPatternType) UnmarshalText(text []byte) error {
 }
 
 // https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/acl/AclOperation.java
-type DescribeAclsOperation int8
+type AclsOperation int8
 
 const DescribeAclsOperationUnknown = 0
 const DescribeAclsOperationAny = 1
@@ -144,7 +144,7 @@ const DescribeAclsOperationDescribeConfigs = 10
 const DescribeAclsOperationAlterConfigs = 11
 const DescribeAclsOperationIdempotentWrite = 12
 
-func (o DescribeAclsOperation) String() string {
+func (o AclsOperation) String() string {
 	switch o {
 	case DescribeAclsOperationUnknown:
 		return "UNKNOWN"
@@ -177,11 +177,11 @@ func (o DescribeAclsOperation) String() string {
 	}
 }
 
-func (o DescribeAclsOperation) MarshalText() ([]byte, error) {
+func (o AclsOperation) MarshalText() ([]byte, error) {
 	return []byte(o.String()), nil
 }
 
-func (o *DescribeAclsOperation) UnmarshalText(text []byte) error {
+func (o *AclsOperation) UnmarshalText(text []byte) error {
 	switch strings.ToUpper(string(text)) {
 	case "UNKNOWN", "0":
 		*o = DescribeAclsOperationAny
@@ -216,16 +216,16 @@ func (o *DescribeAclsOperation) UnmarshalText(text []byte) error {
 }
 
 // https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/acl/AclPermissionType.java
-type DescribeAclsPermissionType int8
+type AclsPermissionType int8
 
 const (
-	DescribeAclsPermissionTypeUnkown DescribeAclsPermissionType = 0
-	DescribeAclsPermissionTypeAny    DescribeAclsPermissionType = 1
-	DescribeAclsPermissionTypeDeny   DescribeAclsPermissionType = 2
-	DescribeAclsPermissionTypeAllow  DescribeAclsPermissionType = 3
+	DescribeAclsPermissionTypeUnkown AclsPermissionType = 0
+	DescribeAclsPermissionTypeAny    AclsPermissionType = 1
+	DescribeAclsPermissionTypeDeny   AclsPermissionType = 2
+	DescribeAclsPermissionTypeAllow  AclsPermissionType = 3
 )
 
-func (p DescribeAclsPermissionType) String() string {
+func (p AclsPermissionType) String() string {
 	switch p {
 	case DescribeAclsPermissionTypeUnkown:
 		return "UNKNOWN"
@@ -240,11 +240,11 @@ func (p DescribeAclsPermissionType) String() string {
 	}
 }
 
-func (p DescribeAclsPermissionType) MarshalText() ([]byte, error) {
+func (p AclsPermissionType) MarshalText() ([]byte, error) {
 	return []byte(p.String()), nil
 }
 
-func (p *DescribeAclsPermissionType) UnmarshalText(text []byte) error {
+func (p *AclsPermissionType) UnmarshalText(text []byte) error {
 	switch strings.ToUpper(string(text)) {
 	case "UNKNOWN", "0":
 		*p = DescribeAclsPermissionTypeAny
@@ -265,13 +265,13 @@ type DescribeAclsRequest struct {
 	DescribeAclsRequestBody
 }
 type DescribeAclsRequestBody struct {
-	ResourceType   DescribeAclsResourceType
+	ResourceType   AclsResourceType
 	ResourceName   *string
-	PatternType    DescribeAclsPatternType
+	PatternType    AclsPatternType
 	Principal      *string
 	Host           *string
-	Operation      DescribeAclsOperation
-	PermissionType DescribeAclsPermissionType
+	Operation      AclsOperation
+	PermissionType AclsPermissionType
 	TaggedFields   TaggedFields
 }
 
@@ -330,7 +330,7 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 	r.RequestHeader = header
 	offset += o
 
-	r.ResourceType = DescribeAclsResourceType(payload[offset])
+	r.ResourceType = AclsResourceType(payload[offset])
 	offset++
 
 	if version < 2 {
@@ -344,7 +344,7 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 	}
 
 	if version >= 1 {
-		r.PatternType = DescribeAclsPatternType(payload[offset])
+		r.PatternType = AclsPatternType(payload[offset])
 		offset++
 	}
 
@@ -366,10 +366,10 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 		r.Host = host
 	}
 
-	r.Operation = DescribeAclsOperation(payload[offset])
+	r.Operation = AclsOperation(payload[offset])
 	offset++
 
-	r.PermissionType = DescribeAclsPermissionType(payload[offset])
+	r.PermissionType = AclsPermissionType(payload[offset])
 	offset++
 
 	return r, nil

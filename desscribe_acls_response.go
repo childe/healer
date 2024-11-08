@@ -16,9 +16,9 @@ type DescribeAclsResponse struct {
 }
 
 type AclResource struct {
-	ResourceType DescribeAclsResourceType
+	ResourceType AclsResourceType
 	ResourceName string
-	PatternType  DescribeAclsPatternType
+	PatternType  AclsPatternType
 	Acls         []Acl
 	TaggedFields TaggedFields
 }
@@ -26,8 +26,8 @@ type AclResource struct {
 type Acl struct {
 	Principal      string
 	Host           string
-	Operation      DescribeAclsOperation
-	PermissionType DescribeAclsPermissionType
+	Operation      AclsOperation
+	PermissionType AclsPermissionType
 	TaggedFields   TaggedFields
 }
 
@@ -92,7 +92,7 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 
 	for i := 0; i < len(response.Resources); i++ {
 		// ResourceType
-		response.Resources[i].ResourceType = DescribeAclsResourceType(payload[offset])
+		response.Resources[i].ResourceType = AclsResourceType(payload[offset])
 		offset++
 
 		// ResourceName
@@ -108,7 +108,7 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 
 		// PatternType
 		if version >= 1 {
-			response.Resources[i].PatternType = DescribeAclsPatternType(payload[offset])
+			response.Resources[i].PatternType = AclsPatternType(payload[offset])
 			offset++
 		}
 
@@ -144,11 +144,11 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 			}
 
 			// Operation
-			response.Resources[i].Acls[j].Operation = DescribeAclsOperation(payload[offset])
+			response.Resources[i].Acls[j].Operation = AclsOperation(payload[offset])
 			offset++
 
 			// PermissionType
-			response.Resources[i].Acls[j].PermissionType = DescribeAclsPermissionType(payload[offset])
+			response.Resources[i].Acls[j].PermissionType = AclsPermissionType(payload[offset])
 			offset++
 
 			if version >= 2 {
