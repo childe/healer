@@ -50,10 +50,7 @@ func TestAclCreationLengthEncodeDecode(t *testing.T) {
 
 			t.Logf("reqeust version: %+v", version)
 
-			encoded, err := original.Encode()
-			if err != nil {
-				t.Fatalf("encode error: %v", err)
-			}
+			encoded := original.Encode(version)
 
 			decoded, err := DecodeCreateAclsRequest(encoded)
 			if err != nil {

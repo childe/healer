@@ -37,8 +37,9 @@ func DecodeCreateAclsResponse(payload []byte, version uint16) (*CreateAclsRespon
 	if responseLength+4 != len(payload) {
 		return r, fmt.Errorf("CreateAclsResponse length did not match: %d!=%d", responseLength+4, len(payload))
 	}
+	offset += 4
 
-	r.ResponseHeader, o = DecodeResponseHeader(payload, API_CreateAcls, version)
+	r.ResponseHeader, o = DecodeResponseHeader(payload[offset:], API_CreateAcls, version)
 	offset += o
 
 	var resultCount int32
@@ -104,6 +105,7 @@ func (r *CreateAclsResponse) Encode() (payload []byte) {
 	offset += 4
 	defer func() {
 		binary.BigEndian.PutUint32(payload, uint32(offset-4))
+		payload = payload[:offset]
 	}()
 
 	offset += r.ResponseHeader.EncodeTo(payload[offset:])
