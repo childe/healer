@@ -55,6 +55,7 @@ var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
 
 // RequestHeader is the request header, which is used in all requests. It contains apiKey, apiVersion, correlationID, clientID
 type RequestHeader struct {
+	hv            *uint16 // header version
 	APIKey        uint16
 	APIVersion    uint16
 	CorrelationID uint32
@@ -68,7 +69,7 @@ func (h *RequestHeader) length() int {
 	if h.ClientID != nil {
 		r += len(*h.ClientID)
 	}
-	if h.headerVersion() >= 2 {
+	if h.IsFlexible() {
 		if h.TaggedFields != nil {
 			r += h.TaggedFields.length()
 		} else {
@@ -93,15 +94,12 @@ func (h *RequestHeader) Encode(payload []byte) int {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(h.CorrelationID))
 	offset += 4
 
-	headerVersion := h.headerVersion()
-	switch headerVersion {
-	case 1:
+	if h.headerVersion() >= 1 {
 		encoded := encodeNullableString(h.ClientID)
 		offset += copy(payload[offset:], encoded)
-	case 2:
-		encoded := encodeNullableString(h.ClientID)
-		offset += copy(payload[offset:], encoded)
+	}
 
+	if h.IsFlexible() {
 		tag := h.TaggedFields.Encode()
 		offset += copy(payload[offset:], tag)
 	}
@@ -181,7 +179,14 @@ func (h *RequestHeader) IsFlexible() bool {
 // and bytes fields are serialized in a more efficient way that saves space.
 // The new serialization types start with compact.
 // For example COMPACT_STRING is a more efficient form of STRING.
-func (h *RequestHeader) headerVersion() uint16 {
+func (h *RequestHeader) headerVersion() (r uint16) {
+	if h.hv != nil {
+		return *h.hv
+	}
+	defer func() {
+		h.hv = &r
+	}()
+
 	_version := h.APIVersion
 	switch h.APIKey {
 	case 0: // Produce
