@@ -76,7 +76,7 @@ func (r *CreateAclsRequest) length() (n int) {
 	return
 }
 
-func (r *CreateAclsRequest) Encode() (payload []byte, err error) {
+func (r *CreateAclsRequest) Encode(version uint16) (payload []byte) {
 	payload = make([]byte, r.length())
 	offset := 0
 	var headerVersion uint16 = r.RequestHeader.headerVersion()
@@ -105,7 +105,7 @@ func (r *CreateAclsRequest) Encode() (payload []byte, err error) {
 	// Write the tag buffer
 	offset += copy(payload[offset:], r.TaggedFields.Encode())
 
-	return payload, nil
+	return payload
 }
 
 // just for test
