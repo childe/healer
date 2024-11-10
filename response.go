@@ -177,7 +177,7 @@ func DecodeResponseHeader(payload []byte, apiKey uint16, apiVersion uint16) (hea
 	offset += 4
 	headerVersion := responseHeaderVersion(apiKey, apiVersion)
 	if headerVersion >= 1 {
-		taggedFields, n := DecodeTaggedFields(payload[offset:], apiVersion)
+		taggedFields, n := DecodeTaggedFields(payload[offset:])
 		offset += n
 		header.TaggedFields = taggedFields
 	}

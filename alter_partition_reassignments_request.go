@@ -197,21 +197,21 @@ func DecodeAlterPartitionReassignmentsRequest(payload []byte, version uint16) (r
 							offset += 4
 						}
 					}
-					partition.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+					partition.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 					offset += o
 
 					topic.Partitions[j] = partition
 				}
 			}
 
-			topic.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+			topic.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 			offset += o
 
 			r.Topics[i] = topic
 		}
 	}
 
-	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+	r.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 	offset += o
 	return
 }

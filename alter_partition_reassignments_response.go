@@ -105,7 +105,7 @@ func decodeToAlterPartitionReassignmentsResponseTopicPartition(payload []byte, v
 	offset += o
 	p.ErrorMsg = errorMsg
 
-	taggedFields, n := DecodeTaggedFields(payload[offset:], version)
+	taggedFields, n := DecodeTaggedFields(payload[offset:])
 	offset += n
 	p.TaggedFields = taggedFields
 
@@ -162,12 +162,12 @@ func NewAlterPartitionReassignmentsResponse(payload []byte, version uint16) (*Al
 				offset += o
 			}
 
-			topic.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+			topic.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 			offset += o
 		}
 	}
 
-	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+	r.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 	offset += o
 
 	return r, nil

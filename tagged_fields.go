@@ -35,7 +35,7 @@ func (r TaggedFields) Encode() []byte {
 	return payload[:offset]
 }
 
-func DecodeTaggedFields(payload []byte, version uint16) (r TaggedFields, length int) {
+func DecodeTaggedFields(payload []byte) (r TaggedFields, length int) {
 	offset := 0
 	taggedFieldsLength, n := binary.Uvarint(payload)
 	offset += n

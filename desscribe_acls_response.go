@@ -49,7 +49,7 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 	offset += 4
 
 	if version >= 1 {
-		_, o = DecodeTaggedFields(payload[offset:], version)
+		_, o = DecodeTaggedFields(payload[offset:])
 		offset += o
 	}
 
@@ -152,17 +152,17 @@ func NewDescribeAclsResponse(payload []byte, version uint16) (response DescribeA
 			offset++
 
 			if version >= 2 {
-				response.Resources[i].Acls[j].TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+				response.Resources[i].Acls[j].TaggedFields, o = DecodeTaggedFields(payload[offset:])
 				offset += o
 			}
 		}
 		if version >= 2 {
-			response.Resources[i].TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+			response.Resources[i].TaggedFields, o = DecodeTaggedFields(payload[offset:])
 			offset += o
 		}
 	}
 	if version >= 2 {
-		response.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+		response.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 		offset += o
 	}
 

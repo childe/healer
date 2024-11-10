@@ -173,14 +173,14 @@ func DecodeCreateAclsRequest(payload []byte) (r CreateAclsRequest, err error) {
 		creation.PermissionType = AclsPermissionType(payload[offset])
 		offset++
 
-		creation.TaggedFields, o = DecodeTaggedFields(payload[offset:], 0)
+		creation.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 		offset += o
 
 		r.Creations[i] = *creation
 	}
 
 	// Decode TaggedFields
-	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], 0)
+	r.TaggedFields, o = DecodeTaggedFields(payload[offset:])
 	offset += o
 
 	return r, nil

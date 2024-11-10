@@ -126,7 +126,7 @@ func DecodeRequestHeader(payload []byte) (h RequestHeader, offset int) {
 		offset += n
 	}
 	if headerVersion >= 2 {
-		taggedFields, n := DecodeTaggedFields(payload[offset:], headerVersion)
+		taggedFields, n := DecodeTaggedFields(payload[offset:])
 		h.TaggedFields = taggedFields
 		offset += n
 	}
