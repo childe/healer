@@ -132,6 +132,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewAlterConfigsResponse(data)
 	case API_DescribeAcls:
 		return NewDescribeAclsResponse(data, p.version)
+	case API_CreateAcls:
+		return DecodeCreateAclsResponse(data, p.version)
 	case API_Delete_Groups:
 		return NewDeleteGroupsResponse(data)
 	case API_IncrementalAlterConfigs:
