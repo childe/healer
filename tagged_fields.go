@@ -22,6 +22,14 @@ func (r *TaggedFields) length() (l int) {
 	return
 }
 
+func (r TaggedFields) EncodeTo(payload []byte) (offset int) {
+	offset = binary.PutUvarint(payload, uint64(len(r)))
+
+	for _, v := range r {
+		offset += v.encode(payload[offset:])
+	}
+	return
+}
 func (r TaggedFields) Encode() []byte {
 	if r == nil {
 		return []byte{0}
