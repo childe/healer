@@ -165,6 +165,10 @@ type Request interface {
 	SetVersion(uint16)
 }
 
+func (h *RequestHeader) IsFlexible() bool {
+	return h.headerVersion() >= 2
+}
+
 // https://github.com/apache/kafka/tree/trunk/clients/src/main/resources/common/message
 
 // v0 correlation_id => INT32

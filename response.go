@@ -162,26 +162,45 @@ func NewResponseHeader(apiKey, apiVersion uint16) ResponseHeader {
 	}
 }
 
+// not exactly, but enough
+func (h *ResponseHeader) length() (n int) {
+	n = 4
+	if h.IsFlexible() {
+		n += h.TaggedFields.length()
+	}
+	return n
+}
+
 func (h *ResponseHeader) Encode() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, h.TaggedFields.length()))
 	binary.Write(buf, binary.BigEndian, h.CorrelationID)
-	if h.headerVersion >= 1 {
+	if h.IsFlexible() {
 		buf.Write(h.TaggedFields.Encode())
 	}
 	return buf.Bytes()
+}
+func (h *ResponseHeader) EncodeTo(payload []byte) (offset int) {
+	binary.BigEndian.PutUint32(payload[offset:], h.CorrelationID)
+	offset += 4
+	if h.IsFlexible() {
+		offset += copy(payload[offset:], h.TaggedFields.Encode())
+	}
+	return offset
 }
 
 func DecodeResponseHeader(payload []byte, apiKey uint16, apiVersion uint16) (header ResponseHeader, offset int) {
 	header = NewResponseHeader(apiKey, apiVersion)
 	header.CorrelationID = binary.BigEndian.Uint32(payload[offset:])
 	offset += 4
-	headerVersion := responseHeaderVersion(apiKey, apiVersion)
-	if headerVersion >= 1 {
+	if header.IsFlexible() {
 		taggedFields, n := DecodeTaggedFields(payload[offset:])
 		offset += n
 		header.TaggedFields = taggedFields
 	}
 	return header, offset
+}
+func (h *ResponseHeader) IsFlexible() bool {
+	return h.headerVersion >= 1
 }
 
 // https://kafka.apache.org/protocol#protocol_api_keys
