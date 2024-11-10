@@ -7,6 +7,21 @@ import (
 
 // https://kafka.apache.org/protocol#protocol_types
 
+func encodeString(s string) []byte {
+	payload := make([]byte, len(s)+2)
+	binary.BigEndian.PutUint16(payload, uint16(len(s)))
+	copy(payload[2:], s)
+	return payload
+}
+func writeString(w io.Writer, s string) (n int, err error) {
+	n, err = w.Write(binary.BigEndian.AppendUint16(nil, uint16(len(s))))
+	if err != nil {
+		return
+	}
+	nn, err := w.Write([]byte(s))
+	return n + nn, err
+}
+
 // Represents a sequence of characters.
 // First the length N + 1 is given as an UNSIGNED_VARINT .
 // Then N bytes follow which are the UTF-8 encoding of the character sequence.
@@ -17,14 +32,6 @@ func encodeCompactString(s string) []byte {
 	return payload[:offset]
 }
 
-func writeString(w io.Writer, s string) (n int, err error) {
-	n, err = w.Write(binary.BigEndian.AppendUint16(nil, uint16(len(s))))
-	if err != nil {
-		return
-	}
-	nn, err := w.Write([]byte(s))
-	return n + nn, err
-}
 func writeCompactString(w io.Writer, s string) (n int, err error) {
 	payload := make([]byte, binary.MaxVarintLen64)
 	offset := binary.PutUvarint(payload, 1+uint64(len(s)))
