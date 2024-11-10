@@ -26,6 +26,7 @@ const (
 	API_CreateTopics                uint16 = 19
 	API_DeleteTopics                uint16 = 20
 	API_DescribeAcls                uint16 = 29
+	API_CreateAcls                  uint16 = 30
 	API_DescribeConfigs             uint16 = 32
 	API_AlterConfigs                uint16 = 33
 	API_DescribeLogDirs             uint16 = 35
