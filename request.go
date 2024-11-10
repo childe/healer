@@ -46,6 +46,7 @@ var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
 	API_FetchRequest:        {10, 7, 0},
 	API_OffsetRequest:       {1, 0},
 	API_DescribeAcls:        {2, 1, 0},
+	API_CreateAcls:          {3, 2, 1, 0},
 	API_CreatePartitions:    {2, 0},
 	API_SaslHandshake:       {1, 0},
 	API_OffsetCommitRequest: {2, 0},
@@ -109,7 +110,7 @@ func (h *RequestHeader) Encode(payload []byte) int {
 }
 
 // DecodeRequestHeader decodes request header from []byte, just used in test cases
-func DecodeRequestHeader(payload []byte, version uint16) (h RequestHeader, offset int) {
+func DecodeRequestHeader(payload []byte) (h RequestHeader, offset int) {
 	h.APIKey = binary.BigEndian.Uint16(payload)
 	offset += 2
 	h.APIVersion = binary.BigEndian.Uint16(payload[offset:])
@@ -125,7 +126,7 @@ func DecodeRequestHeader(payload []byte, version uint16) (h RequestHeader, offse
 		offset += n
 	}
 	if headerVersion >= 2 {
-		taggedFields, n := DecodeTaggedFields(payload[offset:], version)
+		taggedFields, n := DecodeTaggedFields(payload[offset:], headerVersion)
 		h.TaggedFields = taggedFields
 		offset += n
 	}
@@ -165,9 +166,17 @@ type Request interface {
 }
 
 // https://github.com/apache/kafka/tree/trunk/clients/src/main/resources/common/message
+
 // v0 correlation_id => INT32
 // v1 correlation_id => INT32 client_id => NULLABLE_STRING
 // v2 correlation_id => INT32 client_id => NULLABLE_STRING TAG_BUFFER
+
+// Note that tagged fields can only be added to "flexible" message versions. so flexible versions is 2
+
+// In flexible versions(v2), variable-length fields such as strings, arrays,
+// and bytes fields are serialized in a more efficient way that saves space.
+// The new serialization types start with compact.
+// For example COMPACT_STRING is a more efficient form of STRING.
 func (h *RequestHeader) headerVersion() uint16 {
 	_version := h.APIVersion
 	switch h.APIKey {

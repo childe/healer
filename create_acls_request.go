@@ -38,16 +38,18 @@ func (a *AclCreation) encodeTo(payload []byte, version uint16, headerVersion uin
 	payload[offset] = uint8(a.ResourceType)
 	offset++
 
-	if headerVersion < 1 {
+	if headerVersion < 2 {
 		offset += (copy(payload[offset:], encodeString(a.ResourceName)))
 	} else {
 		offset += (copy(payload[offset:], encodeCompactString(a.ResourceName)))
 	}
 
-	payload[offset] = uint8(a.ResourcePatternType)
-	offset++
+	if version >= 1 {
+		payload[offset] = uint8(a.ResourcePatternType)
+		offset++
+	}
 
-	if headerVersion < 1 {
+	if headerVersion < 2 {
 		offset += (copy(payload[offset:], encodeString(a.Principal)))
 		offset += (copy(payload[offset:], encodeString(a.Host)))
 	} else {
@@ -88,7 +90,7 @@ func (r *CreateAclsRequest) Encode() (payload []byte, err error) {
 	offset += r.RequestHeader.Encode(payload[offset:])
 
 	// Encode the number of creations
-	if headerVersion < 1 {
+	if headerVersion < 2 {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Creations)))
 		offset += 4
 	} else {
@@ -107,7 +109,7 @@ func (r *CreateAclsRequest) Encode() (payload []byte, err error) {
 }
 
 // just for test
-func DecodeCreateAclsRequest(payload []byte, version uint16) (r CreateAclsRequest, err error) {
+func DecodeCreateAclsRequest(payload []byte) (r CreateAclsRequest, err error) {
 	offset := 0
 	o := 0
 
@@ -118,13 +120,13 @@ func DecodeCreateAclsRequest(payload []byte, version uint16) (r CreateAclsReques
 	}
 
 	// Decode RequestHeader
-	r.RequestHeader, o = DecodeRequestHeader(payload[offset:], version)
+	r.RequestHeader, o = DecodeRequestHeader(payload[offset:])
 	offset += o
 	headerVersion := r.RequestHeader.headerVersion()
 
 	// Decode number of creations
 	var numCreations int32
-	if r.RequestHeader.headerVersion() < 1 {
+	if headerVersion < 2 {
 		numCreations = int32(binary.BigEndian.Uint32(payload[offset:]))
 		offset += 4
 	} else {
@@ -140,7 +142,7 @@ func DecodeCreateAclsRequest(payload []byte, version uint16) (r CreateAclsReques
 		creation.ResourceType = AclsResourceType(payload[offset])
 		offset++
 
-		if headerVersion < 1 {
+		if headerVersion < 2 {
 			creation.ResourceName, o = nonnullableString(payload[offset:])
 			offset += o
 		} else {
@@ -148,10 +150,12 @@ func DecodeCreateAclsRequest(payload []byte, version uint16) (r CreateAclsReques
 			offset += o
 		}
 
-		creation.ResourcePatternType = AclsPatternType(payload[offset])
-		offset++
+		if r.RequestHeader.APIVersion >= 1 {
+			creation.ResourcePatternType = AclsPatternType(payload[offset])
+			offset++
+		}
 
-		if headerVersion < 1 {
+		if headerVersion < 2 {
 			creation.Principal, o = nonnullableString(payload[offset:])
 			offset += o
 			creation.Host, o = nonnullableString(payload[offset:])
@@ -169,13 +173,14 @@ func DecodeCreateAclsRequest(payload []byte, version uint16) (r CreateAclsReques
 		creation.PermissionType = AclsPermissionType(payload[offset])
 		offset++
 
-		creation.TaggedFields, offset = DecodeTaggedFields(payload[offset:], version)
+		creation.TaggedFields, o = DecodeTaggedFields(payload[offset:], 0)
+		offset += o
 
 		r.Creations[i] = *creation
 	}
 
 	// Decode TaggedFields
-	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], version)
+	r.TaggedFields, o = DecodeTaggedFields(payload[offset:], 0)
 	offset += o
 
 	return r, nil

@@ -21,7 +21,7 @@ func TestReqeustHeaderEncodeV0(t *testing.T) {
 		n := original.Encode(payload)
 		payload = payload[:n]
 
-		decoded, nn := DecodeRequestHeader(payload, version)
+		decoded, nn := DecodeRequestHeader(payload)
 		convey.So(nn, convey.ShouldEqual, n)
 		convey.So(decoded, convey.ShouldResemble, original)
 	})
@@ -42,7 +42,7 @@ func TestReqeustHeaderEncodeV1(t *testing.T) {
 		n := original.Encode(payload)
 		payload = payload[:n]
 
-		decoded, nn := DecodeRequestHeader(payload, version)
+		decoded, nn := DecodeRequestHeader(payload)
 		convey.So(nn, convey.ShouldEqual, n)
 		convey.So(decoded, convey.ShouldResemble, original)
 	})
@@ -74,7 +74,7 @@ func TestReqeustHeaderEncodeV2(t *testing.T) {
 		n := original.Encode(payload)
 		payload = payload[:n]
 
-		decoded, nn := DecodeRequestHeader(payload, version)
+		decoded, nn := DecodeRequestHeader(payload)
 		convey.So(nn, convey.ShouldEqual, n)
 		convey.So(decoded, convey.ShouldResemble, original)
 	})

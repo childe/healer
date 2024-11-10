@@ -71,7 +71,8 @@ func NewMetadataRequest(clientID string, topics []string) *MetadataRequest {
 	return r
 }
 
-func DecodeMetadataRequest(payload []byte, version uint16) (r MetadataRequest, err error) {
+// just for test
+func DecodeMetadataRequest(payload []byte) (r MetadataRequest, err error) {
 	offset := 0
 
 	// request payload length
@@ -79,7 +80,7 @@ func DecodeMetadataRequest(payload []byte, version uint16) (r MetadataRequest, e
 	offset += 4
 
 	// request header
-	header, n := DecodeRequestHeader(payload[offset:], version)
+	header, n := DecodeRequestHeader(payload[offset:])
 	offset += n
 	r.RequestHeader = &header
 
@@ -94,7 +95,7 @@ func DecodeMetadataRequest(payload []byte, version uint16) (r MetadataRequest, e
 		offset += int(topicLength)
 	}
 
-	if version >= 4 {
+	if header.APIVersion >= 4 {
 		r.AllowAutoTopicCreation = payload[offset] == 1
 		offset++
 	}

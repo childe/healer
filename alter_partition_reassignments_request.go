@@ -153,7 +153,7 @@ func DecodeAlterPartitionReassignmentsRequest(payload []byte, version uint16) (r
 		return r, fmt.Errorf("AlterPartitionReassignmentsRequest length did not match: %d!=%d", responseLength+4, len(payload))
 	}
 
-	requestHeader, o := DecodeRequestHeader(payload[offset:], version)
+	requestHeader, o := DecodeRequestHeader(payload[offset:])
 	r.RequestHeader = &requestHeader
 	offset += o
 

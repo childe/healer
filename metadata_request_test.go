@@ -24,7 +24,7 @@ func TestMetadataReqeustEncode(t *testing.T) {
 
 		payload := original.Encode(version)
 
-		decoded, err := DecodeMetadataRequest(payload, version)
+		decoded, err := DecodeMetadataRequest(payload)
 		if err != nil {
 			t.Fatalf("decode metadata error: %v", err)
 		}

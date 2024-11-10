@@ -71,7 +71,7 @@ func DecodeDescribeAclsRequest(payload []byte, version uint16) (r DescribeAclsRe
 	binary.BigEndian.Uint32(payload)
 	offset += 4
 
-	header, o := DecodeRequestHeader(payload[offset:], version)
+	header, o := DecodeRequestHeader(payload[offset:])
 	r.RequestHeader = header
 	offset += o
 
