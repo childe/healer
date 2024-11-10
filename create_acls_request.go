@@ -1,7 +1,6 @@
 package healer
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 )
@@ -35,17 +34,33 @@ func (a *AclCreation) length() (n int) {
 	return
 }
 
-func (a *AclCreation) encode(version uint16) []byte {
-	buf := bytes.NewBuffer(make([]byte, 0, a.length()))
-	binary.Write(buf, binary.BigEndian, a.ResourceType)
-	writeCompactString(buf, a.ResourceName)
-	binary.Write(buf, binary.BigEndian, a.ResourcePatternType)
-	writeCompactString(buf, a.Principal)
-	writeCompactString(buf, a.Host)
-	binary.Write(buf, binary.BigEndian, a.Operation)
-	binary.Write(buf, binary.BigEndian, a.PermissionType)
-	buf.Write(a.TaggedFields.Encode())
-	return buf.Bytes()
+func (a *AclCreation) encodeTo(payload []byte, version uint16, headerVersion uint16) (offset int) {
+	payload[offset] = uint8(a.ResourceType)
+	offset++
+
+	if headerVersion < 1 {
+		offset += (copy(payload[offset:], encodeString(a.ResourceName)))
+	} else {
+		offset += (copy(payload[offset:], encodeCompactString(a.ResourceName)))
+	}
+
+	payload[offset] = uint8(a.ResourcePatternType)
+	offset++
+
+	if headerVersion < 1 {
+		offset += (copy(payload[offset:], encodeString(a.Principal)))
+		offset += (copy(payload[offset:], encodeString(a.Host)))
+	} else {
+		offset += (copy(payload[offset:], encodeCompactString(a.Principal)))
+		offset += (copy(payload[offset:], encodeCompactString(a.Host)))
+	}
+	payload[offset] = uint8(a.Operation)
+	offset++
+	payload[offset] = uint8(a.PermissionType)
+	offset++
+	offset += copy(payload[offset:], a.TaggedFields.Encode())
+
+	return
 }
 
 func (r *CreateAclsRequest) length() (n int) {
@@ -82,30 +97,7 @@ func (r *CreateAclsRequest) Encode() (payload []byte, err error) {
 
 	// Encode each creation
 	for _, creation := range r.Creations {
-		payload[offset] = uint8(creation.ResourceType)
-		offset++
-
-		if headerVersion < 1 {
-			offset += (copy(payload[offset:], encodeString(creation.ResourceName)))
-		} else {
-			offset += (copy(payload[offset:], encodeCompactString(creation.ResourceName)))
-		}
-
-		payload[offset] = uint8(creation.ResourcePatternType)
-		offset++
-
-		if headerVersion < 1 {
-			offset += (copy(payload[offset:], encodeString(creation.Principal)))
-			offset += (copy(payload[offset:], encodeString(creation.Host)))
-		} else {
-			offset += (copy(payload[offset:], encodeCompactString(creation.Principal)))
-			offset += (copy(payload[offset:], encodeCompactString(creation.Host)))
-		}
-		payload[offset] = uint8(creation.Operation)
-		offset++
-		payload[offset] = uint8(creation.PermissionType)
-		offset++
-		offset += copy(payload[offset:], creation.TaggedFields.Encode())
+		offset += creation.encodeTo(payload[offset:], r.APIVersion, headerVersion)
 	}
 
 	// Write the tag buffer
