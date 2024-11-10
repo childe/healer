@@ -176,3 +176,25 @@ func (c *Client) DescribeAcls(r DescribeAclsRequestBody) (DescribeAclsResponse, 
 	}
 	return resp.(DescribeAclsResponse), err
 }
+
+func (c *Client) CreateAcls(creations []AclCreation) (*CreateAclsResponse, error) {
+	req := CreateAclsRequest{
+		RequestHeader{
+			APIKey:   API_CreateAcls,
+			ClientID: &c.clientID,
+		},
+		creations,
+		nil,
+	}
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := controller.RequestAndGet(&req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*CreateAclsResponse), err
+}
