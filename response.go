@@ -134,6 +134,8 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 		return NewDescribeAclsResponse(data, p.version)
 	case API_CreateAcls:
 		return DecodeCreateAclsResponse(data, p.version)
+	case API_DeleteAcls:
+		return DecodeDeleteAclsResponse(data, p.version)
 	case API_Delete_Groups:
 		return NewDeleteGroupsResponse(data)
 	case API_IncrementalAlterConfigs:
@@ -145,7 +147,7 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 	case API_ElectLeaders:
 		return NewElectLeadersResponse(data, p.version)
 	}
-	return nil, errors.New("unknown api")
+	return nil, fmt.Errorf("parsing api %d not implemented", p.api)
 }
 
 type ResponseHeader struct {
