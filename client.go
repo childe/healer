@@ -198,3 +198,18 @@ func (c *Client) CreateAcls(creations []AclCreation) (*CreateAclsResponse, error
 	}
 	return resp.(*CreateAclsResponse), err
 }
+
+func (c *Client) DeleteAcls(filters []*DeleteAclsFilter) (*DeleteAclsResponse, error) {
+	req := NewDeleteAclsRequest(c.clientID, filters)
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*DeleteAclsResponse), err
+}
