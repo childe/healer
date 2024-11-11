@@ -25,6 +25,9 @@ docker pull rmself/healer:latest
 - get pendings
 - reset offsets
 - (re)elect leaders
+- describe acls
+- create acls
+- delete acls
 - rest apis of doing jobs above
 
 # Code Examples
