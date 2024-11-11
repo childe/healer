@@ -38,7 +38,7 @@ func (produceRequest *ProduceRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset += produceRequest.RequestHeader.Encode(payload[offset:])
+	offset += produceRequest.RequestHeader.EncodeTo(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(produceRequest.RequiredAcks))
 	offset += 2

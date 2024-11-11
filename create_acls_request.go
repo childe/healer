@@ -87,7 +87,7 @@ func (r *CreateAclsRequest) Encode(version uint16) (payload []byte) {
 	}()
 
 	offset += 4 // skip the length field
-	offset += r.RequestHeader.Encode(payload[offset:])
+	offset += r.RequestHeader.EncodeTo(payload[offset:])
 
 	// Encode the number of creations
 	if headerVersion < 2 {

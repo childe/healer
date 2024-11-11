@@ -149,7 +149,7 @@ func (r CreatePartitionsRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset += r.RequestHeader.Encode(payload[offset:])
+	offset += r.RequestHeader.EncodeTo(payload[offset:])
 
 	if version == 2 {
 		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Topics)))

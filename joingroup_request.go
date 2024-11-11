@@ -67,7 +67,7 @@ func (r *JoinGroupRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset += r.RequestHeader.Encode(payload[offset:])
+	offset += r.RequestHeader.EncodeTo(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.GroupID)))
 	offset += 2

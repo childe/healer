@@ -83,7 +83,7 @@ func (r ListPartitionReassignmentsRequest) Encode(version uint16) []byte {
 
 	offset += 4
 
-	offset += r.RequestHeader.Encode(payload[offset:])
+	offset += r.RequestHeader.EncodeTo(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.TimeoutMS))
 	offset += 4

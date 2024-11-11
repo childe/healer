@@ -31,7 +31,7 @@ func (r *DescribeAclsRequest) Encode(version uint16) (rst []byte) {
 	}()
 
 	header := make([]byte, r.RequestHeader.length())
-	l := r.RequestHeader.Encode(header)
+	l := r.RequestHeader.EncodeTo(header)
 	buf.Write(header[:l])
 
 	binary.Write(buf, binary.BigEndian, r.ResourceType)

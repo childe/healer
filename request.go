@@ -81,11 +81,11 @@ func (h *RequestHeader) length() int {
 	return r
 }
 
-// Encode encodes request header to []byte. this is used the all request
-// If the playload is too small, Encode will panic.
+// EncodeTo encodes request header to []byte. this is used the all request
+// If the playload is too small, EncodeTo will panic.
 // https://cwiki.apache.org/confluence/display/KAFKA/KIP-482%3A+The+Kafka+Protocol+should+Support+Optional+Tagged+Fields
 // https://kafka.apache.org/protocol#protocol_messages
-func (h *RequestHeader) Encode(payload []byte) int {
+func (h *RequestHeader) EncodeTo(payload []byte) int {
 	offset := 0
 	binary.BigEndian.PutUint16(payload[offset:], h.APIKey)
 	offset += 2

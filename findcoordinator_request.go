@@ -47,7 +47,7 @@ func (findCoordinatorR *FindCoordinatorRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset += findCoordinatorR.RequestHeader.Encode(payload[offset:])
+	offset += findCoordinatorR.RequestHeader.EncodeTo(payload[offset:])
 
 	binary.BigEndian.PutUint16(payload[offset:], uint16(len(findCoordinatorR.GroupID)))
 	offset += 2

@@ -58,7 +58,7 @@ func (offsetR *OffsetsRequest) Encode(version uint16) []byte {
 	binary.BigEndian.PutUint32(payload[offset:], uint32(requestLength))
 	offset += 4
 
-	offset += offsetR.RequestHeader.Encode(payload[offset:])
+	offset += offsetR.RequestHeader.EncodeTo(payload[offset:])
 
 	binary.BigEndian.PutUint32(payload[offset:], uint32(offsetR.ReplicaId))
 	offset += 4

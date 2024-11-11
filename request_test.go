@@ -18,7 +18,7 @@ func TestReqeustHeaderEncodeV0(t *testing.T) {
 		mockey.Mock((*RequestHeader).headerVersion).Return(0).Build()
 
 		payload := make([]byte, original.length())
-		n := original.Encode(payload)
+		n := original.EncodeTo(payload)
 		payload = payload[:n]
 
 		decoded, nn := DecodeRequestHeader(payload)
@@ -39,7 +39,7 @@ func TestReqeustHeaderEncodeV1(t *testing.T) {
 		mockey.Mock((*RequestHeader).headerVersion).Return(1).Build()
 
 		payload := make([]byte, original.length())
-		n := original.Encode(payload)
+		n := original.EncodeTo(payload)
 		payload = payload[:n]
 
 		decoded, nn := DecodeRequestHeader(payload)
@@ -71,7 +71,7 @@ func TestReqeustHeaderEncodeV2(t *testing.T) {
 		mockey.Mock((*RequestHeader).headerVersion).Return(2).Build()
 
 		payload := make([]byte, original.length())
-		n := original.Encode(payload)
+		n := original.EncodeTo(payload)
 		payload = payload[:n]
 
 		decoded, nn := DecodeRequestHeader(payload)
