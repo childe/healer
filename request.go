@@ -27,6 +27,7 @@ const (
 	API_DeleteTopics                uint16 = 20
 	API_DescribeAcls                uint16 = 29
 	API_CreateAcls                  uint16 = 30
+	API_DeleteAcls                  uint16 = 31
 	API_DescribeConfigs             uint16 = 32
 	API_AlterConfigs                uint16 = 33
 	API_DescribeLogDirs             uint16 = 35
@@ -47,6 +48,7 @@ var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
 	API_OffsetRequest:       {1, 0},
 	API_DescribeAcls:        {2, 1, 0},
 	API_CreateAcls:          {3, 2, 1, 0},
+	API_DeleteAcls:          {3, 2, 1, 0},
 	API_CreatePartitions:    {2, 0},
 	API_SaslHandshake:       {1, 0},
 	API_OffsetCommitRequest: {2, 0},
