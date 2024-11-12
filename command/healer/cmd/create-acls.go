@@ -41,7 +41,7 @@ var createAclsCmd = &cobra.Command{
 		if resourcepatterntype, err := cmd.Flags().GetString("patterntype"); err != nil {
 			return err
 		} else {
-			json.Unmarshal([]byte(`"`+resourcepatterntype+`"`), &aclCreation.ResourcePatternType)
+			json.Unmarshal([]byte(`"`+resourcepatterntype+`"`), &aclCreation.PatternType)
 		}
 
 		if aclCreation.Principal, err = cmd.Flags().GetString("principal"); err != nil {

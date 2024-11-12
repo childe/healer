@@ -22,29 +22,29 @@ func TestAclCreationLengthEncodeDecode(t *testing.T) {
 				},
 				Creations: []AclCreation{
 					{
-						ResourceType:        1,
-						ResourceName:        "testResource",
-						ResourcePatternType: 2,
-						Principal:           "testPrincipal",
-						Host:                "testHost",
-						Operation:           3,
-						PermissionType:      4,
+						ResourceType:   1,
+						ResourceName:   "testResource",
+						PatternType:    2,
+						Principal:      "testPrincipal",
+						Host:           "testHost",
+						Operation:      3,
+						PermissionType: 4,
 					},
 					{
-						ResourceType:        2,
-						ResourceName:        "testResource_2",
-						ResourcePatternType: 3,
-						Principal:           "testPrincipal_2",
-						Host:                "testHost_2",
-						Operation:           4,
-						PermissionType:      5,
+						ResourceType:   2,
+						ResourceName:   "testResource_2",
+						PatternType:    3,
+						Principal:      "testPrincipal_2",
+						Host:           "testHost_2",
+						Operation:      4,
+						PermissionType: 5,
 					},
 				},
 				TaggedFields: nil,
 			}
 			if version < 1 {
 				for i := range original.Creations {
-					original.Creations[i].ResourcePatternType = 0
+					original.Creations[i].PatternType = 0
 				}
 			}
 

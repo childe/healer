@@ -12,14 +12,14 @@ type CreateAclsRequest struct {
 }
 
 type AclCreation struct {
-	ResourceType        AclsResourceType
-	ResourceName        string
-	ResourcePatternType AclsPatternType
-	Principal           string
-	Host                string
-	Operation           AclsOperation
-	PermissionType      AclsPermissionType
-	TaggedFields        TaggedFields
+	ResourceType   AclsResourceType
+	ResourceName   string
+	PatternType    AclsPatternType
+	Principal      string
+	Host           string
+	Operation      AclsOperation
+	PermissionType AclsPermissionType
+	TaggedFields   TaggedFields
 }
 
 func (a *AclCreation) length() (n int) {
@@ -45,7 +45,7 @@ func (a *AclCreation) encodeTo(payload []byte, version uint16, headerVersion uin
 	}
 
 	if version >= 1 {
-		payload[offset] = uint8(a.ResourcePatternType)
+		payload[offset] = uint8(a.PatternType)
 		offset++
 	}
 
@@ -151,7 +151,7 @@ func DecodeCreateAclsRequest(payload []byte) (r CreateAclsRequest, err error) {
 		}
 
 		if r.RequestHeader.APIVersion >= 1 {
-			creation.ResourcePatternType = AclsPatternType(payload[offset])
+			creation.PatternType = AclsPatternType(payload[offset])
 			offset++
 		}
 
