@@ -1,42 +1,36 @@
 package apicontrollers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/childe/healer"
 	"github.com/gin-gonic/gin"
 )
 
-func GetBrokerConfigs(c *gin.Context, client string) {
+func GetConfigs(c *gin.Context, resourceType, clientID string) {
 	bootstrapServers := c.Query("bootstrap")
-	bs, err := healer.NewBrokers(bootstrapServers)
+	client, err := healer.NewClient(bootstrapServers, clientID)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer bs.Close()
+	defer client.Close()
 
-	broker := c.Param("broker")
+	resourceName := c.Param(resourceType)
 
-	resources := []*healer.DescribeConfigsRequestResource{
-		{
-			ResourceType: healer.ConvertConfigResourceType("broker"),
-			ResourceName: broker,
-			ConfigNames:  nil,
-		},
-	}
-	r := healer.NewDescribeConfigsRequest(client, resources)
+	resp, err := client.DescribeConfigs(resourceType, resourceName, nil)
 
-	controller, err := bs.GetBroker(bs.Controller())
-	if err != nil {
-		err = fmt.Errorf("failed to create crotroller broker: %w", err)
-		c.String(http.StatusInternalServerError, err.Error())
-	}
-	resp, err := controller.RequestAndGet(r)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		c.JSON(http.StatusOK, resp)
 	}
+}
+
+func GetTopicConfigs(c *gin.Context, clientID string) {
+	GetConfigs(c, "topic", clientID)
+}
+
+func GetBrokerConfigs(c *gin.Context, clientID string) {
+	GetConfigs(c, "broker", clientID)
 }
