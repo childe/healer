@@ -58,7 +58,10 @@ var apiCmd = &cobra.Command{
 
 		router.GET("/metadata", apicontrollers.GetMetadata)
 
-		router.GET("/topic/:topic/configs", wrap(apicontrollers.GetTopicConfigs, client))
+		router.GET("/topic/:topic/configs", func(c *gin.Context) {
+			topic := c.Param("topic")
+			c.Redirect(http.StatusMovedPermanently, "/configs/topic/"+topic+"?"+c.Request.URL.RawQuery)
+		})
 		router.GET("/topic/:topic/offsets", wrap(apicontrollers.GetTopicOffsets, client))
 		router.GET("/topic/:topic/logdirs", wrap(apicontrollers.GetTopicLogDirs, client))
 		router.GET("/topic/:topic/config/:config", wrap(apicontrollers.GetTopicConfig, client))
