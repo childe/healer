@@ -14,40 +14,42 @@ var describeConfigsCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		brokers, err := cmd.Flags().GetString("brokers")
+		if err != nil {
+			return err
+		}
 		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		resourceType, err := cmd.Flags().GetString("resource-type")
+		if err != nil {
+			return err
+		}
 		resourceName, err := cmd.Flags().GetString("resource-name")
-		keys, err := cmd.Flags().GetStringArray("keys")
-		all, err := cmd.Flags().GetBool("all")
-
-		bs, err := healer.NewBrokers(brokers)
 		if err != nil {
-			return fmt.Errorf("failed to create brokers from %s", brokers)
+			return err
 		}
 
-		controller, err := bs.GetBroker(bs.Controller())
-		if err != nil {
-			return fmt.Errorf("failed to create crotroller broker: %w", err)
-		}
-
-		if all {
+		var keys []string
+		if !cmd.Flags().Changed("keys") {
 			keys = nil
+		} else {
+			if keys, err = cmd.Flags().GetStringArray("keys"); err != nil {
+				return err
+			}
 		}
-		resources := []*healer.DescribeConfigsRequestResource{
-			{
-				ResourceType: healer.ConvertConfigResourceType(resourceType),
-				ResourceName: resourceName,
-				ConfigNames:  keys,
-			},
-		}
-		r := healer.NewDescribeConfigsRequest(client, resources)
 
-		resp, err := controller.RequestAndGet(r)
+		admin, err := healer.NewClient(brokers, client)
 		if err != nil {
-			return fmt.Errorf("faild to make describe-configs request: %w", err)
+			return err
 		}
 
-		b, _ := json.MarshalIndent(resp.(healer.DescribeConfigsResponse), "", "  ")
+		resp, err := admin.DescribeConfigs(resourceType, resourceName, keys)
+		if err != nil {
+			return err
+		}
+
+		b, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(b))
 		return nil
 	},
@@ -56,7 +58,6 @@ var describeConfigsCmd = &cobra.Command{
 func init() {
 	describeConfigsCmd.Flags().String("resource-type", "", "the resource type: topic, broker, broker_logger")
 	describeConfigsCmd.Flags().String("resource-name", "", "the resource name")
-	describeConfigsCmd.Flags().StringArray("keys", []string{}, "the configuration keys to list, or null to list all configuration keys")
-	describeConfigsCmd.Flags().Bool("all", false, "list all configs for the given entity")
-	describeConfigsCmd.MarkFlagsMutuallyExclusive("keys", "all")
+	describeConfigsCmd.Flags().StringArray("keys", []string{},
+		"the configuration keys to list, or don't set this to list all")
 }
