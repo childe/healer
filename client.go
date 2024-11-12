@@ -1,6 +1,9 @@
 package healer
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/go-logr/logr"
 )
 
@@ -212,4 +215,37 @@ func (c *Client) DeleteAcls(filters []*DeleteAclsFilter) (*DeleteAclsResponse, e
 		return nil, err
 	}
 	return resp.(*DeleteAclsResponse), err
+}
+
+func (c *Client) DescribeConfigs(resourceType, resourceName string, keys []string) (r DescribeConfigsResponse, err error) {
+	resources := []*DescribeConfigsRequestResource{
+		{
+			ResourceType: ConvertConfigResourceType(resourceType),
+			ResourceName: resourceName,
+			ConfigNames:  keys,
+		},
+	}
+	req := NewDescribeConfigsRequest(c.clientID, resources)
+
+	var serverID int32
+	if resourceType == "broker" {
+		if brokerID, e := strconv.Atoi(resourceName); e != nil {
+			return r, fmt.Errorf("broker id must be a number")
+		} else {
+			serverID = int32(brokerID)
+		}
+	} else {
+		serverID = c.brokers.Controller()
+	}
+
+	server, err := c.brokers.GetBroker(serverID)
+	if err != nil {
+		return r, err
+	}
+
+	resp, err := server.RequestAndGet(req)
+	if err != nil {
+		return r, err
+	}
+	return resp.(DescribeConfigsResponse), nil
 }
