@@ -64,6 +64,9 @@ var apiCmd = &cobra.Command{
 		router.GET("/topic/:topic/config/:config", wrap(apicontrollers.GetTopicConfig, client))
 		router.POST("/topic/:topic/config/:config/:value", wrap(apicontrollers.AlterTopicConfig, client))
 
+		router.GET("/configs/topic/:topic", wrap(apicontrollers.GetTopicConfigs, client))
+		router.GET("/configs/broker/:broker", wrap(apicontrollers.GetBrokerConfigs, client))
+
 		router.GET("/groups", wrap(apicontrollers.ListGroups, client))
 		router.GET("/group/:group", wrap(apicontrollers.DescribeGroups, client))
 		router.GET("/group/:group/pending/:topic", wrap(apicontrollers.GetPending, client))
