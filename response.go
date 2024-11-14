@@ -123,7 +123,7 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 	case API_ListPartitionReassignments:
 		return NewListPartitionReassignmentsResponse(data, p.version)
 	case API_ListGroups:
-		return NewListGroupsResponse(data)
+		return NewListGroupsResponse(data, p.version)
 	case API_CreateTopics:
 		return NewCreateTopicsResponse(data)
 	case API_DeleteTopics:

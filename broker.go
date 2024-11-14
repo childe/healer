@@ -336,11 +336,11 @@ func (broker *Broker) requestAPIVersions(clientID string) (r APIVersionsResponse
 	return resp.(APIVersionsResponse), nil
 }
 
-func (broker *Broker) RequestListGroups(clientID string) (r ListGroupsResponse, err error) {
+func (broker *Broker) RequestListGroups(clientID string) (r *ListGroupsResponse, err error) {
 	request := NewListGroupsRequest(clientID)
 
 	resp, err := broker.RequestAndGet(request)
-	if v, ok := resp.(ListGroupsResponse); ok {
+	if v, ok := resp.(*ListGroupsResponse); ok {
 		return v, err
 	}
 	return r, err

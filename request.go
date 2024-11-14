@@ -48,7 +48,7 @@ var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
 	API_OffsetRequest:       {1, 0},
 	API_OffsetCommitRequest: {2, 0},
 	API_OffsetFetchRequest:  {1, 0},
-	API_ListGroups:          {0},
+	API_ListGroups:          {5, 4, 3, 2, 1, 0},
 	API_SaslHandshake:       {1, 0},
 	API_DescribeAcls:        {2, 1, 0},
 	API_CreateAcls:          {3, 2, 1, 0},

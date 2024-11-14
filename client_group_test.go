@@ -55,7 +55,7 @@ func TestListGroups(t *testing.T) {
 			1: &broker,
 		}).Build()
 		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
-		mockey.Mock((*Broker).RequestListGroups).Return(ListGroupsResponse{
+		mockey.Mock((*Broker).RequestListGroups).Return(&ListGroupsResponse{
 			Groups: []*Group{
 				{
 					GroupID: "test1",
