@@ -24,6 +24,8 @@ func NewListGroupsRequest(clientID string) *ListGroupsRequest {
 	}
 	return &ListGroupsRequest{
 		RequestHeader: requestHeader,
+		StatesFilter:  make([]string, 0),
+		TypesFilter:   make([]string, 0),
 	}
 }
 
