@@ -3,16 +3,13 @@ package healer
 import (
 	"encoding/binary"
 	"fmt"
-	"reflect"
-	"strconv"
-	"strings"
 	"sync/atomic"
 )
 
 // version0
 type ListGroupsRequest struct {
 	*RequestHeader
-	IncludeAuthorizedOperations bool `healer:"minversion:3"`
+	IncludeAuthorizedOperations bool `healer:"minVersion:3"`
 }
 
 var tagCacheListGroupsRequest atomic.Value
@@ -41,22 +38,9 @@ func (r *ListGroupsRequest) tags() (fieldsVersions map[string]uint16) {
 		return v.(map[string]uint16)
 	}
 
-	fieldsVersions = make(map[string]uint16)
-	defer tagCacheListGroupsRequest.Store(fieldsVersions)
-
-	for i := 0; i < reflect.ValueOf(*r).NumField(); i++ {
-		field := reflect.TypeOf(*r).Field(i)
-		healerTag := field.Tag.Get("healer")
-		if healerTag != "" {
-			parts := strings.Split(healerTag, ":")
-			if len(parts) > 1 && parts[1] != "" && parts[0] == "minversion" {
-				if ver, err := strconv.Atoi(parts[1]); err == nil {
-					fieldsVersions[field.Name] = uint16(ver)
-				}
-			}
-		}
-	}
-	return fieldsVersions
+	fieldsVersions = healerTags(*r)
+	tagCacheListGroupsRequest.Store(fieldsVersions)
+	return
 }
 
 func (r *ListGroupsRequest) Encode(version uint16) (payload []byte) {

@@ -19,6 +19,7 @@ func TestListGroupsRequestEncodeDecode(t *testing.T) {
 			}
 
 			encodedRequest := request.Encode(version)
+
 			decodedRequest, err := DecodeListGroupsRequest(encodedRequest)
 
 			convey.So(err, convey.ShouldBeNil)
