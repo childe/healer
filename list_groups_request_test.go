@@ -9,13 +9,23 @@ import (
 func TestListGroupsRequestEncodeDecode(t *testing.T) {
 	convey.Convey("Test ListGroupsRequest Encode and Decode", t, func() {
 		clientID := "testClient"
-		request := NewListGroupsRequest(clientID)
 
 		for _, version := range availableVersions[API_ListGroups] {
 			t.Logf("version: %v", version)
 
-			if version < 3 {
-				request.IncludeAuthorizedOperations = false
+			request := NewListGroupsRequest(clientID)
+			request.SetStatesFilter([]string{"testState1", "testState2"})
+			request.SetTypesFilter([]string{"testType1", "testType2"})
+			request.APIVersion = version
+			request.TaggedFields = mockTaggedFields(request.IsFlexible())
+
+			tags := request.tags()
+
+			if version < tags["StatesFilter"] {
+				request.StatesFilter = nil
+			}
+			if version < tags["TypesFilter"] {
+				request.TypesFilter = nil
 			}
 
 			encodedRequest := request.Encode(version)
@@ -23,7 +33,7 @@ func TestListGroupsRequestEncodeDecode(t *testing.T) {
 			decodedRequest, err := DecodeListGroupsRequest(encodedRequest)
 
 			convey.So(err, convey.ShouldBeNil)
-			convey.So(request, convey.ShouldResemble, decodedRequest)
+			convey.So(decodedRequest, convey.ShouldResemble, request)
 		}
 	})
 }
