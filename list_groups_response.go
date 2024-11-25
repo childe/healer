@@ -113,3 +113,86 @@ func NewListGroupsResponse(payload []byte, version uint16) (r *ListGroupsRespons
 
 	return r, nil
 }
+
+func (r *ListGroupsResponse) length() (n int) {
+	n = 4 + r.ResponseHeader.length()
+	n += 4 // ThrottleTimeMS
+	n += 2 // ErrorCode
+	n += 4 // GroupCount
+	for _, group := range r.Groups {
+		n += 2 + len(group.GroupID)
+		n += 2 + len(group.ProtocolType)
+		n += 2 + len(group.GroupState)
+		n += 2 + len(group.GroupType)
+		n += group.TaggedFields.length()
+	}
+	n += r.TaggedFields.length()
+	return n
+}
+
+// just for test
+func (r *ListGroupsResponse) Encode(version uint16) (payload []byte) {
+	payload = make([]byte, r.length())
+	offset := 4 // payload length
+	tags := r.tags()
+
+	defer func() {
+		binary.BigEndian.PutUint32(payload, uint32(offset-4))
+	}()
+
+	offset += r.ResponseHeader.EncodeTo(payload[offset:])
+
+	if version >= tags["ThrottleTimeMS"] {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(r.ThrottleTimeMS))
+		offset += 4
+	}
+
+	binary.BigEndian.PutUint16(payload[offset:], r.ErrorCode)
+	offset += 2
+
+	var groupCount int
+	if r.Groups == nil {
+		groupCount = -1
+	} else {
+		groupCount = len(r.Groups)
+	}
+	if r.IsFlexible() {
+		offset += copy(payload[offset:], encodeCompactArrayLength(groupCount))
+	} else {
+		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Groups)))
+		offset += 4
+	}
+
+	for _, group := range r.Groups {
+		if r.IsFlexible() {
+			offset += copy(payload[offset:], encodeCompactString(group.GroupID))
+			offset += copy(payload[offset:], encodeCompactString(group.ProtocolType))
+			if version >= tags["GroupState"] {
+				offset += copy(payload[offset:], encodeCompactString(group.GroupState))
+			}
+			if version >= tags["GroupType"] {
+				offset += copy(payload[offset:], encodeCompactString(group.GroupType))
+			}
+		} else {
+			offset += copy(payload[offset:], encodeString(group.GroupID))
+			offset += copy(payload[offset:], encodeString(group.ProtocolType))
+			if version >= tags["GroupState"] {
+				offset += copy(payload[offset:], encodeString(group.GroupState))
+			}
+			if version >= tags["GroupType"] {
+				offset += copy(payload[offset:], encodeString(group.GroupType))
+			}
+		}
+
+		if r.IsFlexible() {
+			offset += group.TaggedFields.EncodeTo(payload[offset:])
+		}
+	}
+
+	if r.IsFlexible() {
+		offset += r.TaggedFields.EncodeTo(payload[offset:])
+	}
+
+	payload = payload[:offset]
+	return payload
+}
