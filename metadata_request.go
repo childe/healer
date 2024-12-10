@@ -16,7 +16,7 @@ func (r *MetadataRequest) length(version uint16) int {
 	for _, topic := range r.Topics {
 		requestLength += 2 + len(topic)
 	}
-	if version == 7 {
+	if version >= 4 {
 		requestLength += 1
 	}
 	return requestLength
@@ -47,7 +47,7 @@ func (metadataRequest *MetadataRequest) Encode(version uint16) []byte {
 		offset += copy(payload[offset:], topicname)
 	}
 
-	if version == 7 {
+	if version >= 4 {
 		if metadataRequest.AllowAutoTopicCreation {
 			payload[offset] = 1
 		} else {
