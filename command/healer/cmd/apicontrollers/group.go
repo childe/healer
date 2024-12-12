@@ -8,16 +8,21 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func ListGroups(c *gin.Context, client string) {
+func ListGroups(c *gin.Context, clientID string) {
 	bootstrapServers := c.Query("bootstrap")
 
-	helper, err := healer.NewHelper(bootstrapServers, client, healer.DefaultBrokerConfig())
+	client, err := healer.NewClient(bootstrapServers, clientID)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	groups := helper.GetGroups()
+	groups, err := client.ListGroups()
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	c.JSON(http.StatusOK, groups)
 }
 
