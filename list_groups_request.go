@@ -14,7 +14,7 @@ type ListGroupsRequest struct {
 	TaggedFields TaggedFields
 }
 
-var tagCacheListGroupsRequest atomic.Value
+var tagsCacheListGroupsRequest atomic.Value
 
 func NewListGroupsRequest(clientID string) *ListGroupsRequest {
 	requestHeader := &RequestHeader{
@@ -57,12 +57,12 @@ func (r *ListGroupsRequest) length() (n int) {
 }
 
 func (r *ListGroupsRequest) tags() (fieldsVersions map[string]uint16) {
-	if v := tagCacheListGroupsRequest.Load(); v != nil {
+	if v := tagsCacheListGroupsRequest.Load(); v != nil {
 		return v.(map[string]uint16)
 	}
 
 	fieldsVersions = healerTags(*r)
-	tagCacheListGroupsRequest.Store(fieldsVersions)
+	tagsCacheListGroupsRequest.Store(fieldsVersions)
 	return
 }
 

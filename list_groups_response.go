@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 )
 
-var tagCacheListGroupsResponse atomic.Value
+var tagsCacheListGroupsResponse atomic.Value
 
 type Group struct {
 	GroupID      string
@@ -28,12 +28,12 @@ func (r *ListGroupsResponse) Error() error {
 }
 
 func (r *ListGroupsResponse) tags() (fieldsVersions map[string]uint16) {
-	if v := tagCacheListGroupsResponse.Load(); v != nil {
+	if v := tagsCacheListGroupsResponse.Load(); v != nil {
 		return v.(map[string]uint16)
 	}
 
 	fieldsVersions = healerTags(*r)
-	tagCacheListGroupsResponse.Store(fieldsVersions)
+	tagsCacheListGroupsResponse.Store(fieldsVersions)
 	return
 }
 
