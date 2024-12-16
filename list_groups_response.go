@@ -7,13 +7,14 @@ import (
 )
 
 var tagsCacheListGroupsResponse atomic.Value
+var tagsCacheListGroupsResponseGroup atomic.Value
 
 type Group struct {
 	GroupID      string
 	ProtocolType string
-	GroupState   string `healer:"minVersion:4"`
-	GroupType    string `healer:"minVersion:5"`
-	TaggedFields TaggedFields
+	GroupState   string       `healer:"minVersion:4"`
+	GroupType    string       `healer:"minVersion:5"`
+	TaggedFields TaggedFields `json:",omitempty"`
 }
 type ListGroupsResponse struct {
 	ResponseHeader
@@ -27,6 +28,16 @@ func (r *ListGroupsResponse) Error() error {
 	return nil
 }
 
+func (g *Group) tags() (fieldsVersions map[string]uint16) {
+	if v := tagsCacheListGroupsResponseGroup.Load(); v != nil {
+		return v.(map[string]uint16)
+	}
+
+	fieldsVersions = healerTags(*g)
+	tagsCacheListGroupsResponseGroup.Store(fieldsVersions)
+	return
+}
+
 func (r *ListGroupsResponse) tags() (fieldsVersions map[string]uint16) {
 	if v := tagsCacheListGroupsResponse.Load(); v != nil {
 		return v.(map[string]uint16)
@@ -34,6 +45,46 @@ func (r *ListGroupsResponse) tags() (fieldsVersions map[string]uint16) {
 
 	fieldsVersions = healerTags(*r)
 	tagsCacheListGroupsResponse.Store(fieldsVersions)
+	return
+}
+
+func decodeToGroup(payload []byte, version uint16, isFlexible bool) (group *Group, offset int) {
+	group = &Group{}
+	tags := group.tags()
+	o := 0
+
+	if isFlexible {
+		group.GroupID, o = compactString(payload[offset:])
+		offset += o
+		group.ProtocolType, o = compactString(payload[offset:])
+		offset += o
+		if version >= tags["GroupState"] {
+			group.GroupState, o = compactString(payload[offset:])
+			offset += o
+		}
+		if version >= tags["GroupType"] {
+			group.GroupType, o = compactString(payload[offset:])
+			offset += o
+		}
+	} else {
+		group.GroupID, o = nonnullableString(payload[offset:])
+		offset += o
+		group.ProtocolType, o = nonnullableString(payload[offset:])
+		offset += o
+		if version >= tags["GroupState"] {
+			group.GroupState, o = nonnullableString(payload[offset:])
+			offset += o
+		}
+		if version >= tags["GroupType"] {
+			group.GroupType, o = nonnullableString(payload[offset:])
+			offset += o
+		}
+	}
+
+	if isFlexible {
+		group.TaggedFields, o = DecodeTaggedFields(payload[offset:])
+		offset += o
+	}
 	return
 }
 
@@ -71,39 +122,8 @@ func NewListGroupsResponse(payload []byte, version uint16) (r *ListGroupsRespons
 	if groupCount >= 0 {
 		r.Groups = make([]*Group, groupCount)
 		for i := int32(0); i < groupCount; i++ {
-			r.Groups[i] = &Group{}
-			if r.IsFlexible() {
-				r.Groups[i].GroupID, o = compactString(payload[offset:])
-				offset += o
-				r.Groups[i].ProtocolType, o = compactString(payload[offset:])
-				offset += o
-				if version >= tags["GroupState"] {
-					r.Groups[i].GroupState, o = compactString(payload[offset:])
-					offset += o
-				}
-				if version >= tags["GroupType"] {
-					r.Groups[i].GroupType, o = compactString(payload[offset:])
-					offset += o
-				}
-			} else {
-				r.Groups[i].GroupID, o = nonnullableString(payload[offset:])
-				offset += o
-				r.Groups[i].ProtocolType, o = nonnullableString(payload[offset:])
-				offset += o
-				if version >= tags["GroupState"] {
-					r.Groups[i].GroupState, o = nonnullableString(payload[offset:])
-					offset += o
-				}
-				if version >= tags["GroupType"] {
-					r.Groups[i].GroupType, o = nonnullableString(payload[offset:])
-					offset += o
-				}
-			}
-
-			if r.IsFlexible() {
-				r.Groups[i].TaggedFields, o = DecodeTaggedFields(payload[offset:])
-				offset += o
-			}
+			r.Groups[i], o = decodeToGroup(payload[offset:], version, r.IsFlexible())
+			offset += o
 		}
 	}
 	if r.IsFlexible() {
@@ -130,10 +150,41 @@ func (r *ListGroupsResponse) length() (n int) {
 	return n
 }
 
+// used in Encode which is used in test
+func (group *Group) encodeTo(payload []byte, isFlexible bool, version uint16) (offset int) {
+	tags := healerTags(*group)
+	if isFlexible {
+		offset += copy(payload[offset:], encodeCompactString(group.GroupID))
+		offset += copy(payload[offset:], encodeCompactString(group.ProtocolType))
+		if version >= tags["GroupState"] {
+			offset += copy(payload[offset:], encodeCompactString(group.GroupState))
+		}
+		if version >= tags["GroupType"] {
+			offset += copy(payload[offset:], encodeCompactString(group.GroupType))
+		}
+	} else {
+		offset += copy(payload[offset:], encodeString(group.GroupID))
+		offset += copy(payload[offset:], encodeString(group.ProtocolType))
+		if version >= tags["GroupState"] {
+			offset += copy(payload[offset:], encodeString(group.GroupState))
+		}
+		if version >= tags["GroupType"] {
+			offset += copy(payload[offset:], encodeString(group.GroupType))
+		}
+	}
+
+	if isFlexible {
+		offset += group.TaggedFields.EncodeTo(payload[offset:])
+	}
+
+	return offset
+}
+
 // just for test
 func (r *ListGroupsResponse) Encode(version uint16) (payload []byte) {
 	payload = make([]byte, r.length())
 	offset := 4 // payload length
+	isFlexible := r.IsFlexible()
 	tags := r.tags()
 
 	defer func() {
@@ -156,7 +207,7 @@ func (r *ListGroupsResponse) Encode(version uint16) (payload []byte) {
 	} else {
 		groupCount = len(r.Groups)
 	}
-	if r.IsFlexible() {
+	if isFlexible {
 		offset += copy(payload[offset:], encodeCompactArrayLength(groupCount))
 	} else {
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Groups)))
@@ -164,32 +215,10 @@ func (r *ListGroupsResponse) Encode(version uint16) (payload []byte) {
 	}
 
 	for _, group := range r.Groups {
-		if r.IsFlexible() {
-			offset += copy(payload[offset:], encodeCompactString(group.GroupID))
-			offset += copy(payload[offset:], encodeCompactString(group.ProtocolType))
-			if version >= tags["GroupState"] {
-				offset += copy(payload[offset:], encodeCompactString(group.GroupState))
-			}
-			if version >= tags["GroupType"] {
-				offset += copy(payload[offset:], encodeCompactString(group.GroupType))
-			}
-		} else {
-			offset += copy(payload[offset:], encodeString(group.GroupID))
-			offset += copy(payload[offset:], encodeString(group.ProtocolType))
-			if version >= tags["GroupState"] {
-				offset += copy(payload[offset:], encodeString(group.GroupState))
-			}
-			if version >= tags["GroupType"] {
-				offset += copy(payload[offset:], encodeString(group.GroupType))
-			}
-		}
-
-		if r.IsFlexible() {
-			offset += group.TaggedFields.EncodeTo(payload[offset:])
-		}
+		offset += group.encodeTo(payload[offset:], isFlexible, version)
 	}
 
-	if r.IsFlexible() {
+	if isFlexible {
 		offset += r.TaggedFields.EncodeTo(payload[offset:])
 	}
 
