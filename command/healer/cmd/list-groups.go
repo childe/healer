@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/childe/healer"
@@ -29,9 +30,8 @@ var listGroupsCmd = &cobra.Command{
 			return err
 		}
 
-		for _, g := range groups {
-			fmt.Println(g)
-		}
+		b, _ := json.Marshal(groups)
+		fmt.Println(string(b))
 
 		return err
 	},

@@ -2,6 +2,7 @@ package healer
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/bytedance/mockey"
@@ -39,9 +40,8 @@ func TestListGroups(t *testing.T) {
 	})
 	mockey.PatchConvey("TestListGroups", t, func() {
 		errMock := errors.New("mock error")
-		broker := BrokerInfo{}
 		mockey.Mock((*Brokers).BrokersInfo).Return(map[int32]*BrokerInfo{
-			1: &broker,
+			1: {},
 		}).Build()
 		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
 		mockey.Mock((*Broker).RequestListGroups).Return(nil, errMock).Build()
@@ -50,11 +50,11 @@ func TestListGroups(t *testing.T) {
 		convey.So(groups, convey.ShouldBeEmpty)
 	})
 	mockey.PatchConvey("TestListGroups", t, func() {
-		broker := BrokerInfo{}
+		brokerID := int32(1)
 		mockey.Mock((*Brokers).BrokersInfo).Return(map[int32]*BrokerInfo{
-			1: &broker,
+			brokerID: {NodeID: brokerID},
 		}).Build()
-		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
+		mockey.Mock((*Brokers).GetBroker).Return(&Broker{nodeID: brokerID}, nil).Build()
 		mockey.Mock((*Broker).RequestListGroups).Return(&ListGroupsResponse{
 			Groups: []*Group{
 				{
@@ -67,6 +67,8 @@ func TestListGroups(t *testing.T) {
 		}, nil).Build()
 		groups, err := c.ListGroups()
 		convey.So(err, convey.ShouldBeNil)
-		convey.So(len(groups), convey.ShouldEqual, 2)
+		convey.So(len(groups), convey.ShouldEqual, 1)
+		fmt.Println(groups)
+		convey.So(len(groups[1]), convey.ShouldEqual, 2)
 	})
 }

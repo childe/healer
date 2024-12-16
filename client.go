@@ -41,7 +41,8 @@ func (c *Client) RefreshMetadata() {
 }
 
 // ListGroups lists all consumer groups from all brokers
-func (c *Client) ListGroups() (groups []string, err error) {
+func (c *Client) ListGroups() (groups map[int32][]*Group, err error) {
+	groups = make(map[int32][]*Group)
 	for _, brokerinfo := range c.brokers.BrokersInfo() {
 		broker, err := c.brokers.GetBroker(brokerinfo.NodeID)
 		if err != nil {
@@ -54,8 +55,8 @@ func (c *Client) ListGroups() (groups []string, err error) {
 			c.logger.Error(err, "get group list failed", "broker", broker.GetAddress())
 			return groups, err
 		}
-		for _, g := range response.Groups {
-			groups = append(groups, g.GroupID)
+		if len(response.Groups) > 0 {
+			groups[broker.nodeID] = response.Groups
 		}
 	}
 	return groups, nil
