@@ -1,6 +1,9 @@
 .PHONY: build
+version := $(shell git describe --tags --always)
+buildTime := $(shell git log -1 --format='%cI')
+
 build:
-	go build -o healer ./command/healer
+	CGO_ENABLED=0 go build -ldflags "-X github.com/childe/healer/command/healer/cmd.version=$(version) -X github.com/childe/healer/command/healer/cmd.buildTime=$(buildTime)" -o healer ./command/healer
 
 .PHONY: install
 install:

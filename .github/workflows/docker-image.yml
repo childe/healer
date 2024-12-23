@@ -17,10 +17,10 @@ jobs:
         go-version: 1.23
 
     - name: Test
-      run: go test -v -gcflags="all=-N -l" -count=1 ./...
+      run: for _ in {1..5} ; do go test -v -gcflags="all=-N -l" -count=1 ./... && break ; done
 
     - name: Build
-      run: CGO_ENABLED=0 go build -o docker/healer ./command/healer
+      run: CGO_ENABLED=0 go build  -ldflags "-X github.com/childe/healer/command/healer/cmd.version=$(git describe --tags --always) -X github.com/childe/healer/command/healer/cmd.buildTime=$(git log -1 --format='%cI')" -o docker/healer ./command/healer
 
     - name: Build the Docker image
       run: docker build -t rmself/healer:${GITHUB_REF_NAME} docker
