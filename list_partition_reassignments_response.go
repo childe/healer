@@ -91,12 +91,13 @@ func decodeToListPartitionReassignmentsPartitionBlock(payload []byte) (r listPar
 }
 
 // FIXME: add error message too
-func (r ListPartitionReassignmentsResponse) Error() error {
+func (r *ListPartitionReassignmentsResponse) Error() error {
 	return getErrorFromErrorCode(r.ErrorCode)
 }
 
 // NewListPartitionReassignmentsResponse decode byte array to ListPartitionReassignmentsResponse instance
-func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r ListPartitionReassignmentsResponse, err error) {
+func NewListPartitionReassignmentsResponse(payload []byte, version uint16) (r *ListPartitionReassignmentsResponse, err error) {
+	r = &ListPartitionReassignmentsResponse{}
 	offset := 0
 	responseLength := int(binary.BigEndian.Uint32(payload))
 	if responseLength+4 != len(payload) {
