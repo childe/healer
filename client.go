@@ -250,3 +250,16 @@ func (c *Client) DescribeConfigs(resourceType, resourceName string, keys []strin
 	}
 	return resp.(DescribeConfigsResponse), nil
 }
+
+func (c *Client) ListPartitionReassignments(req *ListPartitionReassignmentsRequest) (*ListPartitionReassignmentsResponse, error) {
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*ListPartitionReassignmentsResponse), nil
+}

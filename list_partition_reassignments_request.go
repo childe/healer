@@ -17,13 +17,13 @@ type ListPartitionReassignmentsRequest struct {
 }
 
 // NewListPartitionReassignmentsRequest creates a new ListPartitionReassignmentsRequest
-func NewListPartitionReassignmentsRequest(clientID string, timeoutMS int32) ListPartitionReassignmentsRequest {
+func NewListPartitionReassignmentsRequest(clientID string, timeoutMS int32) *ListPartitionReassignmentsRequest {
 	requestHeader := &RequestHeader{
 		APIKey:     API_ListPartitionReassignments,
 		APIVersion: 0,
 		ClientID:   &clientID,
 	}
-	return ListPartitionReassignmentsRequest{
+	return &ListPartitionReassignmentsRequest{
 		RequestHeader: requestHeader,
 
 		TimeoutMS: timeoutMS,

@@ -34,7 +34,12 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 		config := healer.DefaultBrokerConfig()
 		config.Net.TimeoutMSForEachAPI = make([]int, 68)
 		config.Net.TimeoutMSForEachAPI[healer.API_ListPartitionReassignments] = int(timeoutMS)
-		bs, err := healer.NewBrokersWithConfig(brokers, config)
+
+		admin, err := healer.NewClient(brokers, client)
+		if err != nil {
+			return err
+		}
+		defer admin.Close()
 
 		if err != nil {
 			return fmt.Errorf("could not create brokers from %s: %w", brokers, err)
@@ -58,7 +63,7 @@ var listPartitionReassignmentsCmd = &cobra.Command{
 			}
 		}
 
-		resp, err := bs.ListPartitionReassignments(req)
+		resp, err := admin.ListPartitionReassignments(req)
 
 		if err != nil {
 			return fmt.Errorf("failed to do ListPartitionReassignments request: %w", err)

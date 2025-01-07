@@ -330,19 +330,6 @@ func (brokers *Brokers) FindCoordinator(clientID, groupID string) (r FindCoordin
 	return FindCoordinatorResponse{}, fmt.Errorf("could not find coordinator from all brokers")
 }
 
-// ListPartitionReassignments requests ListPartitionReassignments from controller and returns response
-func (brokers *Brokers) ListPartitionReassignments(req ListPartitionReassignmentsRequest) (r *ListPartitionReassignmentsResponse, err error) {
-	controller, err := brokers.GetBroker(brokers.Controller())
-	if err != nil {
-		return r, fmt.Errorf("could not create controller broker: %w", err)
-	}
-	resp, err := controller.RequestAndGet(req)
-	if err != nil {
-		return r, fmt.Errorf("could not get ListPartitionReassignments response from controller: %w", err)
-	}
-	return resp.(*ListPartitionReassignmentsResponse), nil
-}
-
 // AlterPartitionReassignments requests AlterPartitionReassignments from controller and returns response
 func (brokers *Brokers) AlterPartitionReassignments(req *AlterPartitionReassignmentsRequest) (r *AlterPartitionReassignmentsResponse, err error) {
 	controller, err := brokers.GetBroker(brokers.Controller())
