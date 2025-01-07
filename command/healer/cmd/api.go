@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"encoding/base64"
+	"errors"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/childe/healer/command/healer/cmd/apicontrollers"
 
@@ -16,6 +19,28 @@ var wrap = func(f func(c *gin.Context, client string), client string) func(c *gi
 		f(c, client)
 	}
 }
+
+func BasicAuth(username, password string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		auth := strings.SplitN(c.GetHeader("Authorization"), " ", 2)
+
+		if len(auth) != 2 || auth[0] != "Basic" {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		payload, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(payload), ":", 2)
+
+		if len(pair) != 2 || pair[0] != username || pair[1] != password {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 var apiCmd = &cobra.Command{
 	Use:   "api",
 	Short: "support http api",
@@ -28,9 +53,20 @@ var apiCmd = &cobra.Command{
 		if len(client) == 0 {
 			client = "healer"
 		}
+		auth, _ := cmd.Flags().GetString("auth")
 
 		fullAddress := net.JoinHostPort(address, strconv.Itoa(int(port)))
 		router := gin.Default()
+		if len(auth) > 0 {
+			strings.Split(auth, ":")
+			pair := strings.SplitN(string(auth), ":", 2)
+
+			if len(pair) == 2 {
+				router.Use(BasicAuth(pair[0], pair[1]))
+			} else {
+				return errors.New("auth format error")
+			}
+		}
 
 		if cors {
 			router.Use(func(c *gin.Context) {
@@ -96,6 +132,7 @@ func init() {
 	apiCmd.Flags().Int32P("port", "p", 8080, "listen port")
 	apiCmd.Flags().StringP("address", "a", "0.0.0.0", "listen address")
 	apiCmd.Flags().Bool("cors", false, "enable cors")
+	apiCmd.Flags().String("auth", "", "basic auth username:password")
 
 	rootCmd.AddCommand(apiCmd)
 }
