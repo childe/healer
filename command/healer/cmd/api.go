@@ -20,8 +20,14 @@ var wrap = func(f func(c *gin.Context, client string), client string) func(c *gi
 	}
 }
 
-func BasicAuth(username, password string) gin.HandlerFunc {
+func BasicAuth(username, password string, getAllowed bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if getAllowed {
+			if c.Request.Method == "OPTIONS" || c.Request.Method == "HEAD" || c.Request.Method == "GET" {
+				c.Next()
+				return
+			}
+		}
 		auth := strings.SplitN(c.GetHeader("Authorization"), " ", 2)
 
 		if len(auth) != 2 || auth[0] != "Basic" {
@@ -46,23 +52,44 @@ var apiCmd = &cobra.Command{
 	Short: "support http api",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		address, _ := cmd.Flags().GetString("address")
-		port, _ := cmd.Flags().GetInt32("port")
-		cors, _ := cmd.Flags().GetBool("cors")
-		client, _ := cmd.Flags().GetString("client")
+		address, err := cmd.Flags().GetString("address")
+		if err != nil {
+			return err
+		}
+		port, err := cmd.Flags().GetInt32("port")
+		if err != nil {
+			return err
+		}
+		cors, err := cmd.Flags().GetBool("cors")
+		if err != nil {
+			return err
+		}
+		client, err := cmd.Flags().GetString("client")
+		if err != nil {
+			return err
+		}
 		if len(client) == 0 {
 			client = "healer"
 		}
-		auth, _ := cmd.Flags().GetString("auth")
+
+		auth, err := cmd.Flags().GetString("auth")
+		if err != nil {
+			return err
+		}
+		getAllowed, err := cmd.Flags().GetBool("get-allowed")
+		if err != nil {
+			return err
+		}
 
 		fullAddress := net.JoinHostPort(address, strconv.Itoa(int(port)))
+
 		router := gin.Default()
 		if len(auth) > 0 {
 			strings.Split(auth, ":")
 			pair := strings.SplitN(string(auth), ":", 2)
 
 			if len(pair) == 2 {
-				router.Use(BasicAuth(pair[0], pair[1]))
+				router.Use(BasicAuth(pair[0], pair[1], getAllowed))
 			} else {
 				return errors.New("auth format error")
 			}
@@ -133,6 +160,7 @@ func init() {
 	apiCmd.Flags().StringP("address", "a", "0.0.0.0", "listen address")
 	apiCmd.Flags().Bool("cors", false, "enable cors")
 	apiCmd.Flags().String("auth", "", "basic auth username:password")
+	apiCmd.Flags().Bool("get-allowed", false, "allow get/head/options method even without auth header")
 
 	rootCmd.AddCommand(apiCmd)
 }
