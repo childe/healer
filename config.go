@@ -127,17 +127,21 @@ func DefaultConsumerConfig() ConsumerConfig {
 		OffsetsStorage:       1,
 	}
 
-	if len(c.Net.TimeoutMSForEachAPI) == 0 {
-		c.Net.TimeoutMSForEachAPI = make([]int, 68)
-		for i := range c.Net.TimeoutMSForEachAPI {
-			c.Net.TimeoutMSForEachAPI[i] = c.Net.TimeoutMS
-		}
-		c.Net.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
-		c.Net.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
-		c.Net.TimeoutMSForEachAPI[API_FetchRequest] = c.Net.TimeoutMS + int(c.FetchMaxWaitMS)
-	}
+	c.resetTimeoutMSForEachAPI()
 
 	return c
+}
+
+func (c *ConsumerConfig) resetTimeoutMSForEachAPI() {
+	if len(c.Net.TimeoutMSForEachAPI) == 0 {
+		c.Net.TimeoutMSForEachAPI = make([]int, 68)
+	}
+	for i := range c.Net.TimeoutMSForEachAPI {
+		c.Net.TimeoutMSForEachAPI[i] = c.Net.TimeoutMS
+	}
+	c.Net.TimeoutMSForEachAPI[API_JoinGroup] = int(c.SessionTimeoutMS) + 5000
+	c.Net.TimeoutMSForEachAPI[API_OffsetCommitRequest] = int(c.SessionTimeoutMS) / 2
+	c.Net.TimeoutMSForEachAPI[API_FetchRequest] = c.Net.TimeoutMS + int(c.FetchMaxWaitMS)
 }
 
 var defaultConsumerConfig = DefaultConsumerConfig()
@@ -145,6 +149,10 @@ var defaultConsumerConfig = DefaultConsumerConfig()
 // create ConsumerConfig from map or return directly if config is ConsumerConfig
 // return defaultConsumerConfig if config is nil
 func createConsumerConfig(config interface{}) (c ConsumerConfig, err error) {
+	defer func() {
+		c.resetTimeoutMSForEachAPI()
+	}()
+
 	switch config := config.(type) {
 	case nil:
 		return defaultConsumerConfig, nil

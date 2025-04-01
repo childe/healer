@@ -54,4 +54,15 @@ func TestCreateConsumerConfig(t *testing.T) {
 
 		convey.So(defaultConsumerConfig.BootstrapServers, convey.ShouldEqual, "")
 	})
+
+	mockey.PatchConvey("test timeout.ms.for.eachapi based on net.timeout.ms", t, func() {
+		configMap := make(map[string]interface{})
+		configMap["net"] = map[string]string{
+			"timeout.ms": "60000",
+		}
+		concumerConfig, err := createConsumerConfig(configMap)
+		convey.So(err, convey.ShouldBeNil)
+
+		convey.So(concumerConfig.Net.TimeoutMSForEachAPI[0], convey.ShouldEqual, 60000)
+	})
 }
