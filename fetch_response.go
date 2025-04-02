@@ -248,11 +248,12 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	}
 
 	r := io.LimitReader(streamDecoder, int64(batchLength)-49)
+	// set offset immediately because we have to skip the data even if uncompress error
+	offset += int(batchLength) - 49
 	uncompressedBytes, err := uncompress(int8(compress), r)
 	if err != nil {
 		return offset, fmt.Errorf("uncompress records bytes error: %w", err)
 	}
-	offset += int(batchLength) - 49
 
 	uncompressedBytesOffset := 0
 	for i := 0; i < count; i++ {
@@ -315,7 +316,7 @@ func (streamDecoder *fetchResponseStreamDecoder) putMessage(msg *FullMessage) er
 // that is, `Record Batch`,`Record Batch`,`Record Batch`...
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) (err error) {
 	defer func() {
-		if err == io.EOF || err == &maxBytesTooSmall {
+		if errors.Is(err, io.EOF) || err == &maxBytesTooSmall {
 			if streamDecoder.hasOneMessage {
 				err = nil
 			}
@@ -369,7 +370,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 	)
 
 	defer func() {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = &maxBytesTooSmall
 		}
 	}()
