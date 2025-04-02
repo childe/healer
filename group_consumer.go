@@ -2,6 +2,7 @@ package healer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -190,7 +191,7 @@ func (c *GroupConsumer) join() error {
 			c.memberID = ""
 		}
 
-		if err == io.EOF || err == KafkaError(15) || err == KafkaError(16) {
+		if errors.Is(err, io.EOF) || err == KafkaError(15) || err == KafkaError(16) {
 			c.coordinatorAvailable = false
 		}
 
