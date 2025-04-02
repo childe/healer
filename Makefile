@@ -11,7 +11,7 @@ install:
 
 .PHONY: test
 test:
-	for _ in {1..5} ; do go test -v -gcflags="all=-N -l" -count=1 ./... && break ; done
+	go test -v -gcflags="all=-N -l" -count=1 ./...
 
 .PHONY: coverage
 coverage:
