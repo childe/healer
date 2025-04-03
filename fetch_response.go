@@ -242,6 +242,11 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 
 	// count is not accurate, payload maybe truncated by maxsize parameter in fetch request
 	count := int(binary.BigEndian.Uint32(buf[57:]))
+	// logger.Info("record batch info",
+	// 	"baseOffset", baseOffset, "batchLength", batchLength, "partitionLeaderEpoch", partitionLeaderEpoch,
+	// 	"magic", magic, "crc", crc, "attributes", attributes, "compress", compress, "lastOffsetDelta", lastOffsetDelta,
+	// 	"baseTimestamp", baseTimestamp, "maxTimestamp", maxTimestamp, "producerID", producerID, "producerEpoch",
+	// 	producerEpoch, "baseSequence", baseSequence, "count", count)
 
 	if count <= 0 {
 		return
@@ -316,7 +321,7 @@ func (streamDecoder *fetchResponseStreamDecoder) putMessage(msg *FullMessage) er
 // that is, `Record Batch`,`Record Batch`,`Record Batch`...
 func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSet(topicName string, partitionID int32, messageSetSizeBytes int32, version uint16) (err error) {
 	defer func() {
-		if errors.Is(err, io.EOF) || err == &maxBytesTooSmall {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || err == &maxBytesTooSmall {
 			if streamDecoder.hasOneMessage {
 				err = nil
 			}
