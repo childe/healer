@@ -69,6 +69,7 @@ var simpleConsumerCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to generate simple consumer: %w", err)
 		}
+		defer simpleConsumer.Stop()
 
 		messages, err := simpleConsumer.Consume(offset, nil)
 		if err != nil {
