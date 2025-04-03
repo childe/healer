@@ -153,7 +153,7 @@ func TestFetchResponseDecodeWithPartialRecords2(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		payload = payload[:len(payload)-4]
+		payload = payload[:len(payload)-8]
 		t.Logf("payload length: %d", len(payload))
 
 		reader := bytes.NewReader(payload)
@@ -175,6 +175,8 @@ func TestFetchResponseDecodeWithPartialRecords2(t *testing.T) {
 
 		i := 0
 		for msg := range messages {
+			t.Logf("msg: %+v", msg)
+
 			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
 				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
 			if msg.Error != nil {

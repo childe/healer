@@ -436,11 +436,8 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 		return nil
 	}
 
-	// if we use fetch request with version 0 and fetch.max.bytes is not big enough, kafka server may return partial records
-	// healer will ignore the records, double fetch.max.bytes, and then retry.
-	if int(p.RecordBatchLength) > streamDecoder.totalLength-streamDecoder.offset {
-		return &maxBytesTooSmall
-	}
+	// RecordBatchLength consists of more than one Record, so we try to decode the messageSet
+	// if int(p.RecordBatchLength) > streamDecoder.totalLength-streamDecoder.offset { }
 
 	err = streamDecoder.decodeMessageSet(topicName, p.PartitionID, p.RecordBatchLength, version)
 	return err
