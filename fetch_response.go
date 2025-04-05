@@ -37,8 +37,8 @@ type PartitionResponse struct {
 		ProducerID  int64
 		FirstOffset int64
 	}
-	RecordBatchLength int32
-	RecordBatch       RecordBatch
+	RecordBatchesLength int32
+	RecordBatches       []RecordBatch
 }
 
 type FetchResponse struct {
@@ -436,15 +436,15 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 	if _, err = streamDecoder.Read(buf[:4]); err != nil {
 		return err
 	}
-	p.RecordBatchLength = int32(binary.BigEndian.Uint32(buf))
-	if p.RecordBatchLength <= 0 {
+	p.RecordBatchesLength = int32(binary.BigEndian.Uint32(buf))
+	if p.RecordBatchesLength <= 0 {
 		return nil
 	}
 
 	// RecordBatchLength consists of more than one Record, so we try to decode the messageSet
 	// if int(p.RecordBatchLength) > streamDecoder.totalLength-streamDecoder.offset { }
 
-	err = streamDecoder.decodeMessageSet(topicName, p.PartitionID, p.RecordBatchLength, version)
+	err = streamDecoder.decodeMessageSet(topicName, p.PartitionID, p.RecordBatchesLength, version)
 	return err
 }
 

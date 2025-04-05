@@ -12,28 +12,28 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 		return nil, err
 	}
 
-	// 编码 ThrottleTimeMs
+	// Encode ThrottleTimeMs
 	if err := binary.Write(buf, binary.BigEndian, r.ThrottleTimeMs); err != nil {
 		return nil, err
 	}
 
-	// 编码 ErrorCode
+	// Encode ErrorCode
 	if err := binary.Write(buf, binary.BigEndian, r.ErrorCode); err != nil {
 		return nil, err
 	}
 
-	// 编码 SessionID
+	// Encode SessionID
 	if err := binary.Write(buf, binary.BigEndian, r.SessionID); err != nil {
 		return nil, err
 	}
 
-	// 编码 Responses
+	// Encode Responses
 	if err := binary.Write(buf, binary.BigEndian, int32(len(r.Responses))); err != nil {
 		return nil, err
 	}
 
 	for topic, partitions := range r.Responses {
-		// 编码 topic
+		// Encode topic
 		if err := binary.Write(buf, binary.BigEndian, int16(len(topic))); err != nil {
 			return nil, err
 		}
@@ -41,38 +41,38 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 			return nil, err
 		}
 
-		// 编码 partitions
+		// Encode partitions
 		if err := binary.Write(buf, binary.BigEndian, int32(len(partitions))); err != nil {
 			return nil, err
 		}
 
 		for _, partition := range partitions {
-			// 编码 PartitionIndex
+			// Encode PartitionIndex
 			if err := binary.Write(buf, binary.BigEndian, partition.PartitionID); err != nil {
 				return nil, err
 			}
 
-			// 编码 ErrorCode
+			// Encode ErrorCode
 			if err := binary.Write(buf, binary.BigEndian, partition.ErrorCode); err != nil {
 				return nil, err
 			}
 
-			// 编码 HighWatermark
+			// Encode HighWatermark
 			if err := binary.Write(buf, binary.BigEndian, partition.HighWatermark); err != nil {
 				return nil, err
 			}
 
-			// 编码 LastStableOffset
+			// Encode LastStableOffset
 			if err := binary.Write(buf, binary.BigEndian, partition.LastStableOffset); err != nil {
 				return nil, err
 			}
 
-			// 编码 LogStartOffset
+			// Encode LogStartOffset
 			if err := binary.Write(buf, binary.BigEndian, partition.LogStartOffset); err != nil {
 				return nil, err
 			}
 
-			// 编码 AbortedTransactions
+			// Encode AbortedTransactions
 			if err := binary.Write(buf, binary.BigEndian, int32(len(partition.AbortedTransactions))); err != nil {
 				return nil, err
 			}
@@ -86,17 +86,19 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 				}
 			}
 
-			recordBatchBytes, err := partition.RecordBatch.Encode(version)
-			if err != nil {
-				return nil, err
-			}
+			for _, recordBatch := range partition.RecordBatches {
+				recordBatchBytes, err := recordBatch.Encode(version)
+				if err != nil {
+					return nil, err
+				}
 
-			if err := binary.Write(buf, binary.BigEndian, int32(len(recordBatchBytes))); err != nil {
-				return nil, err
-			}
+				if err := binary.Write(buf, binary.BigEndian, int32(len(recordBatchBytes))); err != nil {
+					return nil, err
+				}
 
-			if _, err := buf.Write(recordBatchBytes); err != nil {
-				return nil, err
+				if _, err := buf.Write(recordBatchBytes); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -107,12 +109,12 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 	buf := new(bytes.Buffer)
 
-	// RecordBatch 的 BatchLength 是变长的，所以先预留空间
+	// BatchLength is variable, so reserve space for it
 	defer func() {
 		binary.BigEndian.PutUint32(payload[8:], uint32(buf.Len()-8))
 	}()
 
-	// 编码 RecordBatch
+	// Encode RecordBatch
 	if err := binary.Write(buf, binary.BigEndian, r.BaseOffset); err != nil {
 		return nil, err
 	}
@@ -150,7 +152,7 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 		return nil, err
 	}
 
-	// 编码 Records
+	// Encode Records
 	if err := binary.Write(buf, binary.BigEndian, int32(len(r.Records))); err != nil {
 		return nil, err
 	}
@@ -169,93 +171,107 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 // Encode encodes a record to a byte slice
 // just for test
 func (r *Record) Encode(version uint16) (payload []byte, err error) {
+	// First encode everything except the length field
 	buf := new(bytes.Buffer)
-	defer func() {
-		lengthBuf := make([]byte, binary.MaxVarintLen64)
-		n := binary.PutVarint(lengthBuf, int64(len(payload)))
-		payload = append(lengthBuf[:n], payload...)
-	}()
 
-	// 编码 length
-
-	// 编码 attributes
-	attrBuf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(attrBuf, int64(r.attributes))
-	if _, err := buf.Write(attrBuf[:n]); err != nil {
+	// Encode attributes
+	if err := buf.WriteByte(byte(r.attributes)); err != nil {
 		return nil, err
 	}
 
-	// 编码 timestampDelta
+	// Encode timestampDelta
 	timeBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutVarint(timeBuf, r.timestampDelta)
+	n := binary.PutVarint(timeBuf, r.timestampDelta)
 	if _, err := buf.Write(timeBuf[:n]); err != nil {
 		return nil, err
 	}
 
-	// 编码 offsetDelta
+	// Encode offsetDelta
 	offsetBuf := make([]byte, binary.MaxVarintLen64)
 	n = binary.PutVarint(offsetBuf, int64(r.offsetDelta))
 	if _, err := buf.Write(offsetBuf[:n]); err != nil {
 		return nil, err
 	}
 
-	// 编码 key 长度
+	// Encode key length
 	keyLenBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutVarint(keyLenBuf, int64(len(r.key)))
+	n = binary.PutVarint(keyLenBuf, int64(r.keyLength))
 	if _, err := buf.Write(keyLenBuf[:n]); err != nil {
 		return nil, err
 	}
 
-	// 写入 key
-	if _, err := buf.Write(r.key); err != nil {
-		return nil, err
+	// Write key
+	if r.keyLength > 0 {
+		if _, err := buf.Write(r.key); err != nil {
+			return nil, err
+		}
 	}
 
-	// 编码 value 长度
+	// Encode value length
 	valueLenBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutVarint(valueLenBuf, int64(len(r.value)))
+	n = binary.PutVarint(valueLenBuf, int64(r.valueLen))
 	if _, err := buf.Write(valueLenBuf[:n]); err != nil {
 		return nil, err
 	}
 
-	// 写入 value
-	if _, err := buf.Write(r.value); err != nil {
-		return nil, err
+	// Write value
+	if r.valueLen > 0 {
+		if _, err := buf.Write(r.value); err != nil {
+			return nil, err
+		}
 	}
 
-	// 编码 Headers 数量
+	// Encode Headers count
 	headerCountBuf := make([]byte, binary.MaxVarintLen64)
 	n = binary.PutVarint(headerCountBuf, int64(len(r.Headers)))
 	if _, err := buf.Write(headerCountBuf[:n]); err != nil {
 		return nil, err
 	}
 
-	// 编码每个 Header
+	// Encode each Header
 	for _, header := range r.Headers {
-		// 编码 Key 长度
+		// Encode Key length
 		keyLenBuf := make([]byte, binary.MaxVarintLen64)
 		n = binary.PutVarint(keyLenBuf, int64(len(header.Key)))
 		if _, err := buf.Write(keyLenBuf[:n]); err != nil {
 			return nil, err
 		}
 
-		// 写入 Key
+		// Write Key
 		if _, err := buf.WriteString(header.Key); err != nil {
 			return nil, err
 		}
 
-		// 编码 Value 长度
+		// Encode Value length
 		valueLenBuf := make([]byte, binary.MaxVarintLen64)
 		n = binary.PutVarint(valueLenBuf, int64(len(header.Value)))
 		if _, err := buf.Write(valueLenBuf[:n]); err != nil {
 			return nil, err
 		}
 
-		// 写入 Value
+		// Write Value
 		if _, err := buf.Write(header.Value); err != nil {
 			return nil, err
 		}
 	}
 
-	return buf.Bytes(), nil
+	// Get the encoded content
+	recordBytes := buf.Bytes()
+
+	// Create final buffer including length
+	finalBuf := new(bytes.Buffer)
+
+	// Encode length (not including the length field itself)
+	lengthBuf := make([]byte, binary.MaxVarintLen64)
+	n = binary.PutVarint(lengthBuf, int64(len(recordBytes)))
+	if _, err := finalBuf.Write(lengthBuf[:n]); err != nil {
+		return nil, err
+	}
+
+	// Write the remaining record
+	if _, err := finalBuf.Write(recordBytes); err != nil {
+		return nil, err
+	}
+
+	return finalBuf.Bytes(), nil
 }

@@ -49,7 +49,7 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 			})
 		}
 		t := resp.Responses["test-topic"]
-		t[0].RecordBatch.Records = records
+		t[0].RecordBatches[0].Records = records
 		payload, _ := resp.Encode(version)
 		mockey.Mock((*Broker).requestFetchStreamingly).To(func(fetchRequest *FetchRequest) (io.Reader, uint32, error) {
 			reader := bytes.NewReader(payload)
