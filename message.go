@@ -1,16 +1,10 @@
 package healer
 
 import (
-	"bytes"
-	"compress/gzip"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"io"
-
-	lz4 "github.com/bkaradzic/go-lz4"
-	snappy "github.com/eapache/go-xerial-snappy"
 )
 
 var errUncompleteRecord = errors.New("uncomplete Record, The last bytes are not enough to decode the record")
@@ -130,27 +124,12 @@ type Message struct {
 type MessageSet []*Message
 
 func (message *Message) decompress() ([]byte, error) {
-	compression := CompressType(message.Attributes & 7)
-	var rst []byte
-	switch compression {
-	case CompressionGzip:
-		reader, err := gzip.NewReader(bytes.NewReader(message.Value))
-		if err != nil {
-			return nil, err
-		}
-		if rst, err = io.ReadAll(reader); err != nil && err != io.EOF {
-			return nil, err
-		} else {
-			return rst, nil
-		}
-	case CompressionSnappy:
-		return snappy.Decode(message.Value)
-	case CompressionLz4:
-		return lz4.Decode(nil, message.Value)
-	case CompressionNone:
-		return message.Value, nil
+	compression := CompressType(message.Attributes & 0b11)
+	compressor := NewCompressor(compression.String())
+	if compressor == nil {
+		return nil, fmt.Errorf("unknown Compression Type %s", compression)
 	}
-	return nil, fmt.Errorf("unknown Compression Type %s", compression)
+	return compressor.Compress(message.Value)
 }
 
 func (messageSet *MessageSet) Length() int {

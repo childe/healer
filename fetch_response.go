@@ -9,7 +9,7 @@ import (
 	"io"
 
 	snappy "github.com/eapache/go-xerial-snappy"
-	"github.com/pierrec/lz4"
+	"github.com/pierrec/lz4/v4"
 )
 
 type RecordBatch struct {
@@ -54,7 +54,7 @@ var errFetchResponseTooShortNoRecordsMeta = errors.New("fetch response too short
 type fetchResponseStreamDecoder struct {
 	ctx context.Context
 
-	totalLength int
+	totalLength int // NOT include the 4-byte Length field , only following bytes
 	offset      int
 
 	buffers  io.Reader
@@ -71,6 +71,12 @@ type fetchResponseStreamDecoder struct {
 	hasOneMessage bool
 }
 
+var errShortRead = errors.New("short read")
+
+func (streamDecoder *fetchResponseStreamDecoder) end() bool {
+	return streamDecoder.offset >= streamDecoder.totalLength
+}
+
 func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int, err error) {
 	defer func() {
 		streamDecoder.offset += length
@@ -79,8 +85,6 @@ func (streamDecoder *fetchResponseStreamDecoder) readAll() (length int, err erro
 	written, err := io.Copy(io.Discard, streamDecoder.buffers)
 	return int(written), err
 }
-
-var errShortRead = errors.New("short read")
 
 func (streamDecoder *fetchResponseStreamDecoder) Read(p []byte) (n int, err error) {
 	defer func() {
@@ -207,6 +211,7 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeMessageSetMagic0or1(topic
 	}
 }
 
+// decode one recordBatch which consists of multiple records
 // offset returned equals to batchLength + 12
 func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName string, partitionID int32, header17 []byte) (offset int, err error) {
 	bytesBeforeRecordsLength := 44 // (magic, records count]
@@ -257,6 +262,10 @@ func (streamDecoder *fetchResponseStreamDecoder) decodeRecordsMagic2(topicName s
 	offset += int(batchLength) - 49
 	uncompressedBytes, err := uncompress(int8(compress), r)
 	if err != nil {
+		io.ReadAll(r) // read all remaining compressed bytes, since lz4 reader may not read all bytes before raise error
+		if streamDecoder.end() && streamDecoder.hasOneMessage {
+			return offset, nil
+		}
 		return offset, fmt.Errorf("uncompress records bytes error: %w", err)
 	}
 

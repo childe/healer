@@ -61,7 +61,7 @@ var resp FetchResponse = FetchResponse{
 						PartitionLeaderEpoch: 130,
 						Magic:                2,
 						CRC:                  0x01020304,
-						Attributes:           0 | int16(CompressionGzip),
+						Attributes:           0,
 						LastOffsetDelta:      10,
 						BaseTimestamp:        1630000000000,
 						MaxTimestamp:         1630000010000,
@@ -95,132 +95,147 @@ var resp FetchResponse = FetchResponse{
 
 // complete 2 records, no partial data
 func TestFetchResponseDecodeComplete(t *testing.T) {
-	for _, version := range []uint16{7, 10} {
-		payload, err := resp.Encode(version)
-		if err != nil {
-			t.Error(err)
-		}
-		t.Logf("payload length: %d", len(payload))
-
-		reader := bytes.NewReader(payload)
-		messages := make(chan *FullMessage, 10)
-		decoder := fetchResponseStreamDecoder{
-			ctx:         context.Background(),
-			buffers:     reader,
-			messages:    messages,
-			totalLength: len(payload) + 4,
-			version:     version,
-		}
-
-		startOffset := int64(0)
-		err = decoder.streamDecode(context.Background(), startOffset)
-		if err != nil {
-			t.Error(err)
-		}
-		close(messages)
-
-		i := 0
-		for msg := range messages {
-			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
-				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
-			if msg.Error != nil {
-				t.Error(msg.Error)
+	for _, cType := range []CompressType{CompressionNone, CompressionGzip, CompressionSnappy, CompressionLz4} {
+		resp.Responses["test-topic"][0].RecordBatches[1].Attributes = 0 | int16(cType)
+		for _, version := range []uint16{7, 10} {
+			payload, err := resp.Encode(version)
+			if err != nil {
+				t.Error(err)
 			}
-			i++
-		}
-		if i != 4 {
-			t.Errorf("expect 4 message, but got %d", i)
+			t.Logf("payload length: %d", len(payload))
+
+			reader := bytes.NewReader(payload)
+			messages := make(chan *FullMessage, 10)
+			decoder := fetchResponseStreamDecoder{
+				ctx:         context.Background(),
+				buffers:     reader,
+				messages:    messages,
+				totalLength: len(payload),
+				version:     version,
+			}
+
+			startOffset := int64(0)
+			err = decoder.streamDecode(context.Background(), startOffset)
+			if err != nil {
+				t.Error(err)
+			}
+			close(messages)
+
+			i := 0
+			for msg := range messages {
+				t.Logf("msg: %+v", msg)
+
+				t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
+					msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
+				if msg.Error != nil {
+					t.Error(msg.Error)
+				}
+				i++
+			}
+			if i != 4 {
+				t.Errorf("expect 4 message, but got %d", i)
+			}
 		}
 	}
 }
 
 // append some bytes to the end of the payload
 func TestFetchResponseDecodeWithPartialRecords1(t *testing.T) {
-	for _, version := range []uint16{7, 10} {
-		t.Logf("version: %d", version)
+	for _, cType := range []CompressType{CompressionNone, CompressionGzip, CompressionSnappy, CompressionLz4} {
+		resp.Responses["test-topic"][0].RecordBatches[1].Attributes = 0 | int16(cType)
+		for _, version := range []uint16{7, 10} {
+			t.Logf("version: %d", version)
 
-		payload, err := resp.Encode(version)
-		if err != nil {
-			t.Error(err)
-		}
-		payload = append(payload, []byte{0x00, 0x00, 0x00, 0x00}...)
-		t.Logf("payload length: %d", len(payload))
-
-		reader := bytes.NewReader(payload)
-		messages := make(chan *FullMessage, 10)
-		decoder := fetchResponseStreamDecoder{
-			ctx:         context.Background(),
-			buffers:     reader,
-			messages:    messages,
-			totalLength: len(payload) + 4,
-			version:     version,
-		}
-
-		startOffset := int64(0)
-		err = decoder.streamDecode(context.Background(), startOffset)
-		if err != nil {
-			t.Error(err)
-		}
-		close(messages)
-
-		i := 0
-		for msg := range messages {
-			t.Logf("msg: %+v", msg)
-			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
-				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
-			if msg.Error != nil {
-				t.Error(msg.Error)
+			payload, err := resp.Encode(version)
+			if err != nil {
+				t.Error(err)
 			}
-			i++
-		}
-		if i != 4 {
-			t.Errorf("expect 4 message, but got %d", i)
+			payload = append(payload, []byte{0x00, 0x00, 0x00, 0x00}...)
+			t.Logf("payload length: %d", len(payload))
+
+			reader := bytes.NewReader(payload)
+			messages := make(chan *FullMessage, 10)
+			decoder := fetchResponseStreamDecoder{
+				ctx:         context.Background(),
+				buffers:     reader,
+				messages:    messages,
+				totalLength: len(payload),
+				version:     version,
+			}
+
+			startOffset := int64(0)
+			err = decoder.streamDecode(context.Background(), startOffset)
+			if err != nil {
+				t.Error(err)
+			}
+			close(messages)
+
+			i := 0
+			for msg := range messages {
+				t.Logf("msg: %+v", msg)
+				t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
+					msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
+				if msg.Error != nil {
+					t.Error(msg.Error)
+				}
+				i++
+			}
+			if i != 4 {
+				t.Errorf("expect 4 message, but got %d", i)
+			}
 		}
 	}
 }
 
 // encode 2 records and trancate the last some bytes
 func TestFetchResponseDecodeWithPartialRecords2(t *testing.T) {
-	for _, version := range []uint16{7, 10} {
-		t.Logf("version: %d", version)
+	for _, cType := range []CompressType{CompressionNone, CompressionGzip, CompressionSnappy, CompressionLz4} {
+		resp.Responses["test-topic"][0].RecordBatches[1].Attributes = 0 | int16(cType)
+		for _, version := range []uint16{7, 10} {
+			t.Logf("version: %d, compress type: %s", version, cType)
 
-		payload, err := resp.Encode(version)
-		if err != nil {
-			t.Error(err)
-		}
-		payload = payload[:len(payload)-8]
-		t.Logf("payload length: %d", len(payload))
-
-		reader := bytes.NewReader(payload)
-		messages := make(chan *FullMessage, 10)
-		decoder := fetchResponseStreamDecoder{
-			ctx:         context.Background(),
-			buffers:     reader,
-			messages:    messages,
-			totalLength: len(payload) + 4,
-			version:     version,
-		}
-
-		startOffset := int64(0)
-		err = decoder.streamDecode(context.Background(), startOffset)
-		if err != nil {
-			t.Error(err)
-		}
-		close(messages)
-
-		i := 0
-		for msg := range messages {
-			t.Logf("msg: %+v", msg)
-
-			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
-				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
-			if msg.Error != nil {
-				t.Error(msg.Error)
+			payload, err := resp.Encode(version)
+			if err != nil {
+				t.Error(err)
 			}
-			i++
-		}
-		if i != 2 {
-			t.Errorf("expect 2 message, but got %d", i)
+			payload = payload[:len(payload)-12]
+			t.Logf("payload length: %d", len(payload))
+
+			reader := bytes.NewReader(payload)
+			messages := make(chan *FullMessage, 10)
+			decoder := fetchResponseStreamDecoder{
+				ctx:         context.Background(),
+				buffers:     reader,
+				messages:    messages,
+				totalLength: len(payload),
+				version:     version,
+			}
+
+			startOffset := int64(0)
+			err = decoder.streamDecode(context.Background(), startOffset)
+			if err != nil {
+				t.Error(err)
+			}
+			close(messages)
+
+			i := 0
+			for msg := range messages {
+				t.Logf("msg: %+v", msg)
+
+				t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
+					msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
+				if msg.Error != nil {
+					t.Error(msg.Error)
+				}
+				i++
+			}
+			var expected int = 2
+			if cType == CompressionNone {
+				expected = 3
+			}
+			if i != expected {
+				t.Errorf("expect %d message, but got %d", expected, i)
+			}
 		}
 	}
 }

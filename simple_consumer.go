@@ -427,7 +427,7 @@ func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
 			ctx:         c.ctx,
 			buffers:     reader,
 			messages:    innerMessages,
-			totalLength: int(responseLength) + 4,
+			totalLength: int(responseLength),
 			version:     c.leaderBroker.getHighestAvailableAPIVersion(API_FetchRequest),
 		}
 

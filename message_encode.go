@@ -159,7 +159,7 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 		return nil, err
 	}
 
-	compress := CompressType(r.Attributes & 0x1)
+	compress := CompressType(r.Attributes & 0b11)
 
 	if compress == CompressionNone {
 		for _, record := range r.Records {
