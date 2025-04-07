@@ -104,13 +104,13 @@ func (streamDecoder *fetchResponseStreamDecoder) read(n int) (rst []byte, length
 
 // uncompress read all remaining bytes and uncompress them
 func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err error) {
-	switch compress {
-	case COMPRESSION_NONE:
+	switch CompressType(compress) {
+	case CompressionNone:
 		uncompressedBytes, err = io.ReadAll(reader)
 		if err != nil {
 			return uncompressedBytes, fmt.Errorf("read uncompressed records bytes error: %w", err)
 		}
-	case COMPRESSION_GZIP:
+	case CompressionGzip:
 		reader, err := gzip.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("create gzip reader of records bytes error: %w", err)
@@ -118,7 +118,7 @@ func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err 
 		if uncompressedBytes, err = io.ReadAll(reader); err != nil && err != io.EOF {
 			return nil, fmt.Errorf("uncompress gzip records error: %w", err)
 		}
-	case COMPRESSION_SNAPPY:
+	case CompressionSnappy:
 		buf, err := io.ReadAll(reader)
 		if err != nil {
 			return nil, fmt.Errorf("read streamDecoder error: %w", err)
@@ -127,7 +127,7 @@ func uncompress(compress int8, reader io.Reader) (uncompressedBytes []byte, err 
 		if err != nil {
 			return nil, fmt.Errorf("uncompress snappy records error: %w", err)
 		}
-	case COMPRESSION_LZ4:
+	case CompressionLz4:
 		reader := lz4.NewReader(reader)
 		uncompressedBytes, err = io.ReadAll(reader)
 		if err != nil {

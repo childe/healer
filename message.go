@@ -129,18 +129,11 @@ type Message struct {
 // MessageSet is a batch of messages
 type MessageSet []*Message
 
-const (
-	COMPRESSION_NONE   int8 = 0
-	COMPRESSION_GZIP   int8 = 1
-	COMPRESSION_SNAPPY int8 = 2
-	COMPRESSION_LZ4    int8 = 3
-)
-
 func (message *Message) decompress() ([]byte, error) {
-	compression := message.Attributes & 7
+	compression := CompressType(message.Attributes & 7)
 	var rst []byte
 	switch compression {
-	case COMPRESSION_GZIP:
+	case CompressionGzip:
 		reader, err := gzip.NewReader(bytes.NewReader(message.Value))
 		if err != nil {
 			return nil, err
@@ -150,12 +143,14 @@ func (message *Message) decompress() ([]byte, error) {
 		} else {
 			return rst, nil
 		}
-	case COMPRESSION_SNAPPY:
+	case CompressionSnappy:
 		return snappy.Decode(message.Value)
-	case COMPRESSION_LZ4:
+	case CompressionLz4:
 		return lz4.Decode(nil, message.Value)
+	case CompressionNone:
+		return message.Value, nil
 	}
-	return nil, fmt.Errorf("unknown Compression Code %d", compression)
+	return nil, fmt.Errorf("unknown Compression Type %s", compression)
 }
 
 func (messageSet *MessageSet) Length() int {
@@ -272,8 +267,8 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 			copy(message.Value, payload[offset:offset+int(valueLength)])
 			offset += int(valueLength)
 		}
-		compression := message.Attributes & 0x07
-		if compression != COMPRESSION_NONE {
+		compression := CompressType(message.Attributes & 0x07)
+		if compression != CompressionNone {
 			message.Value, err = message.decompress()
 			if err != nil {
 				return messageSet, err
@@ -281,7 +276,7 @@ func DecodeToMessageSet(payload []byte) (MessageSet, error) {
 		}
 
 		// if crc check true, then go on decode to next level
-		if err == nil && compression != COMPRESSION_NONE {
+		if err == nil && compression != CompressionNone {
 			_messageSet, err := DecodeToMessageSet(message.Value)
 			if err != nil {
 				// TODO go on to next message in the messageSet?

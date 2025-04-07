@@ -28,7 +28,7 @@ type SimpleProducer struct {
 	closeChan chan struct{}
 	closed    bool
 
-	compressionValue int8
+	compressionValue CompressType
 	compressor       Compressor
 
 	once sync.Once
@@ -83,13 +83,13 @@ func NewSimpleProducer(ctx context.Context, topic string, partition int32, confi
 
 	switch cfg.CompressionType {
 	case "none":
-		p.compressionValue = COMPRESSION_NONE
+		p.compressionValue = CompressionNone
 	case "gzip":
-		p.compressionValue = COMPRESSION_GZIP
+		p.compressionValue = CompressionGzip
 	case "snappy":
-		p.compressionValue = COMPRESSION_SNAPPY
+		p.compressionValue = CompressionSnappy
 	case "lz4":
-		p.compressionValue = COMPRESSION_LZ4
+		p.compressionValue = CompressionLz4
 	default:
 		return nil, fmt.Errorf("unknown compress type")
 	}
@@ -217,7 +217,7 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 			MessageSize: 0, // compute in message encode
 
 			Crc:        0, // compute in message encode
-			Attributes: 0x00 | p.compressionValue,
+			Attributes: 0x00 | int8(p.compressionValue),
 			MagicByte:  int8(p.config.HealerMagicByte),
 			Key:        nil,
 			Value:      compressedValue,

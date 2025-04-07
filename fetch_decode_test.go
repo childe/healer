@@ -40,7 +40,6 @@ var resp FetchResponse = FetchResponse{
 						BaseSequence:         220,
 						Records: []Record{
 							{
-								length:         20,
 								attributes:     0,
 								timestampDelta: 1000,
 								offsetDelta:    0,
@@ -49,12 +48,41 @@ var resp FetchResponse = FetchResponse{
 								Headers:        []RecordHeader{},
 							},
 							{
-								length:         20,
 								attributes:     0,
 								timestampDelta: 2000,
 								offsetDelta:    1,
-								key:            []byte("key-2"),
-								value:          []byte("value-2"),
+								key:            []byte("key-22"),
+								value:          []byte("value-22"),
+								Headers:        []RecordHeader{},
+							},
+						},
+					}, {
+						BaseOffset:           120,
+						PartitionLeaderEpoch: 130,
+						Magic:                2,
+						CRC:                  0x01020304,
+						Attributes:           0 | int16(CompressionGzip),
+						LastOffsetDelta:      10,
+						BaseTimestamp:        1630000000000,
+						MaxTimestamp:         1630000010000,
+						ProducerID:           200,
+						ProducerEpoch:        210,
+						BaseSequence:         220,
+						Records: []Record{
+							{
+								attributes:     0,
+								timestampDelta: 1000,
+								offsetDelta:    2,
+								key:            []byte("key-3333333333"),
+								value:          []byte("value-3333333333"),
+								Headers:        []RecordHeader{},
+							},
+							{
+								attributes:     0,
+								timestampDelta: 2000,
+								offsetDelta:    3,
+								key:            []byte("key-4"),
+								value:          []byte("value-4"),
 								Headers:        []RecordHeader{},
 							},
 						},
@@ -100,8 +128,8 @@ func TestFetchResponseDecodeComplete(t *testing.T) {
 			}
 			i++
 		}
-		if i != 2 {
-			t.Errorf("expect 2 message, but got %d", i)
+		if i != 4 {
+			t.Errorf("expect 4 message, but got %d", i)
 		}
 	}
 }
@@ -109,6 +137,8 @@ func TestFetchResponseDecodeComplete(t *testing.T) {
 // append some bytes to the end of the payload
 func TestFetchResponseDecodeWithPartialRecords1(t *testing.T) {
 	for _, version := range []uint16{7, 10} {
+		t.Logf("version: %d", version)
+
 		payload, err := resp.Encode(version)
 		if err != nil {
 			t.Error(err)
@@ -135,6 +165,7 @@ func TestFetchResponseDecodeWithPartialRecords1(t *testing.T) {
 
 		i := 0
 		for msg := range messages {
+			t.Logf("msg: %+v", msg)
 			t.Logf("topic: %s, partition: %d, offset: %d key: %s value: %s",
 				msg.TopicName, msg.PartitionID, msg.Message.Offset, msg.Message.Key, msg.Message.Value)
 			if msg.Error != nil {
@@ -142,8 +173,8 @@ func TestFetchResponseDecodeWithPartialRecords1(t *testing.T) {
 			}
 			i++
 		}
-		if i != 2 {
-			t.Errorf("expect 2 message, but got %d", i)
+		if i != 4 {
+			t.Errorf("expect 4 message, but got %d", i)
 		}
 	}
 }
@@ -151,6 +182,8 @@ func TestFetchResponseDecodeWithPartialRecords1(t *testing.T) {
 // encode 2 records and trancate the last some bytes
 func TestFetchResponseDecodeWithPartialRecords2(t *testing.T) {
 	for _, version := range []uint16{7, 10} {
+		t.Logf("version: %d", version)
+
 		payload, err := resp.Encode(version)
 		if err != nil {
 			t.Error(err)
@@ -186,8 +219,8 @@ func TestFetchResponseDecodeWithPartialRecords2(t *testing.T) {
 			}
 			i++
 		}
-		if i != 1 {
-			t.Errorf("expect 1 message, but got %d", i)
+		if i != 2 {
+			t.Errorf("expect 2 message, but got %d", i)
 		}
 	}
 }

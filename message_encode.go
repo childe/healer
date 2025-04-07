@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 )
 
+// only used in unit test
 func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
@@ -86,13 +87,12 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 				}
 			}
 
+			offset := buf.Len()
+			binary.Write(buf, binary.BigEndian, uint32(0)) // placeholder for RecordBatchesLength
+
 			for _, recordBatch := range partition.RecordBatches {
 				recordBatchBytes, err := recordBatch.Encode(version)
 				if err != nil {
-					return nil, err
-				}
-
-				if err := binary.Write(buf, binary.BigEndian, int32(len(recordBatchBytes))); err != nil {
 					return nil, err
 				}
 
@@ -100,6 +100,8 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 					return nil, err
 				}
 			}
+			// Update RecordBatchesLength
+			binary.BigEndian.PutUint32(buf.Bytes()[offset:], uint32(buf.Len()-offset-4))
 		}
 	}
 
@@ -109,9 +111,9 @@ func (r *FetchResponse) Encode(version uint16) ([]byte, error) {
 func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 	buf := new(bytes.Buffer)
 
-	// BatchLength is variable, so reserve space for it
+	// BatchLength is variable, so reserve space for it.
 	defer func() {
-		binary.BigEndian.PutUint32(payload[8:], uint32(buf.Len()-8))
+		binary.BigEndian.PutUint32(payload[8:], uint32(buf.Len()-12)) // 12 is baseoffset + batchlength
 	}()
 
 	// Encode RecordBatch
@@ -156,12 +158,38 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 	if err := binary.Write(buf, binary.BigEndian, int32(len(r.Records))); err != nil {
 		return nil, err
 	}
-	for _, record := range r.Records {
-		recordBytes, err := record.Encode(version)
+
+	compress := CompressType(r.Attributes & 0x1)
+
+	if compress == CompressionNone {
+		for _, record := range r.Records {
+			recordBytes, err := record.Encode(version)
+			if err != nil {
+				return nil, err
+			}
+			if _, err := buf.Write(recordBytes); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		compressor := NewCompressor(compress.String())
+		b := new(bytes.Buffer)
+		for _, record := range r.Records {
+			recordBytes, err := record.Encode(version)
+			if err != nil {
+				return nil, err
+			}
+			if _, err := b.Write(recordBytes); err != nil {
+				return nil, err
+			}
+		}
+
+		compressed, err := compressor.Compress(b.Bytes())
 		if err != nil {
 			return nil, err
 		}
-		if _, err := buf.Write(recordBytes); err != nil {
+
+		if _, err := buf.Write(compressed); err != nil {
 			return nil, err
 		}
 	}
@@ -195,13 +223,13 @@ func (r *Record) Encode(version uint16) (payload []byte, err error) {
 
 	// Encode key length
 	keyLenBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutVarint(keyLenBuf, int64(r.keyLength))
+	n = binary.PutVarint(keyLenBuf, int64(len(r.key)))
 	if _, err := buf.Write(keyLenBuf[:n]); err != nil {
 		return nil, err
 	}
 
 	// Write key
-	if r.keyLength > 0 {
+	if len(r.key) > 0 {
 		if _, err := buf.Write(r.key); err != nil {
 			return nil, err
 		}
@@ -209,13 +237,13 @@ func (r *Record) Encode(version uint16) (payload []byte, err error) {
 
 	// Encode value length
 	valueLenBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutVarint(valueLenBuf, int64(r.valueLen))
+	n = binary.PutVarint(valueLenBuf, int64(len(r.value)))
 	if _, err := buf.Write(valueLenBuf[:n]); err != nil {
 		return nil, err
 	}
 
 	// Write value
-	if r.valueLen > 0 {
+	if len(r.value) > 0 {
 		if _, err := buf.Write(r.value); err != nil {
 			return nil, err
 		}
