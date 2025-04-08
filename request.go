@@ -43,9 +43,10 @@ const (
 // healer only implements these versions of the protocol, only version 0 is supported if not defined here
 // It must be sorted from high to low
 var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
-	API_MetadataRequest:     {7, 4, 1},
+	API_ProduceRequest:      {0},
 	API_FetchRequest:        {10, 7, 0},
 	API_OffsetRequest:       {1, 0},
+	API_MetadataRequest:     {7, 4, 1},
 	API_OffsetCommitRequest: {2, 0},
 	API_OffsetFetchRequest:  {1, 0},
 	API_ListGroups:          {5, 4, 3, 2, 1, 0},
