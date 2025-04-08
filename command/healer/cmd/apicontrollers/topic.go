@@ -10,6 +10,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetTopicConfig godoc
+// @Summary      获取主题特定配置
+// @Description  获取指定主题的特定配置项
+// @Tags         topics
+// @Accept       json
+// @Produce      json
+// @Param        topic      path    string  true   "主题名称"
+// @Param        config     path    string  true   "配置项名称"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /topic/{topic}/config/{config} [get]
 func GetTopicConfig(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 	bs, err := healer.NewBrokers(bootstrapServers)
@@ -43,6 +54,18 @@ func GetTopicConfig(c *gin.Context, client string) {
 	}
 }
 
+// AlterTopicConfig godoc
+// @Summary      修改主题配置
+// @Description  修改指定主题的特定配置项值
+// @Tags         topics
+// @Accept       json
+// @Produce      json
+// @Param        topic      path    string  true   "主题名称"
+// @Param        config     path    string  true   "配置项名称"
+// @Param        value      path    string  true   "配置项值"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /topic/{topic}/config/{config}/{value} [post]
 func AlterTopicConfig(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 	bs, err := healer.NewBrokers(bootstrapServers)
@@ -71,6 +94,17 @@ func AlterTopicConfig(c *gin.Context, client string) {
 	}
 }
 
+// GetTopicOffsets godoc
+// @Summary      获取主题偏移量
+// @Description  获取指定主题的偏移量信息
+// @Tags         topics
+// @Accept       json
+// @Produce      json
+// @Param        topic      path    string  true   "主题名称"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Param        timestamp  query   string  false  "时间戳（毫秒）"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /topic/{topic}/offsets [get]
 func GetTopicOffsets(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 	bs, err := healer.NewBrokers(bootstrapServers)
@@ -108,6 +142,16 @@ func GetTopicOffsets(c *gin.Context, client string) {
 	c.JSON(http.StatusOK, rst)
 }
 
+// GetTopicLogDirs godoc
+// @Summary      获取主题日志目录
+// @Description  获取指定主题的日志目录信息
+// @Tags         topics
+// @Accept       json
+// @Produce      json
+// @Param        topic      path    string  true   "主题名称"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /topic/{topic}/logdirs [get]
 func GetTopicLogDirs(c *gin.Context, clientID string) {
 	bootstrapServers := c.Query("bootstrap")
 	client, err := healer.NewClient(bootstrapServers, clientID)

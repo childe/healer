@@ -1,4 +1,10 @@
+// Package cmd provides the command line interface and HTTP API for Healer
 package cmd
+
+// @title           Healer API
+// @version         1.0
+// @description     Healer Kafka 管理 API
+// @BasePath        /
 
 import (
 	"encoding/base64"
@@ -10,8 +16,11 @@ import (
 
 	"github.com/childe/healer/command/healer/cmd/apicontrollers"
 
+	_ "github.com/childe/healer/docs" // 导入 swagger docs
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 var wrap = func(f func(c *gin.Context, client string), client string) func(c *gin.Context) {
@@ -111,8 +120,11 @@ var apiCmd = &cobra.Command{
 			})
 		}
 
+		// Swagger UI 路由
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 		router.GET("/", func(c *gin.Context) {
-			c.String(http.StatusOK, "")
+			c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
 		})
 
 		router.GET("/health", func(c *gin.Context) {
@@ -125,6 +137,7 @@ var apiCmd = &cobra.Command{
 			topic := c.Param("topic")
 			c.Redirect(http.StatusMovedPermanently, "/configs/topic/"+topic+"?"+c.Request.URL.RawQuery)
 		})
+
 		router.GET("/topic/:topic/offsets", wrap(apicontrollers.GetTopicOffsets, client))
 		router.GET("/topic/:topic/logdirs", wrap(apicontrollers.GetTopicLogDirs, client))
 		router.GET("/topic/:topic/config/:config", wrap(apicontrollers.GetTopicConfig, client))
@@ -139,11 +152,8 @@ var apiCmd = &cobra.Command{
 
 		router.POST("/alter-partition-reassignments", wrap(apicontrollers.AlterPartitionReassignments, client))
 		router.POST("/elect-leaders", wrap(apicontrollers.ElectLeaders, client))
-
 		router.POST("/list-partition-reassignments", wrap(apicontrollers.ListPartitionReassignments, client))
-
 		router.POST("/create-partitions", wrap(apicontrollers.CreatePartitions, client))
-
 		router.POST("/describe-logdirs", wrap(apicontrollers.DescribeLogdirs, client))
 
 		router.POST("/describe-acls", wrap(apicontrollers.DescribeAcls, client))

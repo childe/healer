@@ -7,6 +7,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetTopicConfigs godoc
+// @Summary      获取主题配置
+// @Description  获取指定主题的所有配置信息
+// @Tags         configs
+// @Accept       json
+// @Produce      json
+// @Param        topic      path    string  true   "主题名称"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /configs/topic/{topic} [get]
+func GetTopicConfigs(c *gin.Context, client string) {
+	GetConfigs(c, "topic", client)
+}
+
+// GetBrokerConfigs godoc
+// @Summary      获取 Broker 配置
+// @Description  获取指定 Broker 的配置信息
+// @Tags         configs
+// @Accept       json
+// @Produce      json
+// @Param        broker     path    string  true   "Broker ID"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /configs/broker/{broker} [get]
+func GetBrokerConfigs(c *gin.Context, client string) {
+	GetConfigs(c, "broker", client)
+}
+
 func GetConfigs(c *gin.Context, resourceType, clientID string) {
 	bootstrapServers := c.Query("bootstrap")
 	client, err := healer.NewClient(bootstrapServers, clientID)
@@ -25,12 +53,4 @@ func GetConfigs(c *gin.Context, resourceType, clientID string) {
 	} else {
 		c.JSON(http.StatusOK, resp)
 	}
-}
-
-func GetTopicConfigs(c *gin.Context, clientID string) {
-	GetConfigs(c, "topic", clientID)
-}
-
-func GetBrokerConfigs(c *gin.Context, clientID string) {
-	GetConfigs(c, "broker", clientID)
 }

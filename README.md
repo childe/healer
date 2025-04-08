@@ -38,11 +38,9 @@ group consumer(cluster style)
 
 [https://github.com/childe/healer/blob/master/command/healer/cmd/group-consumer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/group-consumer.go)
 
-
 ## Producer
 
 [https://github.com/childe/healer/blob/master/command/healer/cmd/console-producer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/console-producer.go)
-
 
 ## Console Consumer
 
@@ -50,9 +48,26 @@ one consumer consume messages from all partitons
 
 [https://github.com/childe/healer/blob/master/command/healer/cmd/console-consumer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/console-consumer.go)
 
-
 ## Simple Consumer
 
 consume from only one certain partition
 
 [https://github.com/childe/healer/blob/master/command/healer/cmd/simple-consumer.go](https://github.com/childe/healer/blob/master/command/healer/cmd/simple-consumer.go)
+
+## API Documentation
+
+To generate API documentation, you need to:
+
+1. Install swag tool:
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest
+```
+
+2. Generate Swagger documentation:
+
+```bash
+swag init -g command/healer/cmd/api.go
+```
+
+3. Start the server and visit http://localhost:8080/swagger/index.html

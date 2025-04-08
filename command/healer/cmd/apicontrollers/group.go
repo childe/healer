@@ -8,6 +8,14 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// ListGroups godoc
+// @Summary      列出消费者组
+// @Description  获取所有消费者组列表
+// @Tags         groups
+// @Accept       json
+// @Produce      json
+// @Success      200    {array}   string
+// @Router       /groups [get]
 func ListGroups(c *gin.Context, clientID string) {
 	bootstrapServers := c.Query("bootstrap")
 
@@ -26,6 +34,16 @@ func ListGroups(c *gin.Context, clientID string) {
 	c.JSON(http.StatusOK, groups)
 }
 
+// DescribeGroups godoc
+// @Summary      获取消费者组详情
+// @Description  获取指定消费者组的详细信息
+// @Tags         groups
+// @Accept       json
+// @Produce      json
+// @Param        group      path    string  true   "消费者组名称"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /group/{group} [get]
 func DescribeGroups(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 	group := c.Param("group")
@@ -128,6 +146,16 @@ func getCommittedOffset(brokers *healer.Brokers, topic string, partitions []int3
 	return rst, nil
 }
 
+// GetPending godoc
+// @Summary      获取消费者组待消费消息
+// @Description  获取指定消费者组在指定主题上的待消费消息信息
+// @Tags         groups
+// @Accept       json
+// @Produce      json
+// @Param        group  path      string  true  "消费者组名称"
+// @Param        topic  path      string  true  "主题名称"
+// @Success      200    {object}  map[string]interface{}
+// @Router       /group/{group}/pending/{topic} [get]
 func GetPending(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 	groupID := c.Param("group")

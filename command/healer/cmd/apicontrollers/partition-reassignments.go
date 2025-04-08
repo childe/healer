@@ -10,6 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ListPartitionReassignments godoc
+// @Summary      列出分区重分配
+// @Description  获取当前正在进行的分区重分配信息
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Param        timeout    query   string  false  "超时时间（毫秒），默认 30000"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /list-partition-reassignments [post]
 func ListPartitionReassignments(c *gin.Context, client string) {
 	type reassignment struct {
 		Topic     string `json:"topic"`
@@ -61,6 +71,16 @@ func ListPartitionReassignments(c *gin.Context, client string) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// AlterPartitionReassignments godoc
+// @Summary      修改分区重分配
+// @Description  修改 Kafka 主题分区的重分配计划
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Param        timeout    query   string  true   "超时时间（毫秒）"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /alter-partition-reassignments [post]
 func AlterPartitionReassignments(c *gin.Context, client string) {
 	type reassignment struct {
 		Topic     string  `json:"topic"`

@@ -6,3 +6,5 @@ vendor/
 .idea
 /docker/healer
 /coverage.out
+# Swagger generated files
+/docs/

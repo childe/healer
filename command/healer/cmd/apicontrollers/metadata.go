@@ -8,6 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetMetadata godoc
+// @Summary      获取元数据
+// @Description  获取 Kafka 集群元数据信息
+// @Tags         metadata
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /metadata [get]
 func GetMetadata(c *gin.Context) {
 	bootstrapServers := c.Query("bootstrap")
 	bs, err := healer.NewBrokers(bootstrapServers)
