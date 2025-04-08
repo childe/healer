@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// MockConn is a mock struct for the Conn type
-type MockConn struct {
+// mockConn is a mock struct for the Conn type
+type mockConn struct {
 	MockRead             func(p []byte) (n int, err error)
 	MockWrite            func(p []byte) (n int, err error)
 	MockClose            func() error
@@ -17,34 +17,34 @@ type MockConn struct {
 	MockSetWriteDeadline func(t time.Time) error
 }
 
-func (_m *MockConn) Read(p []byte) (n int, err error) {
+func (_m *mockConn) Read(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (_m *MockConn) Write(p []byte) (n int, err error) {
+func (_m *mockConn) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (_m *MockConn) Close() error {
+func (_m *mockConn) Close() error {
 	return nil
 }
 
-func (_m *MockConn) LocalAddr() net.Addr {
+func (_m *mockConn) LocalAddr() net.Addr {
 	return nil
 }
 
-func (_m *MockConn) RemoteAddr() net.Addr {
+func (_m *mockConn) RemoteAddr() net.Addr {
 	return nil
 }
 
-func (_m *MockConn) SetDeadline(t time.Time) error {
+func (_m *mockConn) SetDeadline(t time.Time) error {
 	return nil
 }
 
-func (_m *MockConn) SetReadDeadline(t time.Time) error {
+func (_m *mockConn) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
-func (_m *MockConn) SetWriteDeadline(t time.Time) error {
+func (_m *mockConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }

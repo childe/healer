@@ -480,7 +480,7 @@ func TestConsumeEOFInResponse(t *testing.T) {
 			"retry.backoff.ms":  0,
 		}
 
-		mockey.Mock((*net.Dialer).Dial).Return(&MockConn{}, nil).Build()
+		mockey.Mock((*net.Dialer).Dial).Return(&mockConn{}, nil).Build()
 
 		mockey.Mock(NewBrokersWithConfig).Return(&Brokers{}, nil).Build()
 		mockey.Mock(NewBroker).Return(newMockBroker(), nil).Build()
@@ -494,11 +494,11 @@ func TestConsumeEOFInResponse(t *testing.T) {
 		brokerCloseOrigin := (*Broker).Close
 		brokerClose := mockey.Mock((*Broker).Close).To(func(broker *Broker) { (brokerCloseOrigin)(broker) }).Origin(&brokerCloseOrigin).Build()
 		createConn := mockey.Mock((*Broker).createConnAndAuth).To(func(broker *Broker) error {
-			broker.conn = &MockConn{}
+			broker.conn = &mockConn{}
 			return nil
 		}).Build()
 
-		mockey.Mock((*Broker).requestStreamingly).Return(&MockConn{}, 0, nil).Build() // ensureOpen before requestStreamingly
+		mockey.Mock((*Broker).requestStreamingly).Return(&mockConn{}, 0, nil).Build() // ensureOpen before requestStreamingly
 
 		hasFailed := false
 		mockey.Mock((*fetchResponseStreamDecoder).streamDecode).To(func(decoder *fetchResponseStreamDecoder, ctx context.Context, startOffset int64) error {

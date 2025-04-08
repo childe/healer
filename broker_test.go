@@ -16,14 +16,14 @@ func newMockBroker() *Broker {
 		address: "localhost:9092",
 		nodeID:  0,
 		config:  &BrokerConfig{},
-		conn:    &MockConn{},
+		conn:    &mockConn{},
 	}
 }
 
 func TestNewBroker(t *testing.T) {
 	mockey.PatchConvey("TestNewBroker", t, func() {
 		mockey.Mock((*Broker).requestAPIVersions).Return(APIVersionsResponse{}, nil).Build()
-		mockey.Mock((*net.Dialer).Dial).Return(&MockConn{}, nil).Build()
+		mockey.Mock((*net.Dialer).Dial).Return(&mockConn{}, nil).Build()
 		broker, err := NewBroker("127.0.0.1:9092", 0, DefaultBrokerConfig())
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(broker, convey.ShouldNotBeNil)
@@ -70,7 +70,7 @@ func TestGetHighestAvailableAPIVersion(t *testing.T) {
 func TestReopenConn(t *testing.T) {
 	mockey.PatchConvey("conn EOF and reopen new conn", t, func() {
 		mockey.Mock(newAPIVersionsResponse).Return(APIVersionsResponse{}, nil).Build()
-		mockey.Mock((*net.Dialer).Dial).Return(&MockConn{}, nil).Build()
+		mockey.Mock((*net.Dialer).Dial).Return(&mockConn{}, nil).Build()
 		mockey.Mock(NewMetadataResponse).Return(MetadataResponse{}, nil).Build()
 		brokerCloseOrigin := (*Broker).Close
 		brokerClose := mockey.Mock((*Broker).Close).To(func(broker *Broker) { (brokerCloseOrigin)(broker) }).Origin(&brokerCloseOrigin).Build()
@@ -115,7 +115,7 @@ func TestReopenConn(t *testing.T) {
 func TestRequestLock(t *testing.T) {
 	mockey.PatchConvey("ONE broker do Request in multi goroutines in the same time. One closes because of EOF, others should reopen and then complete Request, no nil point panic", t, func() {
 		mockey.Mock(newAPIVersionsResponse).Return(APIVersionsResponse{}, nil).Build()
-		mockey.Mock((*net.Dialer).Dial).Return(&MockConn{}, nil).Build()
+		mockey.Mock((*net.Dialer).Dial).Return(&mockConn{}, nil).Build()
 		mockey.Mock(NewMetadataResponse).Return(MetadataResponse{}, nil).Build()
 
 		broker, err := NewBroker("127.0.0.1:9092", 0, DefaultBrokerConfig())
