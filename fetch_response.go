@@ -528,9 +528,18 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(ctx context.Contex
 	if err := streamDecoder.decodeHeader(streamDecoder.version); err != nil {
 		return err
 	}
+	defer func() {
+		// 将 LimitedReader 中的剩余数据读取完毕
+		streamDecoder.readAll()
+
+		logger.V(5).Info("decode fetch response done", "correlationID", streamDecoder.correlationID)
+	}()
+
 	if streamDecoder.responsesCount == 0 {
 		return nil
 	}
+
+	logger.V(5).Info("decode fetch response", "correlationID", streamDecoder.correlationID, "responsesCount", streamDecoder.responsesCount)
 
 	for i := 0; i < streamDecoder.responsesCount; i++ {
 		err := streamDecoder.decodeResponses(streamDecoder.version)
@@ -551,12 +560,6 @@ func (streamDecoder *fetchResponseStreamDecoder) streamDecode(ctx context.Contex
 			}
 		}
 	}
-
-	// 早期版本的协议可能会有多出来的字节,需要丢弃
-	if streamDecoder.more {
-		streamDecoder.readAll()
-	}
-	logger.V(5).Info("decode fetch response done", "correlationID", streamDecoder.correlationID)
 
 	return nil
 }
