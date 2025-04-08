@@ -1,6 +1,7 @@
 package healer
 
 import (
+	"encoding/binary"
 	"net"
 	"time"
 )
@@ -18,6 +19,11 @@ type mockConn struct {
 }
 
 func (_m *mockConn) Read(p []byte) (n int, err error) {
+	// mock the response length
+	if len(p) == 4 {
+		binary.BigEndian.PutUint32(p, 100)
+	}
+
 	return len(p), nil
 }
 

@@ -82,7 +82,7 @@ func (p defaultReadParser) Read() ([]byte, error) {
 		}
 	}
 	copy(resp[0:4], responseLengthBuf)
-	// logger.V(5).Info("response info", "length", len(resp), "CorrelationID", binary.BigEndian.Uint32(resp[4:]))
+	logger.V(5).Info("response info", "length", len(resp), "CorrelationID", binary.BigEndian.Uint32(resp[4:]))
 	return resp, nil
 }
 
