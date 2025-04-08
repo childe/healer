@@ -34,7 +34,7 @@ var getOffsetsCmd = &cobra.Command{
 			//timestamp = time.Now().UnixMilli()
 		} else if timestamp == -2 {
 			// use 0 as timestamp, response will return correct earliest timestamp associated with the offset. if use -2 , timestamp returned is -1. weird.
-			timestamp = 0
+			// timestamp = 0
 		}
 
 		brokers, err := healer.NewBrokers(bs)
