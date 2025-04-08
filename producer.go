@@ -56,7 +56,7 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 
 	for {
 		if err = p.updateCurrentSimpleProducer(); err != nil {
-			logger.Error(err, "update current simple consumer, sleep and retry", "topic", p.topic, "retry_backoff_ms", p.config.RetryBackOffMS)
+			logger.Error(err, "update current simple producer, sleep and retry", "topic", p.topic, "retry_backoff_ms", p.config.RetryBackOffMS)
 			time.Sleep(time.Duration(p.config.RetryBackOffMS) * time.Millisecond)
 		} else {
 			break
