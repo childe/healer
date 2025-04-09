@@ -3,36 +3,36 @@ name: Build and Push Docker Image
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.23
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.23
 
-    - name: Test
-      run: for _ in {1..5} ; do go test -v -gcflags="all=-N -l" -count=1 ./... && break ; done
+      - name: Test
+        run: make test
 
-    - name: Build
-      run: CGO_ENABLED=0 go build  -ldflags "-X github.com/childe/healer/command/healer/cmd.version=$(git describe --tags --always) -X github.com/childe/healer/command/healer/cmd.buildTime=$(git log -1 --format='%cI')" -o docker/healer ./command/healer
+      - name: Build
+        run: make build && mv healer docker/
 
-    - name: Build the Docker image
-      run: docker build -t rmself/healer:${GITHUB_REF_NAME} docker
+      - name: Build the Docker image
+        run: docker build -t rmself/healer:${GITHUB_REF_NAME} docker
 
-    - name: Log in to Docker Hub
-      run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Push Docker image
-      run: docker push rmself/healer:${GITHUB_REF_NAME}
+      - name: Push Docker image
+        run: docker push rmself/healer:${GITHUB_REF_NAME}
 
-    - name: Tag latest
-      run: docker tag rmself/healer:${GITHUB_REF_NAME} rmself/healer
+      - name: Tag latest
+        run: docker tag rmself/healer:${GITHUB_REF_NAME} rmself/healer
 
-    - name: Push Docker image
-      run: docker push rmself/healer
+      - name: Push Docker image
+        run: docker push rmself/healer
