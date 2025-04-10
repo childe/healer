@@ -14,6 +14,8 @@ import (
 // @Tags         metadata
 // @Accept       json
 // @Produce      json
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Param        topics     query   array   false  "主题名称列表"
 // @Success      200  {object}  map[string]interface{}
 // @Router       /metadata [get]
 func GetMetadata(c *gin.Context) {

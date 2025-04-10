@@ -8,6 +8,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DescribeLogdirs godoc
+// @Summary      描述日志目录
+// @Description  获取指定主题的日志目录信息
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Param        topics     body    array   true   "主题名称列表"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /describe-logdirs [post]
 func DescribeLogdirs(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 

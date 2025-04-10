@@ -14,6 +14,7 @@ import (
 // @Tags         groups
 // @Accept       json
 // @Produce      json
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
 // @Success      200    {array}   string
 // @Router       /groups [get]
 func ListGroups(c *gin.Context, clientID string) {
@@ -152,8 +153,9 @@ func getCommittedOffset(brokers *healer.Brokers, topic string, partitions []int3
 // @Tags         groups
 // @Accept       json
 // @Produce      json
-// @Param        group  path      string  true  "消费者组名称"
-// @Param        topic  path      string  true  "主题名称"
+// @Param        group      path    string  true   "消费者组名称"
+// @Param        topic      path    string  true   "主题名称"
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
 // @Success      200    {object}  map[string]interface{}
 // @Router       /group/{group}/pending/{topic} [get]
 func GetPending(c *gin.Context, client string) {

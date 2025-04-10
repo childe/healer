@@ -8,6 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CreatePartitions godoc
+// @Summary      创建分区
+// @Description  为指定主题创建新的分区
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        bootstrap  query   string  true   "Kafka bootstrap servers, 格式: host1:port1,host2:port2"
+// @Param        topic      body    string  true   "主题名称"
+// @Param        count      body    int32   true   "新增分区数量"
+// @Param        timeout    body    int     true   "超时时间（毫秒）"
+// @Success      200       {object}  map[string]interface{}
+// @Router       /create-partitions [post]
 func CreatePartitions(c *gin.Context, client string) {
 	bootstrapServers := c.Query("bootstrap")
 	bs, err := healer.NewBrokers(bootstrapServers)
