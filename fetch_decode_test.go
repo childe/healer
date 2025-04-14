@@ -38,7 +38,7 @@ var resp FetchResponse = FetchResponse{
 						ProducerID:           200,
 						ProducerEpoch:        210,
 						BaseSequence:         220,
-						Records: []Record{
+						Records: []*Record{
 							{
 								attributes:     0,
 								timestampDelta: 1000,
@@ -68,7 +68,7 @@ var resp FetchResponse = FetchResponse{
 						ProducerID:           200,
 						ProducerEpoch:        210,
 						BaseSequence:         220,
-						Records: []Record{
+						Records: []*Record{
 							{
 								attributes:     0,
 								timestampDelta: 1000,

@@ -3,6 +3,7 @@ package healer
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 )
 
 // TODO type define ApiKey and change api_XXX to ApiKey type
@@ -43,7 +44,7 @@ const (
 // healer only implements these versions of the protocol, only version 0 is supported if not defined here
 // It must be sorted from high to low
 var availableVersions map[uint16][]uint16 = map[uint16][]uint16{
-	API_ProduceRequest:      {0},
+	API_ProduceRequest:      {9, 0},
 	API_FetchRequest:        {10, 7, 0},
 	API_OffsetRequest:       {1, 0},
 	API_MetadataRequest:     {7, 4, 1},
@@ -109,6 +110,37 @@ func (h *RequestHeader) EncodeTo(payload []byte) int {
 	}
 
 	return offset
+}
+
+func (h *RequestHeader) WriteTo(w io.Writer) (n int64, err error) {
+	var o int
+	binary.Write(w, binary.BigEndian, h.APIKey)
+	n += 2
+
+	binary.Write(w, binary.BigEndian, h.APIVersion)
+	n += 2
+
+	binary.Write(w, binary.BigEndian, h.CorrelationID)
+	n += 4
+
+	if h.headerVersion() >= 1 {
+		o, err = writeNullableString(w, h.ClientID)
+		n += int64(o)
+		if err != nil {
+			return n, err
+		}
+	}
+
+	if h.IsFlexible() {
+		tag := h.TaggedFields.Encode()
+		err = binary.Write(w, binary.BigEndian, tag)
+		if err != nil {
+			return n, err
+		}
+		n += int64(len(tag))
+	}
+
+	return n, nil
 }
 
 // DecodeRequestHeader decodes request header from []byte, just used in test cases

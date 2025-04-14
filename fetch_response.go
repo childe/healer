@@ -12,21 +12,6 @@ import (
 	"github.com/pierrec/lz4/v4"
 )
 
-type RecordBatch struct {
-	BaseOffset           int64
-	BatchLength          int32
-	PartitionLeaderEpoch int32
-	Magic                int8
-	CRC                  uint32
-	Attributes           int16
-	LastOffsetDelta      int32
-	BaseTimestamp        int64
-	MaxTimestamp         int64
-	ProducerID           int64
-	ProducerEpoch        int16
-	BaseSequence         int32
-	Records              []Record
-}
 type PartitionResponse struct {
 	PartitionID         int32
 	ErrorCode           int16
@@ -37,8 +22,10 @@ type PartitionResponse struct {
 		ProducerID  int64
 		FirstOffset int64
 	}
-	RecordBatchesLength int32
-	RecordBatches       []RecordBatch
+
+	// RecordBatches is also called MessageSet somewhere
+	RecordBatchesSize int32
+	RecordBatches     []RecordBatch
 }
 
 type FetchResponse struct {
@@ -59,7 +46,6 @@ type fetchResponseStreamDecoder struct {
 
 	buffers  io.Reader
 	messages chan *FullMessage
-	more     bool
 
 	version uint16
 
@@ -445,15 +431,15 @@ func (streamDecoder *fetchResponseStreamDecoder) decodePartitionResponse(topicNa
 	if _, err = streamDecoder.Read(buf[:4]); err != nil {
 		return err
 	}
-	p.RecordBatchesLength = int32(binary.BigEndian.Uint32(buf))
-	if p.RecordBatchesLength <= 0 {
+	p.RecordBatchesSize = int32(binary.BigEndian.Uint32(buf))
+	if p.RecordBatchesSize <= 0 {
 		return nil
 	}
 
 	// RecordBatchLength consists of more than one Record, so we try to decode the messageSet
 	// if int(p.RecordBatchLength) > streamDecoder.totalLength-streamDecoder.offset { }
 
-	err = streamDecoder.decodeMessageSet(topicName, p.PartitionID, p.RecordBatchesLength, version)
+	err = streamDecoder.decodeMessageSet(topicName, p.PartitionID, p.RecordBatchesSize, version)
 	return err
 }
 

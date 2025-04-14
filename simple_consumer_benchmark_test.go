@@ -35,9 +35,9 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 		mockey.Mock((*SimpleConsumer).getOffset).Return(0, nil).Build()
 		mockey.Mock((*Broker).getHighestAvailableAPIVersion).Return(version).Build()
 
-		records := make([]Record, 0)
+		records := make([]*Record, 0)
 		for i := 0; i < 20; i++ {
-			records = append(records, Record{
+			records = append(records, &Record{
 				length:         100,
 				attributes:     0,
 				timestampDelta: 1000,

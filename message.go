@@ -9,92 +9,6 @@ import (
 
 var errUncompleteRecord = errors.New("uncomplete Record, The last bytes are not enough to decode the record")
 
-// RecordHeader is concluded in Record
-type RecordHeader struct {
-	headerKeyLength   int32
-	Key               string
-	headerValueLength int32
-	Value             []byte
-}
-
-func decodeHeader(payload []byte) (header RecordHeader, offset int) {
-	keyLength, o := binary.Varint(payload[offset:])
-	header.headerKeyLength = int32(keyLength)
-	offset += o
-	header.Key = string(payload[offset : offset+int(header.headerKeyLength)])
-	offset += int(header.headerKeyLength)
-
-	valueLength, o := binary.Varint(payload[offset:])
-	header.headerValueLength = int32(valueLength)
-	offset += o
-	header.Value = make([]byte, valueLength)
-	offset += copy(header.Value, payload[offset:offset+int(header.headerValueLength)])
-	return
-}
-
-// Record is element of Records
-type Record struct {
-	length         int32
-	attributes     int8
-	timestampDelta int64
-	offsetDelta    int32
-	keyLength      int32
-	key            []byte
-	valueLen       int32
-	value          []byte
-	Headers        []RecordHeader
-}
-
-// DecodeToRecord decodes the struct Record from the given payload.
-func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
-	length, o := binary.Varint(payload)
-	if length == 0 || len(payload[o:]) < int(length) {
-		return record, o, errUncompleteRecord
-	}
-	record.length = int32(length)
-	offset += o
-
-	record.attributes = int8(payload[offset])
-	offset++
-
-	timestampDelta, o := binary.Varint(payload[offset:])
-	record.timestampDelta = int64(timestampDelta)
-	offset += o
-
-	offsetDelta, o := binary.Varint(payload[offset:])
-	record.offsetDelta = int32(offsetDelta)
-	offset += o
-
-	keyLength, o := binary.Varint(payload[offset:])
-	record.keyLength = int32(keyLength)
-	offset += o
-
-	if keyLength > 0 {
-		record.key = make([]byte, keyLength)
-		offset += copy(record.key, payload[offset:offset+int(record.keyLength)])
-	}
-
-	valueLen, o := binary.Varint(payload[offset:])
-	record.valueLen = int32(valueLen)
-	offset += o
-	if valueLen > 0 {
-		record.value = make([]byte, valueLen)
-		offset += copy(record.value, payload[offset:offset+int(record.valueLen)])
-	}
-
-	headerCount, o := binary.Varint(payload[offset:])
-	offset += o
-	if headerCount > 0 {
-		record.Headers = make([]RecordHeader, headerCount)
-		for i := int64(0); i < headerCount; i++ {
-			record.Headers[i], o = decodeHeader(payload[offset:])
-			offset += o
-		}
-	}
-
-	return
-}
-
 // FullMessage contains message value and topic and partition
 type FullMessage struct {
 	TopicName   string
@@ -103,7 +17,7 @@ type FullMessage struct {
 	Message     *Message
 }
 
-// Message is a message in a topic
+// Message is one message in fetch response with magic byte 0 or 1. Magic 2 use Record
 type Message struct {
 	Offset      int64
 	MessageSize int32
@@ -192,7 +106,7 @@ func (messageSet *MessageSet) Encode(payload []byte, offset int) int {
 	return offset
 }
 
-// DecodeToMessageSet decodes a MessageSet from a byte array.
+// DecodeToMessageSet creates a MessageSet from a byte array.
 // MessageSet is [offset message_size message], but it only decode one message in healer generally, loops inside decodeMessageSetMagic0or1.
 // if message.Value is compressed, it will uncompress the value and returns an array of messages.
 func DecodeToMessageSet(payload []byte) (MessageSet, error) {
