@@ -1,5 +1,6 @@
 default: build
 
+.PHONY: swag
 swag:
 	swag init -g command/healer/cmd/api.go
 
