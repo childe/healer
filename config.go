@@ -212,7 +212,12 @@ type ProducerConfig struct {
 	Retries          int   `json:"retries,string" mapstructure:"retries"`
 	RequestTimeoutMS int32 `json:"request.timeout.ms,string" mapstructure:"request.timeout.ms"`
 
-	// producer.AddMessage will use this config to assemble Message
+	//Prior to Kafka 0.11, messages were transferred and stored in message sets.
+	//In a message set, each message has its own metadata.
+	//Note that although message sets are represented as an array,
+	//they are not preceded by an int32 array size like other array elements in the protocol.
+	//https://kafka.apache.org/documentation/#messageset
+	//only 2 is implemented for now
 	HealerMagicByte int `json:"healer.magicbyte,string" mapstructure:"healer.magicbyte"`
 }
 
@@ -250,6 +255,14 @@ var defaultProducerConfig = DefaultProducerConfig()
 // create ProducerConfig from map or return directly if config is ProducerConfig
 // return defaultProducerConfig if config is nil
 func createProducerConfig(config interface{}) (c ProducerConfig, err error) {
+	// TODO support magic 0 and 1
+	defer func() {
+		if c.HealerMagicByte < 2 {
+			c.HealerMagicByte = 2
+			logger.Info("ONLY SUPPORT MAGIC BYTE 2 FOR NOW, CHANGE IT TO 2")
+		}
+	}()
+
 	switch v := config.(type) {
 	case nil:
 		return defaultProducerConfig, nil

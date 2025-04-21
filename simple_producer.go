@@ -69,10 +69,6 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 func NewSimpleProducer(ctx context.Context, topic string, partition int32, config any) (*SimpleProducer, error) {
 	cfg, err := createProducerConfig(config)
 	logger.Info("create simple producer", "origin_config", config, "final_config", cfg)
-	if cfg.HealerMagicByte < 2 {
-		cfg.HealerMagicByte = 2
-		logger.Info("ONLY SUPPORT MAGIC BYTE 2 FOR NOW, CHANGE IT TO 2")
-	}
 	if err != nil {
 		return nil, err
 	}
