@@ -101,7 +101,7 @@ func writeCompactNullableString(w io.Writer, s *string) (n int, err error) {
 // First the length N+1 is given as an UNSIGNED_VARINT.
 // Then N bytes follow.
 func encodeCompactBytes(s []byte) []byte {
-	payload := make([]byte, len(s)+binary.MaxVarintLen32)
+	payload := make([]byte, len(s)+binary.MaxVarintLen64)
 	offset := binary.PutUvarint(payload, 1+uint64(len(s)))
 	offset += copy(payload[offset:], s)
 	return payload[:offset]
@@ -128,8 +128,8 @@ func encodeCompactNullableBytes(s []byte) []byte {
 	if s == nil {
 		return []byte{0}
 	}
-	payload := make([]byte, len(s)+binary.MaxVarintLen32)
-	offset := binary.PutVarint(payload, 1+int64(len(s)))
+	payload := make([]byte, len(s)+binary.MaxVarintLen64)
+	offset := binary.PutUvarint(payload, 1+uint64(len(s)))
 	offset += copy(payload[offset:], s)
 	return payload[:offset]
 }

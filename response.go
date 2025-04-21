@@ -91,7 +91,7 @@ func (p defaultReadParser) Parse(data []byte) (Response, error) {
 	case API_Heartbeat:
 		return NewHeartbeatResponse(data)
 	case API_ProduceRequest:
-		return NewProduceResponse(data)
+		return NewProduceResponse(data, p.version)
 	case API_MetadataRequest:
 		return NewMetadataResponse(data, p.version)
 	case API_ApiVersions:

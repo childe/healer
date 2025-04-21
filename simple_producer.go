@@ -21,7 +21,7 @@ type SimpleProducer struct {
 	topic     string
 	partition int32
 
-	messageSet MessageSet
+	records []*Record
 
 	lock sync.Mutex
 
@@ -66,9 +66,13 @@ func (p *SimpleProducer) createLeader() (*Broker, error) {
 // NewSimpleProducer creates a new simple producer
 // config can be a map[string]interface{} or a ProducerConfig,
 // use DefaultProducerConfig if config is nil
-func NewSimpleProducer(ctx context.Context, topic string, partition int32, config interface{}) (*SimpleProducer, error) {
+func NewSimpleProducer(ctx context.Context, topic string, partition int32, config any) (*SimpleProducer, error) {
 	cfg, err := createProducerConfig(config)
 	logger.Info("create simple producer", "origin_config", config, "final_config", cfg)
+	if cfg.HealerMagicByte < 2 {
+		cfg.HealerMagicByte = 2
+		logger.Info("ONLY SUPPORT MAGIC BYTE 2 FOR NOW, CHANGE IT TO 2")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +99,7 @@ func NewSimpleProducer(ctx context.Context, topic string, partition int32, confi
 	}
 	p.compressor = NewCompressor(cfg.CompressionType)
 
-	p.messageSet = make([]*Message, 0, cfg.MessageMaxCount)
+	p.records = make([]*Record, 0, cfg.MessageMaxCount)
 
 	leader := ctx.Value(leaderKey)
 	if leader != nil {
@@ -139,25 +143,20 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 	valueCopy := make([]byte, len(value))
 	copy(valueCopy, value)
 
-	message := &Message{
-		Offset:      0,
-		MessageSize: 0, // compute in message encode
+	record := Record{
+		attributes:     0x00, // compress in upper message set level
+		timestampDelta: 0,
+		offsetDelta:    0,
 
-		Crc:        0,    // compute in message encode
-		Attributes: 0x00, // compress in upper message set level
-		MagicByte:  int8(p.config.HealerMagicByte),
-		Key:        key,
-		Value:      valueCopy,
-	}
-	if p.config.HealerMagicByte == 1 {
-		message.Timestamp = uint64(time.Now().UnixMilli())
+		key:   key,
+		value: valueCopy,
 	}
 
-	p.messageSet = append(p.messageSet, message)
-	if len(p.messageSet) >= p.config.MessageMaxCount {
-		messageSet := p.messageSet
-		p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-		p.flush(messageSet)
+	p.records = append(p.records, &record)
+	if len(p.records) >= p.config.MessageMaxCount {
+		records := p.records
+		p.records = make([]*Record, 0, p.config.MessageMaxCount)
+		p.flush(records)
 	}
 	return nil
 }
@@ -167,16 +166,37 @@ func (p *SimpleProducer) Flush() error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if len(p.messageSet) > 0 {
-		messageSet := p.messageSet
-		p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-		return p.flush(messageSet)
+	if len(p.records) > 0 {
+		records := p.records
+		p.records = make([]*Record, 0, p.config.MessageMaxCount)
+		return p.flush(records)
 	}
 	return nil
 }
 
-func (p *SimpleProducer) flush(messageSet MessageSet) error {
-	logger.V(5).Info("flush messsages", "count", len(messageSet), "topic", p.topic, "partition", p.partition)
+func (p *SimpleProducer) createRecordBatch(records []*Record) RecordBatch {
+	ts := time.Now().UnixMilli()
+	batch := RecordBatch{
+		BaseOffset:           0,
+		BatchLength:          0,
+		PartitionLeaderEpoch: -1,
+		Magic:                int8(p.config.HealerMagicByte),
+		CRC:                  0,
+		Attributes:           int16(0 | p.compressionValue),
+		LastOffsetDelta:      int32(len(records)) - 1,
+		BaseTimestamp:        ts,
+		MaxTimestamp:         ts,
+		ProducerID:           -1,
+		ProducerEpoch:        0,
+		BaseSequence:         0,
+		Records:              records,
+	}
+
+	return batch
+}
+
+func (p *SimpleProducer) flush(records []*Record) error {
+	logger.V(5).Info("flush messsages", "count", len(records), "topic", p.topic, "partition", p.partition)
 
 	produceRequest := &ProduceRequest{
 		RequiredAcks: p.config.Acks,
@@ -188,48 +208,14 @@ func (p *SimpleProducer) flush(messageSet MessageSet) error {
 		ClientID:   &p.config.ClientID,
 	}
 
-	produceRequest.TopicBlocks = make([]struct {
-		TopicName      string
-		PartitonBlocks []struct {
-			Partition      int32
-			MessageSetSize int32
-			MessageSet     MessageSet
-		}
-	}, 1)
+	produceRequest.TopicBlocks = make([]produceRequestT, 1)
 	produceRequest.TopicBlocks[0].TopicName = p.topic
-	produceRequest.TopicBlocks[0].PartitonBlocks = make([]struct {
-		Partition      int32
-		MessageSetSize int32
-		MessageSet     MessageSet
-	}, 1)
+	produceRequest.TopicBlocks[0].PartitonBlocks = make([]produceRequestP, 1)
 
-	if p.compressionValue != 0 {
-		// FIXME: compressed message size if larger than before?
-		value := make([]byte, messageSet.Length())
-		offset := messageSet.Encode(value, 0)
-		value = value[:offset]
-		compressedValue, err := p.compressor.Compress(value)
-		if err != nil {
-			return fmt.Errorf("compress messageset error:%s", err)
-		}
-		var message *Message = &Message{
-			Offset:      0,
-			MessageSize: 0, // compute in message encode
-
-			Crc:        0, // compute in message encode
-			Attributes: 0x00 | int8(p.compressionValue),
-			MagicByte:  int8(p.config.HealerMagicByte),
-			Key:        nil,
-			Value:      compressedValue,
-		}
-		if p.config.HealerMagicByte == 1 {
-			message.Timestamp = uint64(time.Now().UnixMilli())
-		}
-		messageSet = []*Message{message}
-	}
 	produceRequest.TopicBlocks[0].PartitonBlocks[0].Partition = p.partition
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSetSize = int32(len(messageSet))
-	produceRequest.TopicBlocks[0].PartitonBlocks[0].MessageSet = messageSet
+	produceRequest.TopicBlocks[0].PartitonBlocks[0].RecordBatches = []RecordBatch{
+		p.createRecordBatch(records),
+	}
 
 	rp, err := p.leader.RequestAndGet(produceRequest)
 	if err == nil {
@@ -249,10 +235,8 @@ func (p *SimpleProducer) Close() {
 		defer p.lock.Unlock()
 
 		logger.Info("flush before SimpleProducer close")
-		if len(p.messageSet) > 0 {
-			messageSet := p.messageSet
-			p.messageSet = make([]*Message, 0, p.config.MessageMaxCount)
-			p.flush(messageSet)
+		if len(p.records) > 0 {
+			p.flush(p.records)
 		}
 
 		if p.parent == nil {

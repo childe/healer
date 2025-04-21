@@ -213,7 +213,6 @@ type ProducerConfig struct {
 	RequestTimeoutMS int32 `json:"request.timeout.ms,string" mapstructure:"request.timeout.ms"`
 
 	// producer.AddMessage will use this config to assemble Message
-	// only 0 and 1 is implemented for now
 	HealerMagicByte int `json:"healer.magicbyte,string" mapstructure:"healer.magicbyte"`
 }
 
@@ -227,7 +226,7 @@ func DefaultProducerConfig() ProducerConfig {
 			KeepAliveMS:         7200000,
 		},
 		ClientID:                 "healer",
-		Acks:                     1,
+		Acks:                     -1,
 		CompressionType:          "none",
 		BatchSize:                16384,
 		MessageMaxCount:          1024,
@@ -240,7 +239,9 @@ func DefaultProducerConfig() ProducerConfig {
 		TLSEnabled: false,
 
 		Retries:          0,
-		RequestTimeoutMS: 30000,
+		RequestTimeoutMS: 1500,
+
+		HealerMagicByte: 2,
 	}
 }
 
