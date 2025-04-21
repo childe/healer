@@ -241,6 +241,7 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 	if err := binary.Write(buf, binary.BigEndian, r.LastOffsetDelta); err != nil {
 		return nil, err
 	}
+
 	if err := binary.Write(buf, binary.BigEndian, r.BaseTimestamp); err != nil {
 		return nil, err
 	}

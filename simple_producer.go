@@ -175,6 +175,7 @@ func (p *SimpleProducer) Flush() error {
 }
 
 func (p *SimpleProducer) createRecordBatch(records []*Record) RecordBatch {
+	ts := time.Now().UnixMilli()
 	batch := RecordBatch{
 		BaseOffset:           0,
 		BatchLength:          0,
@@ -183,8 +184,8 @@ func (p *SimpleProducer) createRecordBatch(records []*Record) RecordBatch {
 		CRC:                  0,
 		Attributes:           int16(0 | p.compressionValue),
 		LastOffsetDelta:      int32(len(records)) - 1,
-		BaseTimestamp:        0,
-		MaxTimestamp:         0,
+		BaseTimestamp:        ts,
+		MaxTimestamp:         ts,
 		ProducerID:           -1,
 		ProducerEpoch:        0,
 		BaseSequence:         0,
