@@ -29,13 +29,10 @@ func decodeHeader(payload []byte) (header RecordHeader, offset int) {
 
 // Record is one message in fetch response with magic byte 2
 type Record struct {
-	length         int32 // length of the record, not including `length` itself
 	attributes     int8
 	timestampDelta int64
 	offsetDelta    int32
-	keyLength      int32
 	key            []byte
-	valueLen       int32
 	value          []byte
 	Headers        []RecordHeader
 }
@@ -142,7 +139,6 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	if length == 0 || len(payload[o:]) < int(length) {
 		return record, o, errUncompleteRecord
 	}
-	record.length = int32(length)
 	offset += o
 
 	record.attributes = int8(payload[offset])
@@ -157,30 +153,26 @@ func DecodeToRecord(payload []byte) (record Record, offset int, err error) {
 	offset += o
 
 	keyLength, o := binary.Varint(payload[offset:])
-	record.keyLength = int32(keyLength)
 	offset += o
 
 	if keyLength > 0 {
 		record.key = make([]byte, keyLength)
-		offset += copy(record.key, payload[offset:offset+int(record.keyLength)])
+		offset += copy(record.key, payload[offset:offset+int(keyLength)])
 	}
 
 	valueLen, o := binary.Varint(payload[offset:])
-	record.valueLen = int32(valueLen)
 	offset += o
 	if valueLen > 0 {
 		record.value = make([]byte, valueLen)
-		offset += copy(record.value, payload[offset:offset+int(record.valueLen)])
+		offset += copy(record.value, payload[offset:offset+int(valueLen)])
 	}
 
 	headerCount, o := binary.Varint(payload[offset:])
 	offset += o
-	if headerCount > 0 {
-		record.Headers = make([]RecordHeader, headerCount)
-		for i := int64(0); i < headerCount; i++ {
-			record.Headers[i], o = decodeHeader(payload[offset:])
-			offset += o
-		}
+	record.Headers = make([]RecordHeader, headerCount)
+	for i := range record.Headers {
+		record.Headers[i], o = decodeHeader(payload[offset:])
+		offset += o
 	}
 
 	return
@@ -346,8 +338,8 @@ func DecodeToRecordBatch(payload []byte) (r RecordBatch, offset int, err error) 
 	r.BaseSequence = int32(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 
-	recordCount, o := binary.Varint(payload[offset:])
-	offset += o
+	recordCount := binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
 
 	r.Records = make([]*Record, recordCount)
 	for i := range r.Records {

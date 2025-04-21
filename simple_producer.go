@@ -144,8 +144,6 @@ func (p *SimpleProducer) AddMessage(key []byte, value []byte) error {
 	copy(valueCopy, value)
 
 	record := Record{
-		length: 0, // compute in message encode
-
 		attributes:     0x00, // compress in upper message set level
 		timestampDelta: 0,
 		offsetDelta:    0,

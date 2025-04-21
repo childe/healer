@@ -38,7 +38,6 @@ func BenchmarkSimpleConsumer(b *testing.B) {
 		records := make([]*Record, 0)
 		for i := 0; i < 20; i++ {
 			records = append(records, &Record{
-				length:         100,
 				attributes:     0,
 				timestampDelta: 1000,
 				offsetDelta:    0,
