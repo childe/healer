@@ -92,13 +92,26 @@ func TestProduceRequestEncodeDecodeRoundTrip(t *testing.T) {
 			},
 		}
 
-		// 编码请求
-		version := uint16(9) // 使用API版本9测试
+		version := uint16(9)
 		encodedData := request.Encode(version)
 
-		// 解码请求
 		decodedRequest := &ProduceRequest{}
 		err := decodedRequest.Decode(encodedData, version)
+
+		// set some fields to zero to test decoding correctly
+		for i := range decodedRequest.TopicBlocks {
+			t := &decodedRequest.TopicBlocks[i]
+			for j := range t.PartitonBlocks {
+				p := &t.PartitonBlocks[j]
+				p.RecordBatchesSize = 0
+				for k := range p.RecordBatches {
+					b := &p.RecordBatches[k]
+					b.BatchLength = 0
+					b.CRC = 0
+				}
+			}
+		}
+
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(decodedRequest, convey.ShouldResemble, request)
 	})

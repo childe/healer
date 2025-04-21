@@ -188,8 +188,8 @@ func (p *SimpleProducer) createRecordBatch(records []*Record) RecordBatch {
 		BaseTimestamp:        0,
 		MaxTimestamp:         0,
 		ProducerID:           -1,
-		ProducerEpoch:        -1,
-		BaseSequence:         -1,
+		ProducerEpoch:        0,
+		BaseSequence:         0,
 		Records:              records,
 	}
 

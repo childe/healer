@@ -306,3 +306,58 @@ func (r *RecordBatch) Encode(version uint16) (payload []byte, err error) {
 	}
 	return buf.Bytes(), nil
 }
+
+// DecodeToRecord decodes the struct Record from the given payload.
+// only used in test
+func DecodeToRecordBatch(payload []byte) (r RecordBatch, offset int, err error) {
+	r.BaseOffset = int64(binary.BigEndian.Uint64(payload[offset:]))
+	offset += 8
+
+	r.BatchLength = int32(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+
+	r.PartitionLeaderEpoch = int32(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+
+	r.Magic = int8(payload[offset]) // only 2 supported for now
+	offset++
+
+	r.CRC = binary.BigEndian.Uint32(payload[offset:])
+	offset += 4
+
+	r.Attributes = int16(binary.BigEndian.Uint16(payload[offset:]))
+	offset += 2
+
+	r.LastOffsetDelta = int32(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+
+	r.BaseTimestamp = int64(binary.BigEndian.Uint64(payload[offset:]))
+	offset += 8
+
+	r.MaxTimestamp = int64(binary.BigEndian.Uint64(payload[offset:]))
+	offset += 8
+
+	r.ProducerID = int64(binary.BigEndian.Uint64(payload[offset:]))
+	offset += 8
+
+	r.ProducerEpoch = int16(binary.BigEndian.Uint16(payload[offset:]))
+	offset += 2
+
+	r.BaseSequence = int32(binary.BigEndian.Uint32(payload[offset:]))
+	offset += 4
+
+	recordCount, o := binary.Varint(payload[offset:])
+	offset += o
+
+	r.Records = make([]*Record, recordCount)
+	for i := range r.Records {
+		record, o, err := DecodeToRecord(payload[offset:])
+		offset += o
+		if err != nil {
+			return r, offset, err
+		}
+		r.Records[i] = &record
+	}
+
+	return r, offset, nil
+}

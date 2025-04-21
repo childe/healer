@@ -237,14 +237,12 @@ func (r *ProduceRequest) Decode(data []byte, version uint16) error {
 				offset += 4
 			}
 
-			// 跳过记录批次数据，因为目前我们不解析具体内容
-			offset += int(p.RecordBatchesSize)
+			// offset += int(p.RecordBatchesSize)
 
 			// 解码记录批次
-			// 这里我们简单地添加一个空的RecordBatch，因为测试代码只是验证结构，而不是实际内容
-			recordBatch := RecordBatch{}
-			// TODO: 实现RecordBatch的解码
+			recordBatch, o, _ := DecodeToRecordBatch(data[offset:])
 			p.RecordBatches = append(p.RecordBatches, recordBatch)
+			offset += o
 
 			if isFlexible {
 				tf, o := DecodeTaggedFields(data[offset:])
