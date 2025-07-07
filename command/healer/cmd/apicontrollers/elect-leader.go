@@ -51,10 +51,6 @@ func ElectLeaders(c *gin.Context, client string) {
 	defer bs.Close()
 
 	req := healer.NewElectLeadersRequest(int32(timeoutMS))
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
 
 	for _, v := range topicPartitions {
 		req.Add(v.Topic, v.Partition)
