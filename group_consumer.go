@@ -187,11 +187,11 @@ func (c *GroupConsumer) join() error {
 	if err != nil {
 		logger.Error(err, "join group failed", "groupId", c.config.GroupID)
 
-		if err == KafkaError(25) {
+		if errors.Is(err, KafkaError(25)) {
 			c.memberID = ""
 		}
 
-		if errors.Is(err, io.EOF) || err == KafkaError(15) || err == KafkaError(16) {
+		if errors.Is(err, io.EOF) || errors.Is(err, KafkaError(15)) || errors.Is(err, KafkaError(16)) {
 			c.coordinatorAvailable = false
 		}
 
@@ -242,10 +242,10 @@ func (c *GroupConsumer) sync() error {
 
 	if err != nil {
 		logger.Error(err, "sync failed", "groupId", c.config.GroupID)
-		if err == KafkaError(15) || err == KafkaError(16) {
+		if errors.Is(err, KafkaError(15)) || errors.Is(err, KafkaError(16)) {
 			c.coordinatorAvailable = false
 		}
-		if err == KafkaError(25) {
+		if errors.Is(err, KafkaError(25)) {
 			c.memberID = ""
 		}
 		return err
@@ -290,7 +290,7 @@ func (c *GroupConsumer) joinAndSync() error {
 			return nil
 		}
 
-		if err == KafkaError(22) || err == KafkaError(25) || err == KafkaError(27) {
+		if errors.Is(err, KafkaError(22)) || errors.Is(err, KafkaError(25)) || errors.Is(err, KafkaError(27)) {
 			continue
 		}
 		if _, ok := err.(KafkaError); ok {
