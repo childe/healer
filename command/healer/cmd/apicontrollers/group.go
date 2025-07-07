@@ -72,10 +72,7 @@ func DescribeGroups(c *gin.Context, client string) {
 		c.String(http.StatusInternalServerError, err.Error())
 	}
 
-	groups := make([]*healer.GroupDetail, 0)
-	for _, group := range resp.(healer.DescribeGroupsResponse).Groups {
-		groups = append(groups, group)
-	}
+	groups := resp.(healer.DescribeGroupsResponse).Groups
 	c.JSON(http.StatusOK, groups)
 }
 
