@@ -85,7 +85,7 @@ func NewJoinGroupResponse(payload []byte) (r JoinGroupResponse, err error) {
 	membersLength := int(binary.BigEndian.Uint32(payload[offset:]))
 	offset += 4
 	r.Members = make([]Member, membersLength)
-	for i := 0; i < membersLength; i++ {
+	for i := range membersLength {
 		l := int(binary.BigEndian.Uint16(payload[offset:]))
 		offset += 2
 		r.Members[i].MemberID = string(payload[offset : offset+l])
