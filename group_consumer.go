@@ -187,7 +187,7 @@ func (c *GroupConsumer) join() error {
 	if err != nil {
 		logger.Error(err, "join group failed", "groupId", c.config.GroupID)
 
-		if err == KafkaError(25) {
+		if errors.Is(err, KafkaError(25)) {
 			c.memberID = ""
 		}
 
