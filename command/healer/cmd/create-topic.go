@@ -53,6 +53,28 @@ var createTopicCmd = &cobra.Command{
 			return fmt.Errorf(`option "[replica-assignment]" can't be used with option"[replication-factor]"`)
 		}
 
+		// Use the new Client.CreateTopic method for simple cases (no replica assignment)
+		if replicaAssignment == "" {
+			// Create client instance
+			healerClient, err := healer.NewClient(brokers, client)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+			defer healerClient.Close()
+
+			// Use the new CreateTopic method
+			resp, err := healerClient.CreateTopic(topic, partitions, replicationFactor, timeout)
+			if err != nil {
+				return fmt.Errorf("failed to create topic: %w", err)
+			}
+
+			// Print response
+			b, _ := json.Marshal(resp)
+			klog.Info(string(b))
+			return nil
+		}
+
+		// For complex cases with replica assignment, use the original implementation
 		config := healer.DefaultBrokerConfig()
 		config.Net.TimeoutMSForEachAPI = make([]int, 68)
 		config.Net.TimeoutMSForEachAPI[healer.API_CreateTopics] = int(timeout)
@@ -69,23 +91,23 @@ var createTopicCmd = &cobra.Command{
 		r := healer.NewCreateTopicsRequest(client, timeout)
 
 		replicas := make(map[int32][]int32)
-		if replicaAssignment != "" {
-			for pid, nodes := range strings.Split(replicaAssignment, ",") {
-				replicas[int32(pid)] = make([]int32, 0)
-				for _, node := range strings.Split(nodes, ":") {
-					nodeid, err := strconv.Atoi(node)
-					if err != nil {
-						return fmt.Errorf("invalid replica-assignment: %w", err)
-					}
-					replicas[int32(pid)] = append(replicas[int32(pid)], int32(nodeid))
+		for pid, nodes := range strings.Split(replicaAssignment, ",") {
+			replicas[int32(pid)] = make([]int32, 0)
+			for _, node := range strings.Split(nodes, ":") {
+				nodeid, err := strconv.Atoi(node)
+				if err != nil {
+					return fmt.Errorf("invalid replica-assignment: %w", err)
 				}
+				replicas[int32(pid)] = append(replicas[int32(pid)], int32(nodeid))
 			}
+		}
 
-			for pid, nodes := range replicas {
-				r.AddReplicaAssignment(topic, pid, nodes)
-			}
-		} else {
-			r.AddTopic(topic, partitions, replicationFactor)
+		// First add the topic
+		r.AddTopic(topic, partitions, replicationFactor)
+
+		// Then add replica assignments
+		for pid, nodes := range replicas {
+			r.AddReplicaAssignment(topic, pid, nodes)
 		}
 
 		if resp, err := controller.RequestAndGet(r); err != nil {

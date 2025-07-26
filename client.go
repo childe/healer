@@ -160,6 +160,54 @@ func (c *Client) DeleteTopics(topics []string, timeoutMs int32) (r DeleteTopicsR
 	return resp.(DeleteTopicsResponse), err
 }
 
+// CreateTopic creates a single topic with specified parameters
+func (c *Client) CreateTopic(topic string, numPartitions int32, replicationFactor int16, timeoutMs uint32) (CreateTopicsResponse, error) {
+	c.logger.Info("create topic", "topic", topic, "partitions", numPartitions, "replicationFactor", replicationFactor)
+
+	req := NewCreateTopicsRequest(c.clientID, timeoutMs)
+	err := req.AddTopic(topic, numPartitions, replicationFactor)
+	if err != nil {
+		return CreateTopicsResponse{}, err
+	}
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return CreateTopicsResponse{}, err
+	}
+
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return CreateTopicsResponse{}, err
+	}
+
+	return resp.(CreateTopicsResponse), nil
+}
+
+// CreateTopics creates multiple topics with specified parameters
+func (c *Client) CreateTopics(topics []string, numPartitions int32, replicationFactor int16, timeoutMs uint32) (CreateTopicsResponse, error) {
+	c.logger.Info("create topics", "topics", topics, "partitions", numPartitions, "replicationFactor", replicationFactor)
+
+	req := NewCreateTopicsRequest(c.clientID, timeoutMs)
+	for _, topic := range topics {
+		err := req.AddTopic(topic, numPartitions, replicationFactor)
+		if err != nil {
+			return CreateTopicsResponse{}, err
+		}
+	}
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return CreateTopicsResponse{}, err
+	}
+
+	resp, err := controller.RequestAndGet(req)
+	if err != nil {
+		return CreateTopicsResponse{}, err
+	}
+
+	return resp.(CreateTopicsResponse), nil
+}
+
 func (c *Client) DescribeAcls(r DescribeAclsRequestBody) (DescribeAclsResponse, error) {
 	req := DescribeAclsRequest{
 		RequestHeader{
