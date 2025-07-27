@@ -27,35 +27,30 @@ var deleteGroupsCmd = &cobra.Command{
 			return err
 		}
 
-		brokers, err := healer.NewBrokers(bootStrapBrokers)
+		// Use the new Client.DeleteGroups method
+		healerClient, err := healer.NewClient(bootStrapBrokers, client)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+		defer healerClient.Close()
+
+		// Use the new DeleteGroups method
+		resp, err := healerClient.DeleteGroups(groups)
+		if err != nil {
+			return fmt.Errorf("failed to delete groups: %w", err)
 		}
 
-		for _, group := range groups {
-			coordinatorResponse, err := brokers.FindCoordinator(client, group)
-			if err != nil {
-				return err
-			}
-
-			coordinator, err := brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
-			if err != nil {
-				return err
-			}
-			klog.Infof("coordinator for group[%s]:%s", group, coordinator.GetAddress())
-
-			req := healer.NewDeleteGroupsRequest(client, groups)
-			resp, err := coordinator.RequestAndGet(req)
-			if err != nil {
-				return fmt.Errorf("failed to request delete_groups: %w", err)
-			}
-
-			s, err := json.MarshalIndent(resp.(healer.DeleteGroupsResponse), "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal delete_groups response: %w", err)
-			}
-			fmt.Println(string(s))
+		// Check for errors in response
+		if respErr := resp.Error(); respErr != nil {
+			klog.Warningf("Some groups may not have been deleted successfully: %v", respErr)
 		}
+
+		// Print response in JSON format
+		s, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal delete_groups response: %w", err)
+		}
+		fmt.Println(string(s))
 
 		return nil
 	},

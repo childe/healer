@@ -248,6 +248,54 @@ func (c *Client) CreatePartitionsWithAssignments(topic string, totalPartitions i
 	return resp.(CreatePartitionsResponse), nil
 }
 
+// DeleteGroups deletes consumer groups from the Kafka cluster
+func (c *Client) DeleteGroups(groups []string) (DeleteGroupsResponse, error) {
+	c.logger.Info("delete groups", "groups", groups)
+
+	var allResults []struct {
+		GroupID   string `json:"group_id"`
+		ErrorCode int16  `json:"error_code"`
+	}
+
+	// Process each group individually to find its coordinator
+	for _, group := range groups {
+		// Find coordinator for the group
+		coordinatorResponse, err := c.brokers.FindCoordinator(c.clientID, group)
+		if err != nil {
+			c.logger.Error(err, "failed to find coordinator for group", "group", group)
+			return DeleteGroupsResponse{}, fmt.Errorf("failed to find coordinator for group %s: %w", group, err)
+		}
+
+		// Get the coordinator broker
+		coordinator, err := c.brokers.GetBroker(coordinatorResponse.Coordinator.NodeID)
+		if err != nil {
+			c.logger.Error(err, "failed to get coordinator broker", "group", group, "nodeID", coordinatorResponse.Coordinator.NodeID)
+			return DeleteGroupsResponse{}, fmt.Errorf("failed to get coordinator broker for group %s: %w", group, err)
+		}
+
+		c.logger.Info("coordinator for group", "group", group, "coordinator", coordinator.GetAddress())
+
+		// Create delete groups request for this group
+		req := NewDeleteGroupsRequest(c.clientID, []string{group})
+		resp, err := coordinator.RequestAndGet(req)
+		if err != nil {
+			c.logger.Error(err, "failed to delete group", "group", group)
+			return DeleteGroupsResponse{}, fmt.Errorf("failed to delete group %s: %w", group, err)
+		}
+
+		// Collect results
+		deleteResp := resp.(DeleteGroupsResponse)
+		allResults = append(allResults, deleteResp.Results...)
+	}
+
+	// Return combined response
+	return DeleteGroupsResponse{
+		CorrelationID:  0, // This will be overwritten by the last response
+		ThrottleTimeMs: 0,
+		Results:        allResults,
+	}, nil
+}
+
 func (c *Client) DescribeAcls(r DescribeAclsRequestBody) (DescribeAclsResponse, error) {
 	req := DescribeAclsRequest{
 		RequestHeader{
