@@ -208,6 +208,46 @@ func (c *Client) CreateTopics(topics []string, numPartitions int32, replicationF
 	return resp.(CreateTopicsResponse), nil
 }
 
+// CreatePartitions creates additional partitions for existing topics
+func (c *Client) CreatePartitions(topic string, totalPartitions int32, timeoutMs uint32, validateOnly bool) (CreatePartitionsResponse, error) {
+	c.logger.Info("create partitions", "topic", topic, "totalPartitions", totalPartitions, "validateOnly", validateOnly)
+
+	req := NewCreatePartitionsRequest(c.clientID, timeoutMs, validateOnly)
+	req.AddTopic(topic, totalPartitions, nil)
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return CreatePartitionsResponse{}, err
+	}
+
+	resp, err := controller.RequestAndGet(&req)
+	if err != nil {
+		return CreatePartitionsResponse{}, err
+	}
+
+	return resp.(CreatePartitionsResponse), nil
+}
+
+// CreatePartitionsWithAssignments creates additional partitions for existing topics with custom broker assignments
+func (c *Client) CreatePartitionsWithAssignments(topic string, totalPartitions int32, assignments [][]int32, timeoutMs uint32, validateOnly bool) (CreatePartitionsResponse, error) {
+	c.logger.Info("create partitions with assignments", "topic", topic, "totalPartitions", totalPartitions, "assignments", assignments, "validateOnly", validateOnly)
+
+	req := NewCreatePartitionsRequest(c.clientID, timeoutMs, validateOnly)
+	req.AddTopic(topic, totalPartitions, assignments)
+
+	controller, err := c.brokers.GetController()
+	if err != nil {
+		return CreatePartitionsResponse{}, err
+	}
+
+	resp, err := controller.RequestAndGet(&req)
+	if err != nil {
+		return CreatePartitionsResponse{}, err
+	}
+
+	return resp.(CreatePartitionsResponse), nil
+}
+
 func (c *Client) DescribeAcls(r DescribeAclsRequestBody) (DescribeAclsResponse, error) {
 	req := DescribeAclsRequest{
 		RequestHeader{

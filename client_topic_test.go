@@ -103,6 +103,7 @@ func TestCreateTopicWithError(t *testing.T) {
 		brokers:  brokers,
 	}
 	mockey.PatchConvey("TestCreateTopicWithError", t, func() {
+		mockey.Mock((*Brokers).Controller).Return(int32(1)).Build()
 		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
 		mockey.Mock((*Broker).RequestAndGet).
 			To(func(b *Broker, req Request) (Response, error) {
@@ -128,5 +129,148 @@ func TestCreateTopicWithError(t *testing.T) {
 		// Test that the response has an error
 		responseError := response.Error()
 		convey.So(responseError, convey.ShouldNotBeNil)
+	})
+}
+
+func TestCreatePartitions(t *testing.T) {
+	brokers := &Brokers{}
+	c := &Client{
+		clientID: "test",
+		brokers:  brokers,
+	}
+	mockey.PatchConvey("TestCreatePartitions", t, func() {
+		mockey.Mock((*Brokers).Controller).Return(int32(1)).Build()
+		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
+		mockey.Mock((*Broker).RequestAndGet).
+			To(func(b *Broker, req Request) (Response, error) {
+				mockResponse := CreatePartitionsResponse{
+					CorrelationID:  1,
+					ThrottleTimeMS: 0,
+					Results: []createPartitionsResponseResultBlock{
+						{
+							TopicName:    "test-topic",
+							ErrorCode:    0, // No error
+							ErrorMessage: nil,
+						},
+					},
+				}
+				return mockResponse, nil
+			}).Build()
+
+		// Test successful partition creation
+		response, err := c.CreatePartitions("test-topic", 6, 30000, false)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(response.Results, convey.ShouldHaveLength, 1)
+		convey.So(response.Results[0].TopicName, convey.ShouldEqual, "test-topic")
+		convey.So(response.Results[0].ErrorCode, convey.ShouldEqual, 0)
+	})
+}
+
+func TestCreatePartitionsWithAssignments(t *testing.T) {
+	brokers := &Brokers{}
+	c := &Client{
+		clientID: "test",
+		brokers:  brokers,
+	}
+	mockey.PatchConvey("TestCreatePartitionsWithAssignments", t, func() {
+		mockey.Mock((*Brokers).Controller).Return(int32(1)).Build()
+		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
+		mockey.Mock((*Broker).RequestAndGet).
+			To(func(b *Broker, req Request) (Response, error) {
+				mockResponse := CreatePartitionsResponse{
+					CorrelationID:  1,
+					ThrottleTimeMS: 0,
+					Results: []createPartitionsResponseResultBlock{
+						{
+							TopicName:    "test-topic-assignments",
+							ErrorCode:    0,
+							ErrorMessage: nil,
+						},
+					},
+				}
+				return mockResponse, nil
+			}).Build()
+
+		// Test successful partition creation with custom assignments
+		assignments := [][]int32{{1, 2}, {2, 3}}
+		response, err := c.CreatePartitionsWithAssignments("test-topic-assignments", 5, assignments, 30000, false)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(response.Results, convey.ShouldHaveLength, 1)
+		convey.So(response.Results[0].TopicName, convey.ShouldEqual, "test-topic-assignments")
+		convey.So(response.Results[0].ErrorCode, convey.ShouldEqual, 0)
+	})
+}
+
+func TestCreatePartitionsWithError(t *testing.T) {
+	brokers := &Brokers{}
+	c := &Client{
+		clientID: "test",
+		brokers:  brokers,
+	}
+	mockey.PatchConvey("TestCreatePartitionsWithError", t, func() {
+		mockey.Mock((*Brokers).Controller).Return(int32(1)).Build()
+		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
+		mockey.Mock((*Broker).RequestAndGet).
+			To(func(b *Broker, req Request) (Response, error) {
+				errorMsg := "Invalid partition count"
+				mockResponse := CreatePartitionsResponse{
+					CorrelationID:  1,
+					ThrottleTimeMS: 0,
+					Results: []createPartitionsResponseResultBlock{
+						{
+							TopicName:    "invalid-topic",
+							ErrorCode:    37, // InvalidPartitions error
+							ErrorMessage: &errorMsg,
+						},
+					},
+				}
+				return mockResponse, nil
+			}).Build()
+
+		// Test partition creation with error (invalid partition count)
+		response, err := c.CreatePartitions("invalid-topic", 2, 30000, false)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(response.Results, convey.ShouldHaveLength, 1)
+		convey.So(response.Results[0].TopicName, convey.ShouldEqual, "invalid-topic")
+		convey.So(response.Results[0].ErrorCode, convey.ShouldEqual, 37)
+		convey.So(response.Results[0].ErrorMessage, convey.ShouldNotBeNil)
+
+		// Test that the response has an error
+		responseError := response.Error()
+		convey.So(responseError, convey.ShouldNotBeNil)
+	})
+}
+
+func TestCreatePartitionsValidateOnly(t *testing.T) {
+	brokers := &Brokers{}
+	c := &Client{
+		clientID: "test",
+		brokers:  brokers,
+	}
+	mockey.PatchConvey("TestCreatePartitionsValidateOnly", t, func() {
+		mockey.Mock((*Brokers).Controller).Return(int32(1)).Build()
+		mockey.Mock((*Brokers).GetBroker).Return(&Broker{}, nil).Build()
+		mockey.Mock((*Broker).RequestAndGet).
+			To(func(b *Broker, req Request) (Response, error) {
+				mockResponse := CreatePartitionsResponse{
+					CorrelationID:  1,
+					ThrottleTimeMS: 0,
+					Results: []createPartitionsResponseResultBlock{
+						{
+							TopicName:    "validate-topic",
+							ErrorCode:    0,
+							ErrorMessage: nil,
+						},
+					},
+				}
+				return mockResponse, nil
+			}).Build()
+
+		// Test partition creation with validate only (dry run)
+		response, err := c.CreatePartitions("validate-topic", 8, 30000, true)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(response.Results, convey.ShouldHaveLength, 1)
+		convey.So(response.Results[0].TopicName, convey.ShouldEqual, "validate-topic")
+		convey.So(response.Results[0].ErrorCode, convey.ShouldEqual, 0)
 	})
 }

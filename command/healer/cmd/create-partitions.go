@@ -60,32 +60,54 @@ var createPartitionsCmd = &cobra.Command{
 			return err
 		}
 
-		bs, err := healer.NewBrokers(brokers)
-		if err != nil {
-			return fmt.Errorf("failed to create brokers from %s", brokers)
+		// Use the new Client.CreatePartitions method for simple cases (no assignments)
+		if assignments == "" {
+			// Create client instance
+			healerClient, err := healer.NewClient(brokers, client)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+			defer healerClient.Close()
+
+			// Use the new CreatePartitions method
+			resp, err := healerClient.CreatePartitions(topic, count, timeout, validateOnly)
+			if err != nil {
+				return fmt.Errorf("failed to create partitions: %w", err)
+			}
+
+			// Check for errors in response
+			if respErr := resp.Error(); respErr != nil {
+				return fmt.Errorf("create partitions failed: %w", respErr)
+			}
+
+			fmt.Printf("Successfully created partitions for topic '%s' with total count: %d\n", topic, count)
+			return nil
 		}
 
-		controller, err := bs.GetBroker(bs.Controller())
+		// For complex cases with assignments, use the new CreatePartitionsWithAssignments method
+		healerClient, err := healer.NewClient(brokers, client)
 		if err != nil {
-			return fmt.Errorf("failed to create crotroller broker: %w", err)
+			return fmt.Errorf("failed to create client: %w", err)
 		}
+		defer healerClient.Close()
 
-		r := healer.NewCreatePartitionsRequest(client, timeout, validateOnly)
-		var partitionAssignments [][]int32
-		if assignments != "" {
-			partitionAssignments, err = genPartitionAssignments(assignments)
-		} else {
-			partitionAssignments = nil
-		}
+		partitionAssignments, err := genPartitionAssignments(assignments)
 		if err != nil {
 			return err
 		}
-		r.AddTopic(topic, count, partitionAssignments)
 
-		_, err = controller.RequestAndGet(r)
+		// Use the new CreatePartitionsWithAssignments method
+		resp, err := healerClient.CreatePartitionsWithAssignments(topic, count, partitionAssignments, timeout, validateOnly)
 		if err != nil {
-			return fmt.Errorf("failed to create partitions: %w", err)
+			return fmt.Errorf("failed to create partitions with assignments: %w", err)
 		}
+
+		// Check for errors in response
+		if respErr := resp.Error(); respErr != nil {
+			return fmt.Errorf("create partitions with assignments failed: %w", respErr)
+		}
+
+		fmt.Printf("Successfully created partitions for topic '%s' with total count: %d and custom assignments\n", topic, count)
 		return nil
 	},
 }

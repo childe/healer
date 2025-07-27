@@ -43,9 +43,10 @@ type createPartitionsRequestAssignmentsBlock struct {
 }
 
 func (r createPartitionsRequestAssignmentsBlock) encode(payload []byte, version uint16) (offset int) {
-	if version == 2 {
+	switch version {
+	case 2:
 		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.BrokerIDs)))
-	} else if version == 0 {
+	case 0:
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.BrokerIDs)))
 		offset += 4
 	}
@@ -62,9 +63,10 @@ func (r createPartitionsRequestAssignmentsBlock) encode(payload []byte, version 
 }
 
 func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint16) (offset int) {
-	if version == 2 {
+	switch version {
+	case 2:
 		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Name)))
-	} else if version == 0 {
+	case 0:
 		binary.BigEndian.PutUint16(payload[offset:], uint16(len(r.Name)))
 		offset += 2
 	}
@@ -74,13 +76,14 @@ func (r *createPartitionsRequestTopicBlock) encode(payload []byte, version uint1
 	binary.BigEndian.PutUint32(payload[offset:], uint32(r.Count))
 	offset += 4
 
-	if version == 2 {
+	switch version {
+	case 2:
 		if r.Assignments == nil {
 			offset += binary.PutUvarint(payload[offset:], 0)
 		} else {
 			offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Assignments)))
 		}
-	} else if version == 0 {
+	case 0:
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Assignments)))
 		offset += 4
 	}
@@ -151,9 +154,10 @@ func (r CreatePartitionsRequest) Encode(version uint16) []byte {
 
 	offset += r.RequestHeader.EncodeTo(payload[offset:])
 
-	if version == 2 {
+	switch version {
+	case 2:
 		offset += binary.PutUvarint(payload[offset:], 1+uint64(len(r.Topics)))
-	} else if version == 0 {
+	case 0:
 		binary.BigEndian.PutUint32(payload[offset:], uint32(len(r.Topics)))
 		offset += 4
 	}
