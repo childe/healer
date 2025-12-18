@@ -164,7 +164,11 @@ func (broker *Broker) sendSaslAuthenticate() error {
 	)
 
 	saslHandShakeRequest := NewSaslHandShakeRequest(clientID, mechanism)
-	resp, err := broker.RequestAndGet(saslHandShakeRequest)
+	rp, err := broker.Request(saslHandShakeRequest)
+	if err != nil {
+		return err
+	}
+	resp, err := rp.ReadAndParse()
 	if err != nil {
 		return err
 	}
@@ -174,7 +178,11 @@ func (broker *Broker) sendSaslAuthenticate() error {
 
 	// authenticate
 	saslAuthenticateRequest := NewSaslAuthenticateRequest(clientID, user, password, mechanism)
-	resp, err = broker.RequestAndGet(saslAuthenticateRequest)
+	rp, err = broker.Request(saslAuthenticateRequest)
+	if err != nil {
+		return err
+	}
+	resp, err = rp.ReadAndParse()
 	if err != nil {
 		return err
 	}
