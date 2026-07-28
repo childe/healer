@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -25,7 +26,7 @@ type SimpleConsumer struct {
 
 	ctx           context.Context
 	cancel        context.CancelFunc
-	stop          bool
+	stop          atomic.Bool
 	consumeLoopWg sync.WaitGroup
 
 	fromBeginning  bool
@@ -192,7 +193,7 @@ func (c *SimpleConsumer) initOffset() {
 		c.fromBeginning = true
 	}
 
-	for !c.stop {
+	for !c.stop.Load() {
 		if c.offset, err = c.getOffset(c.fromBeginning); err != nil {
 			logger.Error(err, "could not get offset", "topic", c.topic, "partitionID", c.partitionID)
 			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
@@ -278,7 +279,7 @@ func (c *SimpleConsumer) Stop() {
 	logger.Info("stopping simple consumer", "topic", c.topic, "partitionID", c.partitionID)
 	c.cancel()
 
-	c.stop = true
+	c.stop.Store(true)
 
 	c.consumeLoopWg.Wait()
 
@@ -340,10 +341,7 @@ func (c *SimpleConsumer) CommitOffset() {
 // Consume begins to fetch messages.
 // It create and return a new channel if you pass nil, or it returns the channel you passed.
 func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<-chan *FullMessage, error) {
-	var (
-		err      error
-		messages = messageChan
-	)
+	messages := messageChan
 	if messageChan == nil {
 		messages = make(chan *FullMessage, 100)
 	}
@@ -353,7 +351,23 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 
 	logger.V(5).Info("start consume from offset (before fetch offset)", "topic", c.topic, "partitionID", c.partitionID, "offset", c.offset)
 
-	for !c.stop {
+	// Register the consume goroutine synchronously *before* returning, so that a
+	// concurrent Stop() -> consumeLoopWg.Wait() can never observe a zero counter and
+	// return before the loop is registered. All blocking setup (leader lookup, offset
+	// init) now happens inside consumeLoop so this returns promptly.
+	c.consumeLoopWg.Add(1)
+	go c.consumeLoop(messages)
+
+	return messages, nil
+}
+
+func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
+	defer c.consumeLoopWg.Done()
+
+	defer logger.Info("consume loop exit", "topic", c.topic, "partitionID", c.partitionID)
+
+	var err error
+	for !c.stop.Load() {
 		if err = c.getLeaderBroker(); err != nil {
 			logger.Error(err, "get leader broker error", "topic", c.topic, "partitionID", c.partitionID)
 			time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))
@@ -362,8 +376,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		}
 	}
 
-	if c.stop {
-		return messages, nil
+	if c.stop.Load() {
+		return
 	}
 
 	if c.config.GroupID != "" && (c.offset == -1 || c.offset == -2) {
@@ -377,7 +391,12 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 	}
 
 	if c.config.AutoCommit && c.config.GroupID != "" {
+		// Track the auto-commit goroutine with consumeLoopWg so Stop() waits for its
+		// final commit-on-ctx.Done to finish. Otherwise that commit (which reads group
+		// state such as memberID) can race with GroupConsumer.leave() after Stop().
+		c.consumeLoopWg.Add(1)
 		go func() {
+			defer c.consumeLoopWg.Done()
 			ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.AutoCommitIntervalMS))
 			defer ticker.Stop()
 			for {
@@ -392,19 +411,8 @@ func (c *SimpleConsumer) Consume(offset int64, messageChan chan *FullMessage) (<
 		}()
 	}
 
-	go c.consumeLoop(messages)
-
-	return messages, nil
-}
-
-func (c *SimpleConsumer) consumeLoop(messages chan *FullMessage) {
-	c.consumeLoopWg.Add(1)
-	defer c.consumeLoopWg.Done()
-
-	defer logger.Info("consume loop exit", "topic", c.topic, "partitionID", c.partitionID)
-
 	wg := &sync.WaitGroup{}
-	for !c.stop {
+	for !c.stop.Load() {
 		innerMessages := make(chan *FullMessage, 100)
 
 		// fetch
@@ -481,7 +489,7 @@ func (c *SimpleConsumer) consumeMessages(innerMessages chan *FullMessage, messag
 			} else if errors.Is(message.Error, KafkaError(6)) {
 				c.leaderBroker.Close()
 				c.leaderBroker = nil
-				for !c.stop {
+				for !c.stop.Load() {
 					if err = c.getLeaderBroker(); err != nil {
 						logger.Error(err, "failer to get leader", "topic", c.topic, "partitionID", c.partitionID)
 						time.Sleep(time.Millisecond * time.Duration(c.config.RetryBackOffMS))

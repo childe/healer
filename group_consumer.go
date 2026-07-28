@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -30,7 +31,7 @@ type GroupConsumer struct {
 	topicMetadatas       []TopicMetadata // may contain some other topics which are consumed by other process with the same group
 	ifLeader             bool
 	joined               bool
-	closed               bool
+	closed               atomic.Bool
 	closeChan            chan bool
 	coordinatorAvailable bool
 	topics               []string
@@ -112,7 +113,7 @@ func (c *GroupConsumer) getTopicPartitionInfo() {
 	for t := range _topics {
 		c.topics = append(c.topics, t)
 	}
-	for !c.closed {
+	for !c.closed.Load() {
 		metaDataResponse, err = c.brokers.RequestMetaData(c.config.ClientID, c.topics)
 		if err == nil {
 			break
@@ -261,7 +262,7 @@ func (c *GroupConsumer) sync() error {
 
 func (c *GroupConsumer) joinAndSync() error {
 	var err error
-	for !c.closed {
+	for !c.closed.Load() {
 		if !c.coordinatorAvailable {
 			err = c.getCoordinator()
 			if err != nil {
@@ -272,13 +273,13 @@ func (c *GroupConsumer) joinAndSync() error {
 		}
 		c.coordinatorAvailable = true
 
-		if c.closed {
+		if c.closed.Load() {
 			return nil
 		}
 
 		err = c.join()
 
-		if c.closed {
+		if c.closed.Load() {
 			return nil
 		}
 
@@ -305,15 +306,22 @@ func (c *GroupConsumer) joinAndSync() error {
 }
 
 func (c *GroupConsumer) heartbeat() error {
+	// Snapshot the state we need under the lock, then release it before doing the
+	// (potentially slow/blocking) coordinator network call. Holding c.mutex across
+	// the request would block stop()/Close() for the whole duration of the I/O.
 	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	joined := c.joined
+	coordinator := c.coordinator
+	generationID := c.generationID
+	memberID := c.memberID
+	c.mutex.Unlock()
 
-	if !c.joined {
+	if !joined || coordinator == nil {
 		return nil
 	}
 
-	logger.V(5).Info("heartbeat", "generationID", c.generationID, "memberID", c.memberID)
-	_, err := c.coordinator.requestHeartbeat(c.config.ClientID, c.config.GroupID, c.generationID, c.memberID)
+	logger.V(5).Info("heartbeat", "generationID", generationID, "memberID", memberID)
+	_, err := coordinator.requestHeartbeat(c.config.ClientID, c.config.GroupID, generationID, memberID)
 	return err
 }
 
@@ -361,6 +369,12 @@ func (c *GroupConsumer) restart() {
 	// heartbeat and metadata changing could both cause restart. make sure they do not conflict
 	c.restartLocker.Lock()
 	defer c.restartLocker.Unlock()
+
+	// If the consumer is (being) closed, do not spawn new simple consumers: AwaitClose
+	// may already be draining c.wg, and re-adding to it would race with that Wait.
+	if c.closed.Load() {
+		return
+	}
 
 	c.stop()
 	// stop heartbeat
@@ -411,10 +425,20 @@ func (c *GroupConsumer) Close() {
 func (c *GroupConsumer) AwaitClose(timeout time.Duration) {
 	defer c.brokers.Close()
 
-	c.closed = true
-	c.closeChan <- true
+	// Set closed first so any restart() that grabs restartLocker after this bails out,
+	// and any in-flight joinAndSync loop stops retrying.
+	c.closed.Store(true)
+	// Non-blocking: closeChan is buffered(1) and Close may be called more than once.
+	select {
+	case c.closeChan <- true:
+	default:
+	}
 
+	// Serialize with restart(): never run stop()/wg.Wait() while a restart is spawning
+	// new simple consumers (wg.Add concurrent with wg.Wait panics / hangs).
+	c.restartLocker.Lock()
 	c.stop()
+	c.restartLocker.Unlock()
 
 	done := make(chan bool)
 	go func() {
@@ -438,7 +462,7 @@ func (c *GroupConsumer) refreshMeta() {
 		ticker *time.Ticker = time.NewTicker(time.Millisecond * time.Duration(c.config.MetadataMaxAgeMS))
 	)
 	for range ticker.C {
-		if c.closed {
+		if c.closed.Load() {
 			return
 		}
 		if !c.ifLeader {
@@ -464,7 +488,7 @@ func (c *GroupConsumer) refreshMeta() {
 // Consume will join group and then cosumes messages from kafka.
 // it return a chan, and client could get messages from the chan
 func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage, error) {
-	c.closed = false
+	c.closed.Store(false)
 
 	if messages == nil {
 		messages = make(chan *FullMessage, 100)
@@ -475,7 +499,7 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 	ticker := time.NewTicker(time.Millisecond * time.Duration(c.config.SessionTimeoutMS) / 10)
 	go func() {
 		for range ticker.C {
-			if c.closed {
+			if c.closed.Load() {
 				return
 			}
 			err := c.heartbeat()
@@ -491,6 +515,10 @@ func (c *GroupConsumer) Consume(messages chan *FullMessage) (<-chan *FullMessage
 		c.refreshMeta()
 	}()
 
+	// Serialize the initial start with restart()/AwaitClose() so the c.wg Wait/Add
+	// sequence inside consumeWithoutHeartBeat cannot overlap another one.
+	c.restartLocker.Lock()
+	defer c.restartLocker.Unlock()
 	return c.consumeWithoutHeartBeat(c.config.FromBeginning)
 }
 
@@ -503,7 +531,7 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool) (chan *FullM
 	var err error
 	joinedChan := make(chan bool, 1)
 	go func() {
-		for !c.closed {
+		for !c.closed.Load() {
 			err = c.joinAndSync()
 			if err == nil {
 				break
@@ -533,7 +561,10 @@ func (c *GroupConsumer) consumeWithoutHeartBeat(fromBeginning bool) (chan *FullM
 
 		c.wg.Add(1)
 
-		go simpleConsumer.Consume(offset, c.messages)
+		// Consume now returns promptly after registering its consume goroutine
+		// (consumeLoopWg). Call it synchronously so that when this function returns,
+		// every simple consumer is registered and a subsequent stop()/Stop() is safe.
+		simpleConsumer.Consume(offset, c.messages)
 	}
 
 	return c.messages, nil
