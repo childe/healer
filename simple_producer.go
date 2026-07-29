@@ -162,6 +162,11 @@ func (p *SimpleProducer) Flush() error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	// Close already flushed and cleared the records; do not resend them.
+	if p.closed {
+		return nil
+	}
+
 	if len(p.records) > 0 {
 		records := p.records
 		p.records = make([]*Record, 0, p.config.MessageMaxCount)
@@ -232,7 +237,9 @@ func (p *SimpleProducer) Close() {
 
 		logger.Info("flush before SimpleProducer close")
 		if len(p.records) > 0 {
-			p.flush(p.records)
+			records := p.records
+			p.records = make([]*Record, 0, p.config.MessageMaxCount)
+			p.flush(records)
 		}
 
 		if p.parent == nil {

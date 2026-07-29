@@ -28,6 +28,9 @@ type Producer struct {
 	lock                 sync.Mutex
 
 	ctx context.Context
+
+	closeChan chan struct{}
+	closeOnce sync.Once
 }
 
 // NewProducer creates a new console producer.
@@ -45,6 +48,7 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 		topic:                topic,
 		pidToSimpleProducers: make(map[int32]*SimpleProducer),
 		leaderBrokersMapping: make(map[int32]*Broker),
+		closeChan:            make(chan struct{}),
 	}
 
 	brokerConfig := getBrokerConfigFromProducerConfig(&cfg)
@@ -67,10 +71,17 @@ func NewProducer(topic string, config interface{}) (*Producer, error) {
 	p.ctx = context.WithValue(ctx, parentProducerKey, p)
 
 	go func() {
-		for range time.NewTicker(time.Duration(cfg.MetadataMaxAgeMS) * time.Millisecond).C {
-			err := p.updateCurrentSimpleProducer()
-			if err != nil {
-				logger.Error(err, "refresh simple producer failed", "topic", p.topic)
+		ticker := time.NewTicker(time.Duration(cfg.MetadataMaxAgeMS) * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				err := p.updateCurrentSimpleProducer()
+				if err != nil {
+					logger.Error(err, "refresh simple producer failed", "topic", p.topic)
+				}
+			case <-p.closeChan:
+				return
 			}
 		}
 	}()
@@ -87,10 +98,10 @@ func (p *Producer) updateCurrentSimpleProducer() error {
 	if err != nil {
 		return fmt.Errorf("get metadata of %s error: %w", p.topic, err)
 	}
-	p.topicMeta = metadataResponse.TopicMetadatas[0]
+	newMeta := metadataResponse.TopicMetadatas[0]
 
 	validPartitionID := make([]int32, 0)
-	for _, partition := range p.topicMeta.PartitionMetadatas {
+	for _, partition := range newMeta.PartitionMetadatas {
 		if partition.PartitionErrorCode == 0 {
 			validPartitionID = append(validPartitionID, partition.PartitionID)
 		}
@@ -102,14 +113,20 @@ func (p *Producer) updateCurrentSimpleProducer() error {
 	}
 
 	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.topicMeta = newMeta
+	var older *SimpleProducer
 	if p.currentProducer == nil {
 		logger.Info("init current simple producer", "leader", sp.leader)
-		p.currentProducer = sp
 	} else {
-		older := p.currentProducer
+		older = p.currentProducer
 		logger.Info("update current simple producer", "older", older, "oldLeader", older.leader, "new", sp, "newLeader", sp.leader)
-		p.currentProducer = sp
+	}
+	p.currentProducer = sp
+	p.lock.Unlock()
+
+	// Close the previous producer outside the lock: older.Close() flushes and does
+	// network I/O, and must not block other producers acquiring p.lock.
+	if older != nil {
 		older.Close()
 	}
 
@@ -131,9 +148,13 @@ func (p *Producer) getLeaderID(pid int32) (int32, error) {
 
 // getSimpleProducer return the simple producer. if key is nil, return the current simple producer
 func (p *Producer) getSimpleProducer(key []byte) (*SimpleProducer, error) {
+	// Hold p.lock for the whole function: it reads p.topicMeta and reads/writes
+	// p.pidToSimpleProducers and p.leaderBrokersMapping, all of which are also
+	// mutated by the metadata-refresh goroutine (updateCurrentSimpleProducer).
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	if key == nil {
-		p.lock.Lock()
-		defer p.lock.Unlock()
 		return p.currentProducer, nil
 	}
 
@@ -186,14 +207,35 @@ func (p *Producer) AddMessage(key []byte, value []byte) error {
 
 // Close close all simple producers in the console producer
 func (p *Producer) Close() {
-	if p.currentProducer != nil {
-		p.currentProducer.Close()
-	}
+	// Stop the metadata-refresh goroutine. Guarded by closeOnce so Close is idempotent.
+	p.closeOnce.Do(func() {
+		close(p.closeChan)
+	})
+
+	// Snapshot the shared state under the lock, then release it before doing the
+	// (blocking, network) Close calls.
+	p.lock.Lock()
+	current := p.currentProducer
+	simpleProducers := make([]*SimpleProducer, 0, len(p.pidToSimpleProducers))
 	for _, sp := range p.pidToSimpleProducers {
+		simpleProducers = append(simpleProducers, sp)
+	}
+	brokers := make([]*Broker, 0, len(p.leaderBrokersMapping))
+	for _, broker := range p.leaderBrokersMapping {
+		brokers = append(brokers, broker)
+	}
+	p.currentProducer = nil
+	p.pidToSimpleProducers = make(map[int32]*SimpleProducer)
+	p.leaderBrokersMapping = make(map[int32]*Broker)
+	p.lock.Unlock()
+
+	if current != nil {
+		current.Close()
+	}
+	for _, sp := range simpleProducers {
 		sp.Close()
 	}
-
-	for _, broker := range p.leaderBrokersMapping {
+	for _, broker := range brokers {
 		broker.Close()
 	}
 }
